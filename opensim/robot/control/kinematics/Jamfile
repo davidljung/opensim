@@ -1,0 +1,20 @@
+project robot_control_kinematics
+  : usage-requirements
+                  <library>/robot_control//os_robot_control
+  : requirements
+                  <library>/robot_control//os_robot_control
+  ;
+
+lib os_robot_control_kinematics :
+                MPPseudoInvSolver.cpp
+                IKORFullSpaceSolver.cpp
+                SVDFullSpaceSolver.cpp
+                LeastNormIKSolver.cpp
+                AnalyticLagrangianFSBetaOptimizer.cpp
+                AnalyticLagrangianNullSpaceBetaOptimizer.cpp
+                IKOR.cpp
+                IKORFullSpaceSolverTest.cpp
+                KinematicsTest.cpp
+                IKORController.cpp
+                OldIKOR.cpp
+  ;

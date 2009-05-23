@@ -1,0 +1,63 @@
+project opensim
+  : requirements <include>. <define>DEBUG=1 
+  : build-dir /home/jungd/opensim
+  ;
+  
+#some external dependencies
+
+#Xerces lib
+lib xercesc     : : <name>xerces-c <search>$(ext)/xerces/lib ;
+
+#CPPUnit
+lib cppunit     : : <name>cppunit  <search>$(ext)/cppunit/src/cppunit/.libs ;
+
+#OSG libs
+lib osg         : : <name>osg         <search>$(ext)/osg/lib/Linux32 ;
+lib osgProducer : : <name>osgProducer <search>$(ext)/osg/lib/Linux32 ;
+lib osgGA       : : <name>osgGA       <search>$(ext)/osg/lib/Linux32 ;
+lib osgDB       : : <name>osgDB       <search>$(ext)/osg/lib/Linux32 ;
+lib osgUtil     : : <name>osgUtil     <search>$(ext)/osg/lib/Linux32 ;
+lib osgText     : : <name>osgText     <search>$(ext)/osg/lib/Linux32 ;
+
+#OpenProducer libs
+lib producer    : : <name>Producer    <search>$(ext)/producer/lib/Linux32 ;
+
+#OpenThreads
+lib openthreads : : <name>OpenThreads <search>$(ext)/openthreads/lib/Linux32 ;
+
+#ODE libs
+lib ode         : : <file>$(ext)/ode/lib/libode.a ;
+
+#GTKmm libs
+lib gtkmm       : : <name>gtkmm-2.0 ;
+lib gdkmm       : : <name>gdkmm-2.0 ;
+lib atkmm       : : <name>atkmm-1.0 ;
+lib gtkx11      : : <name>gtk-x11-2.0 ;
+lib pangomm     : : <name>pangomm-1.0 ;
+lib glibmm      : : <name>glibmm-2.0 ;
+lib sigc        : : <name>sigc-1.2 ;
+lib gdkx11      : : <name>gdk-x11-2.0 ;
+lib atk         : : <name>atk-1.0 ;
+lib gdkpixbuf   : : <name>gdk_pixbuf-2.0 ;
+lib pangoxft    : : <name>pangoxft-1.0 ;
+lib pangox      : : <name>pangox-1.0 ;
+lib pango       : : <name>pango-1.0 ;
+lib gobject     : : <name>gobject-2.0 ;
+lib gmodule     : : <name>gmodule-2.0 ;
+lib glib        : : <name>glib-2.0 ;
+
+
+lib dl          : : <name>dl ;
+lib m           : : <name>m ;
+
+
+build-project base ;
+build-project gfx ;
+build-project physics ;
+build-project robot ;
+build-project robot/control ;
+build-project robot/control/kinematics ;
+build-project robot/sim ;
+build-project apps ;
+
+

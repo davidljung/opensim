@@ -1,0 +1,97 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: VisualDebugUtil 1138 2004-09-28 20:59:25Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-09-28 16:59:25 -0400 (Tue, 28 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _PHYSICS_VISUALDEBUGUTIL_
+#define _PHYSICS_VISUALDEBUGUTIL_
+
+#include <base/Object>
+#include <base/Transform>
+#include <physics/physics>
+#include <physics/Box>
+#include <physics/Sphere>
+#include <physics/Cylinder>
+#include <physics/Capsule>
+#include <base/Dimension3>
+
+#include <gfx/Color4>
+#include <gfx/Visual>
+
+#include <osg/MatrixTransform>
+
+
+namespace physics {
+
+
+class VisualDebugUtil : public gfx::Visual, virtual public base::Object
+{
+public:
+  VisualDebugUtil() {}
+  virtual ~VisualDebugUtil() {}
+
+  virtual String className() const { return String("VisualDebugUtil"); }
+
+  static void addDebugObject(ref<const Shape> shape, const String& name, base::Transform worldConfiguration, const gfx::Color4& color = gfx::Color4("lime green"));
+  static void addDebugBoxObject(base::Dimension3 dimensions, const String& name, base::Transform worldConfiguration, const gfx::Color4& color = gfx::Color4("lime green"));
+  static void addDebugSphereObject(Real radius, const String& name, base::Transform worldConfiguration, const gfx::Color4& color = gfx::Color4("lime green"));
+  static void addDebugCylinderObject(Real height, Real radius, const String& name, base::Transform worldConfiguration, const gfx::Color4& color = gfx::Color4("lime green"));
+  static void addDebugCapsuleObject(Real height, Real radius, const String& name, base::Transform worldConfiguration, const gfx::Color4& color = gfx::Color4("lime green"));
+
+  static void addDebugVectorArrow(Vector3 v, const String& name, base::Transform worldConfiguration, const gfx::Color4& color = gfx::Color4("white"));
+
+  static void setConfiguration(const String& name, const base::Transform& configuration);
+  static void setColor(const String& name, const gfx::Color4& color);
+  static void setColorAll(gfx::Color4& color);
+
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Attributes visualAttributes=0) const;
+
+  static void updateVisual();
+
+protected:
+  struct DebugObjectData {
+    DebugObjectData() {}
+    DebugObjectData(const String& name, ref<const Shape> shape, const gfx::Color4& color, const base::Transform& configuration);
+
+    String name;
+    ref<const Shape> shape;
+    gfx::Color4 color;
+    base::Transform configuration;
+    ref_ptr<osg::MatrixTransform> transform;
+  };
+
+  typedef std::map< String, DebugObjectData > ObjectMap;
+
+  static ObjectMap debugObjects;
+
+  // for Visual
+  static Visual::Attributes attributes;
+  static ref_ptr<osg::Group> node; // ==0 => no Visual has been created
+
+};
+
+
+} // physics
+
+#endif

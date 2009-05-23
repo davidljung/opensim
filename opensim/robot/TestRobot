@@ -1,0 +1,373 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: TestRobot 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_TESTROBOT_
+#define _ROBOT_TESTROBOT_
+
+#include <robot/Robot>
+
+#include <base/VFile>
+#include <base/Vector>
+#include <robot/BasicControlInterface>
+#include <robot/KinematicChain>
+#include <robot/ToolDescription>
+
+
+namespace robot {
+
+
+/**
+ * A concrete Robot class that doesn't correspond to any
+ *  real robot.  It is useful for testing. 
+ *  The RobotDescription provided depends on the constructor used for instantiation.
+ */
+class TestRobot : public Robot 
+{
+public:
+  enum JointType { Prismatic = KinematicChain::Link::Prismatic,
+		   Revolute = KinematicChain::Link::Revolute };
+
+  /// instantiate default robot (fixed platform with a single Puma manipulator)
+  TestRobot();
+
+  /// instantiate robot from file specification
+  TestRobot(ref<base::VFile> robotSpecification,
+	    const base::Point3& initialPosition, const base::Orient& initialOrientation);
+
+  /// instantiate robot from a description
+  TestRobot(ref<const robot::RobotDescription> robotDescription,
+	          const base::Point3& initialPosition, const base::Orient& initialOrientation);
+
+  /// instantiate a fixed platform with a single manipulator specified via D-H parameters
+  TestRobot(const base::IVector& jointType, const base::Vector& alpha, const base::Vector& a, const base::Vector& d, const base::Vector& theta);
+
+
+  virtual String className() const { return String("TestRobot"); }
+
+  virtual array<std::pair<String,String> > controlInterfaces() const; 
+
+  /**
+   * TestRobot provides the following ControlInterfaces (name:type):
+   *
+   *  platformPosition:PlatformPositionControl        
+   *    - outputs control the x,y and angle of the platform w.r.t to the world coordinate frame.
+   *       The angle is clockwise relative to the x-axis (about z).
+   *
+   *  manipulatorPositionN:JointPositionControl
+   *    - outputs control the position of a manipulators joints (angle for revolute joints
+   *      and extension for prismatic joints)
+   *
+   *  manipulatorProximityN:LinkProximitySensors
+   *     - Inputs provide proximity sensor information.
+   *
+   *  manipulatorToolGripN:ToolGripControl
+   *     - single scalar input represents tool proximity to tool grip mechanism.
+   *       0 => not in range to be grasped, 1 => in range to be grasped (or currently grasped)
+   *       single scalar output controls tool gripper latch
+   *       1 => grasp/latch tool, 0 => ungrasp/unlatch tool
+   *
+   *  toolPositionN:JointPositionControl
+   *     - joint position for tool joints (if any).  Note that the inputSize() and outputSize()
+   *       change dynamically depending on which tool is grasped (0 when no tool is grasped)
+   *
+   */
+  virtual ref<ControlInterface> getControlInterface(String interfaceName="") throw(std::invalid_argument);
+
+  virtual bool isDescriptionProvided() const { return true; }
+
+  const base::Point3 getPosition() const          ///< get world frame position of robot
+    { return position; }             
+  const base::Orient getOrientation() const       ///< get world frame orientation of robot
+    { return orientation; }       
+  void setPosition(const base::Point3& pos)       ///< set world frame position of robot
+    { position = pos; }          
+  void setOrientation(const base::Orient& orient) ///< set world frame orientation of robot
+    { orientation = orient; }
+  
+  /// because tools are not physically simulated, we can 'magically' indicate that
+  ///  a tool is within grasping range of the end-effector
+  void placeToolInProximity(ref<const ToolDescription> toolDescription, Int manipIndex=0);
+
+  /// remove any tool from within grasping range of the end-effector
+  void removeToolFromProximity(Int manipIndex=0);
+
+
+protected:
+  void create(String manipName, const base::IVector& jointType, const base::Vector& alpha, const base::Vector& a, const base::Vector& d, const base::Vector& theta);
+  void initManipulators();
+
+  base::Point3 position;    ///< world frame position of robot
+  base::Orient orientation; ///< world frame orientation of robot
+
+  array<Vector> qa;  ///< joint parameters of manipulators
+  array<Vector> tqa; ///< joint parameters of tools (index corresponds to manipulators (qa) - i.e. at most one tool per manipulator)
+
+  array<bool>            toolProximity; ///< is a tool in proximity of manipulator end-effector?
+  array<bool>            toolGrasped;   ///< is manipulator grasping a tool?
+  array<ref<const ToolDescription> > tools;         ///< which tool (in proximity and possibly being grasped)
+
+
+  class ManipulatorControlInterface : public BasicControlInterface
+  {
+  public:
+    ManipulatorControlInterface(const String& name, const String& type, ref<TestRobot> robot, Int manipIndex)
+      : BasicControlInterface(name, type, 
+			      robot->qa[manipIndex].size(), robot->qa[manipIndex].size()
+			      ),
+            robot(robot), mi(manipIndex) {}
+
+    ManipulatorControlInterface(const ManipulatorControlInterface& mci)
+      : BasicControlInterface(mci), robot(mci.robot), mi(mci.mi) {}
+
+    virtual String className() const { return String("ManipulatorControlInterface"); }
+    virtual Object& clone() const { return *NewObj ManipulatorControlInterface(*this); } 
+
+    virtual String        inputName(Int i) const
+      { return String("jointPosition")+base::intToString(i); }
+
+    virtual Real          getInput(Int i) const
+    { 
+      Assert(i < inputSize());
+      return robot->qa[mi][i];
+    }
+    
+    virtual const Vector& getInputs() const 
+    {
+      return robot->qa[mi];
+    }
+    
+    virtual String outputName(Int i) const
+    { 
+      return String("jointPosition")+base::intToString(i); 
+    }
+    
+    virtual void   setOutput(Int i, Real value)
+    {
+      Assert(i < outputSize());
+      robot->qa[mi][i]=value;
+    }
+    
+    virtual void   setOutputs(const Vector& values) 
+    {
+      Assert(values.size() == robot->qa[mi].size());
+      robot->qa[mi] = values;
+    }
+
+  protected:
+    ref<TestRobot> robot;
+    Int mi;
+  }; 
+
+
+
+
+  class ToolControlInterface : public BasicControlInterface
+  {
+  public:
+    ToolControlInterface(const String& name, const String& type, ref<TestRobot> robot, Int manipIndex, bool gripControl)
+      : BasicControlInterface(name, type, gripControl?1:0, gripControl?1:0),
+        gripControl(gripControl), robot(robot), mi(manipIndex) {}
+    
+    ToolControlInterface(const ToolControlInterface& tci)
+      : BasicControlInterface(tci), gripControl(tci.gripControl), 
+	robot(tci.robot), mi(tci.mi) {}
+
+    virtual String className() const { return String("ToolControlInterface"); }
+    virtual Object& clone() const { return *NewObj ToolControlInterface(*this); }
+
+    virtual Int           inputSize() const 
+    {
+      return (gripControl)?1:robot->tqa[mi].size();
+    }
+
+    virtual String        inputName(Int i) const
+      { return gripControl?String("toolProximity"):String("jointPosition")+base::intToString(i); }
+
+    virtual Real          getInput(Int i) const
+      { 
+	Assert(i < inputSize());
+	if (gripControl) 
+	  return (robot->toolProximity[mi]?1.0:0.0);
+	return robot->tqa[mi][i];
+      }
+
+    virtual const Vector& getInputs() const 
+    {
+      lastInputs.resize(inputSize());
+      for(Int i=0; i<lastInputs.size(); i++)
+	lastInputs[i] = getInput(i);
+      return lastInputs;
+    }
+
+    virtual Int    outputSize() const 
+    {
+      return (gripControl)?1:robot->tqa[mi].size();
+    }
+
+    virtual String outputName(Int i) const
+      { 
+	return gripControl?String("toolGrasp"):String("jointPosition")+base::intToString(i); 
+      }
+
+    virtual void   setOutput(Int i, Real value)
+      {
+	Assert(i < outputSize());
+	if (gripControl) {
+	  if (Math::equals(value,0)) {
+	    robot->toolGrasped[mi]=false;
+	    robot->tqa[mi].resize(0); // can't control an ungrasped tool
+	  }
+	  else
+	    if (robot->toolProximity[mi]) { // can only grasp when a tool is in proximity
+	      if (!robot->toolGrasped[mi]) {
+		robot->toolGrasped[mi]=true;
+		// set initial configuration to 0
+		robot->tqa[mi].reset( zeroVector(robot->tools[mi]->getKinematicChain().dof()) );
+	      }
+	    }
+	  return;
+	}
+	robot->tqa[mi][i]=value;
+      }
+
+  virtual void   setOutputs(const Vector& values) 
+    {
+      numOutputs = outputSize();
+      BasicControlInterface::setOutputs(values);
+    }
+
+  protected:
+    bool gripControl; ///< is this a ToolGripControl? (or a JointPositionControl)
+    ref<TestRobot> robot;
+    Int mi;
+  };
+
+
+
+
+  class PlatformControlInterface : public BasicControlInterface
+  {
+  public:
+    PlatformControlInterface(const String& name, const String& type, 
+			     ref<TestRobot> robot, bool mobilePlatform)
+      : BasicControlInterface(name, type,mobilePlatform?3:0,mobilePlatform?3:0),
+        robot(robot) {}
+
+    PlatformControlInterface(const PlatformControlInterface& pci)
+      : BasicControlInterface(pci), robot(pci.robot) {}
+
+    virtual String className() const { return String("PlatformControlInterface"); }
+    virtual Object& clone() const { return *NewObj PlatformControlInterface(*this); } 
+
+    virtual String        inputName(Int i) const
+    { return (i==0)?String("worldX"):( (i==1)?String("worldY"):String("worldTheta") ); }
+
+    virtual Real          getInput(Int i) const
+      { 
+	Assert(i < inputSize());
+	if (i==0) return robot->position.x;
+	if (i==1) return robot->position.y;
+	// extract rotation about Z-axis component
+	Vector3 xaxis(1,0,0);
+	Vector3 txaxis = robot->orientation.getQuat4().rotate(xaxis);
+	txaxis.z=0; txaxis.normalize(); // project into x-y plane
+	Real angle = Math::acos(xaxis.dot(txaxis));
+	///!!! check this works for a full circle - as acos(dot) is just the angle between vectors
+	return Math::normalizeAngle(angle);
+      }
+
+    virtual String outputName(Int i) const
+      { 
+	return (i==0)?String("worldX"):( (i==1)?String("worldY"):String("worldTheta") ); 
+      }
+
+    virtual void   setOutput(Int i, Real value)
+      {
+	Assert(i < outputSize());
+	if ((i==0)||(i==1)) {
+	  base::Point3 newpos( robot->position );
+	  if (i==0) newpos.x = value;
+	  if (i==1) newpos.y = value;
+	  robot->position = newpos;
+	}
+	else {
+	  base::Orient neworient( robot->orientation );
+	  // !!! for now we ignore the rotation components about y,z axes and
+	  //  just create a rot about z-axis by value
+	  neworient = base::Orient(base::Quat4(base::Vector3(0,0,1),value));
+	  robot->orientation = neworient;
+	}
+      }
+
+  protected:
+    ref<TestRobot> robot;
+  };
+
+  
+  
+  
+  class ProximitySensorInterface : public BasicControlInterface
+  {
+  public:
+    ProximitySensorInterface(const String& name, const String& type, 
+			     ref<TestRobot> robot, Int manipIndex)
+      : BasicControlInterface(name, type,4,0),
+        robot(robot), mi(manipIndex) {}
+
+    ProximitySensorInterface(const ProximitySensorInterface& psi)
+      : BasicControlInterface(psi), robot(psi.robot), mi(psi.mi) {}
+
+    virtual String className() const { return String("ProximitySensorInterface"); }
+    virtual Object& clone() const { return *NewObj ProximitySensorInterface(*this); } 
+
+    virtual String        inputName(Int i) const
+    {
+      return (i==0)?String("link"):String("xyz").substr(i-1,1);
+    }
+
+    virtual Real          getInput(Int i) const
+      { 
+	Assert(i < inputSize());
+	return 0;
+      }
+
+    virtual String outputName(Int i) const
+      { 
+	return String();
+      }
+
+    virtual void   setOutput(Int i, Real value)
+      {	Assert(i < outputSize()); }
+
+  protected:
+    ref<TestRobot> robot;
+    Int mi;
+  };
+
+};
+
+
+} // robot
+
+#endif

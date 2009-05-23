@@ -1,0 +1,118 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODECollidableBody 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODECOLLIDABLEBODY_
+#define _PHYSICS_ODECOLLIDABLEBODY_
+
+#include <physics/physics>
+
+#include <physics/CollidableBody>
+
+#include <ode/ode.h>
+
+
+namespace physics {
+
+
+class ODECollidableBody : virtual public CollidableBody
+{
+public:
+  ODECollidableBody(ref<const Shape> shape);
+  virtual ~ODECollidableBody();
+  
+  virtual String className() const { return String("ODECollidableBody"); }
+
+  // DynamicSpatial
+  virtual void setPosition(const Point3& x);
+  virtual void setOrientation(const Orient& orient);
+  virtual void setVelocity(const Vector3& v) { state->vel = v; }
+  virtual void setAngVelocity(const Vector3& w) { state->angVel = w; }
+
+  virtual Point3  getPosition() const;
+  virtual Orient  getOrientation() const;
+  virtual Vector3 getVelocity() const { return state->vel; }
+  virtual Vector3 getAngVelocity() const { return state->angVel; }
+  
+  virtual void saveState();
+  virtual void restoreState();
+
+  virtual Point3  getSavedPosition() const { return state->savedPos; }
+  virtual Orient  getSavedOrientation() const { return state->savedOrient; }
+  virtual Vector3 getSavedVelocity() const { return state->savedVel; }
+  virtual Vector3 getSavedAngVelocity() const { return state->savedAngVel; }
+  
+  virtual dGeomID getGeomID() const { return geomID; }
+  
+protected:
+  ODECollidableBody() {}
+  ODECollidableBody(ref<const Shape> shape, bool holdState) : CollidableBody(shape) { init(holdState); }
+  ODECollidableBody(const ODECollidableBody& cb) 
+    : CollidableBody(cb)
+  {
+    init(false);
+    if (cb.state) 
+      state = ref<BodyState>( dynamic_cast<BodyState*>(&cb.state->clone()) ); 
+  }
+
+  
+  dGeomID  geomID;  ///< ODE's geom ID (corresponding to shape - has pos/orient)
+  void createGeom(); ///< create ODE geom from Shape
+  
+  class BodyState : public base::ReferencedObject, public base::Cloneable
+  {
+  public:
+    BodyState() {}
+    BodyState(const BodyState& bs) 
+      : vel(bs.vel), angVel(bs.angVel),
+        savedPos(bs.savedPos), savedOrient(bs.savedOrient), savedVel(bs.savedVel), savedAngVel(bs.savedAngVel) {}
+        
+    virtual String className() const { return String("BodyState"); }
+    virtual Object& clone() const { return *NewObj BodyState(*this); }
+        
+    Vector3 vel;
+    Vector3 angVel;
+    
+    // saved state
+    Point3 savedPos;
+    Orient savedOrient;
+    Vector3 savedVel;
+    Vector3 savedAngVel;
+  };
+  
+  ref<BodyState> state;
+  
+  void init(bool holdState)
+  {
+    createGeom();
+    if (holdState) 
+      state = ref<BodyState>(NewObj BodyState());
+  }
+  
+};
+  
+  
+
+} // physics
+
+#endif

@@ -1,0 +1,60 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: MPPseudoInvSolver 1036 2004-02-11 20:48:55Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:48:55 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_MPPSEUDOINVSOLVER_
+#define _ROBOT_CONTROL_KINEMATICS_MPPSEUDOINVSOLVER_
+
+#include <robot/control/kinematics/kinematics>
+#include <base/ReferencedObject>
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// Solves a system Ax=b using the Moore-Penrose pseudo-inverse.
+/**
+ * (see IKOR v2.0 function CALC_PSEUDO)
+ */
+class MPPseudoInvSolver : public base::ReferencedObject
+
+{
+public:
+  MPPseudoInvSolver() {}
+
+  virtual String className() const { return String("MPPseudoInvSolver"); }
+  virtual Object& clone() const { return *NewObj MPPseudoInvSolver(*this); } 
+
+  virtual Vector solve(const Matrix& A, const Vector& b);
+
+protected:
+  MPPseudoInvSolver(const MPPseudoInvSolver& c) {}
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

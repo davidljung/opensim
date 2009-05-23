@@ -1,0 +1,58 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ConvexShape 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_CONVEXSHAPE_
+#define _PHYSICS_CONVEXSHAPE_
+
+#include <physics/physics>
+#include <physics/Shape>
+#include <base/Point3>
+#include <base/Vector3>
+
+
+namespace physics {
+
+
+class ConvexShape : virtual public Shape
+{
+public:
+  virtual ~ConvexShape() {}
+
+  virtual bool isConvex() const { return true; }
+
+  // Move this to an interface class  - or even just somewhow let each shape specify the
+  //  function by registering with a GJKCollisionModel upon CollisionModel creation !!!
+
+  // Support point of v - used by GJK collision algorithm
+  // [see "A fast procedure for computing the distance between complex
+  //       objects in three-dimensional space", E.G. Gilbert, D.W. Johnson
+  //       and S.S. Keerthi, IEEE Journal of Robotics and Automation, 4(2):193-203, 1988]
+  virtual gfx::Point3 support(const gfx::Vector3& v) const  = 0;
+
+};
+
+
+} // physics
+
+#endif

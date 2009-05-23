@@ -1,0 +1,86 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ReferenceOpVectorFormObjective 1036 2004-02-11 20:48:55Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:48:55 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_REFERENCEOPVECTORFORMOBJECTIVE_
+#define _ROBOT_CONTROL_KINEMATICS_REFERENCEOPVECTORFORMOBJECTIVE_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <robot/control/kinematics/Optimizer>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// Representation of an Optimizer::Objective function expressed in reference operational vector form.
+/**
+ * The paper below introduces an analytic optimization method where the objective function (Q)
+ *  is expressed in terms of a given reference operational vector dZr, as:
+ *  Q = | dZ(q,dq) - dZr |^2, where dZ(q,dq) = B(q)dq
+ * This class represents objective functions of this form.
+ *
+ * see "Resolving Kinematic Redundancy with Constraints 
+ * Using the FSP (Full Space Parameterization) Approach", Francois G. Pin & Faithlyn A. Tulloch,
+ * Proceedings of the 1996 IEEE International Conference on Robotics and Automation.
+ */
+class ReferenceOpVectorFormObjective : public Optimizer::Objective
+{
+public:
+  ReferenceOpVectorFormObjective() {}
+
+  virtual String className() const { return String("ReferenceOpVectorFormObjective"); }
+
+  virtual ObjectiveType getObjectiveType() const { return NonLinear; }
+  
+  virtual Real evaluate(const Vector& x, const Vector& a) const
+  { 
+    const Vector& dq(x);
+    Assert(B.size2() == dq.size());
+    Assert(dZr.size() == B.size1());
+
+    Vector tmp( B*dq - dZr );
+    return inner_prod(tmp,tmp); // return sum of squares of tmp
+ }
+
+  void          setB(const Matrix& B)    { this->B.reset(B); }
+  void          setdZr(const Vector& dZr){ this->dZr.reset(dZr); }
+  const Matrix& getB() const             { return B; }
+  const Vector& getdZr() const           { return dZr; }
+  
+				 
+protected:
+  Matrix B;
+  Vector dZr;
+				 
+};
+  
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

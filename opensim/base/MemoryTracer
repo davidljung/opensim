@@ -1,0 +1,242 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: MemoryTracer 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+  
+****************************************************************************/
+
+#ifndef _BASE_MEMORYTRACER_
+#define _BASE_MEMORYTRACER_
+
+#include <base/base>
+#include <string>
+
+
+namespace base {
+
+
+
+#ifdef DEBUG
+
+// if this is defined, memory is traced, otherwise the global new/delete operators are
+//  not overloaded
+//#define _TRACEMEMORY_
+
+// if this is defined and tracing is being used, the new and delete operators will output to stderr
+//#define TRACEOUTPUT
+
+// if this is defined and TRACEOUTPUT is defined, then new/delete will only output named allocations
+#define _NAMEDOUTPUTONLY_
+
+
+// if this is defined, extra integrity checks will be performed for memory overwrite
+// (these are very slow).
+#define _FULLINTEGRITYCHECK_ 1
+
+// if 1, a full memory check is performed on every call to new or delete
+// if 0, a check is never performed (except by excplict call to checkAllMemory())
+// if n, a full memory check is performed on every n'th call to new or delete
+#define _FULLCHECKFREQUENTY_ 100
+
+
+#endif
+
+
+
+
+  class MemoryTracer
+  {
+  public:
+    static void* allocate(int size, const std::string& name, bool isArray=false) throw(std::bad_alloc);
+    static bool release(void* address, bool isArray=false, int size = -1) throw(std::bad_alloc);
+    static bool validate(void *address, int size, const std::string& name) throw(std::bad_alloc);
+    static bool invalidate(void* address, int size) throw(std::bad_alloc);
+
+    static void* checkAddrRange(void* address, long typesize) throw(std::bad_alloc);
+    static bool checkAddr(void* address, void* reportAddr = 0, bool checkAllMemory = true) throw(std::bad_alloc);
+    static bool checkAllMemory() throw(std::bad_alloc);
+
+    static char* getName(void* addr);
+    static long  getOffset(void* addr);
+
+    static bool cleanup();
+    static void menu() throw(std::bad_alloc);
+    static void dump() ;
+    static void dumpNamed();
+    static void dumpDeallocated();
+    static void handleError() throw(std::bad_alloc);
+
+  protected:
+    static void Logerr(char* errstr);
+    static void entrylock();
+    static void exitunlock();
+    static int causefault();
+    static void fill() 
+    {
+      for(Int i=0; i<Filling; i++) 
+	prefill[i]  = postfill[i] = Filler;
+    }
+
+    static bool isOK() 
+    {
+      if (initialized != (Byte)Magic) { 
+	initialized = (Byte)Magic;
+	fill();
+	return true;
+      }
+#ifdef _FULLINTEGRITYCHECK_
+      for(Int i=0; i<Filling; i++) 
+	if ((prefill[i] != Filler) || (postfill[i] != Filler)) return false;
+#endif
+      return true;
+    }
+    
+    static const Byte Filling = 8;    // no of extra bytes to add before & after allocated memory 
+    static const Byte Filler = 0xea;  // byte placed in filling space for integrity check 
+    static const int Magic = 13456;   // must be < 16384 
+    static const int External = 32768;// mask for marking mem as external 
+    
+    static const int IsArray;
+    static const int IsNotArray;
+    
+    struct AllocEntry {
+      bool isExternal() const { return (magic & External); }
+      void setExternal() { magic = (External | Magic); }
+      void clearExternal() { magic = Magic; }
+      void setMagic() { magic = Magic; }
+      bool isMagic() const { return ((magic&Magic) == Magic); }
+      bool isNotMagic() const { return !isMagic(); }
+      
+      void fill() 
+      {
+	for(Int i=0; i<Filling; i++) 
+	  prefill[i]  = postfill[i] = Filler;
+      }
+
+      bool isOK() const 
+      {
+#ifdef _FULLINTEGRITYCHECK_
+	for(Int i=0; i<Filling; i++) 
+	  if ((prefill[i] != Filler) || (postfill[i] != Filler)) return false;
+      if ((arrayFlag != MemoryTracer::IsArray) && (arrayFlag != MemoryTracer::IsNotArray)) return false;
+#endif
+	if (size<=0) return false;
+	if (isNotMagic()) return false;
+	return true;
+      }
+
+      bool isArray() { return arrayFlag == MemoryTracer::IsArray; }
+      void setIsArray(bool isAnArray) { arrayFlag = isAnArray?MemoryTracer::IsArray:MemoryTracer::IsNotArray; }
+      
+      Byte prefill[Filling]; // Filler for check integrity of list
+      int size;
+      Byte* address;
+      int arrayFlag;
+      char* name;
+      int magic;
+
+      AllocEntry* prev;
+      AllocEntry* next;
+
+      Byte postfill[Filling]; // Filler for check integrity of list
+    };
+
+    
+    class AllocList
+    {
+    public:
+      void push_front(AllocEntry* e);
+      void push_back(AllocEntry* e);
+      AllocEntry* pop_back();
+      AllocEntry* pop_front();
+      void remove(AllocEntry* e);
+
+      AllocEntry* front() const { return head; }
+      AllocEntry* back() const { return tail; }
+      int size() const { return len; }
+
+      AllocEntry* find(void* address, AllocEntry* from = 0) const;
+
+    protected:
+      // NB: Because new/delete may be called before the global construction of 
+      //  static AllocList members of MemoryTracer, we rely on the following
+      //  fields to have been initialized to 0 by the compiler!
+      AllocEntry* head; // front
+      AllocEntry* tail; // back
+      Int len;
+    };
+
+    static const int DList_Max = 1000;
+
+    static Byte prefill[Filling]; // Filler for integrity check
+
+    static Byte initialized;
+    static bool cleanedUp;
+    static Int entry;
+    static Int fullCheckCounter;
+    static LInt allocCount;
+    static LInt deallocCount;
+    static LInt checkCount;
+
+    static AllocList mlist; // the allocated memory list
+    static AllocList dlist; // list of memory allocated and then deallocated (so we can catch double delete's)
+
+    static Byte postfill[Filling]; // Filler for integrity check
+  };
+
+
+  void stressTestAllocator();
+
+
+} // base
+
+
+
+#ifdef _TRACEMEMORY_
+void* operator new(size_t size) throw (std::bad_alloc);
+void* operator new[](size_t size) throw (std::bad_alloc);
+void* operator new(size_t size, const std::string& name) throw (std::bad_alloc);
+void* operator new[](size_t size, const std::string& name) throw (std::bad_alloc);
+void operator delete(void* p) throw();
+void operator delete[](void* p) throw();
+
+//#define NewObj new(std::string(__FILE__)+":"+base::intToString(__LINE__))
+//#define NewNamedObj(name) new(std::string(__FILE__)+":"+base::intToString(__LINE__)+":"+name)
+#define NewObj new
+#define NewNamedObj(name) new
+#define DeleteObj delete
+
+#else
+
+inline void* operator new(size_t size, const std::string& name) throw (std::bad_alloc)
+{ return ::operator new(size); }
+inline void* operator new[](size_t size, const std::string& name) throw (std::bad_alloc)
+{ return ::operator new[](size); }
+
+#define NewObj new
+#define NewNamedObj(name) new
+#define DeleteObj delete
+
+#endif
+
+
+
+#endif
+

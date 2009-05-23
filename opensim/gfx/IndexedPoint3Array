@@ -1,0 +1,74 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: IndexedPoint3Array 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_INDEXEDPOINT3ARRAY_
+#define _GFX_INDEXEDPOINT3ARRAY__
+
+#include <base/Point3>
+
+#include <gfx/gfx>
+#include <gfx/Triangle3>
+#include <gfx/TriangleContainer>
+
+
+
+namespace gfx {
+
+
+class IndexedPoint3Array : public base::Object
+{
+public:
+  IndexedPoint3Array();
+  IndexedPoint3Array(const array<base::Point3>& a);
+  IndexedPoint3Array(const TriangleContainer& a);
+  IndexedPoint3Array(const IndexedPoint3Array& ipa);
+  virtual ~IndexedPoint3Array();
+
+  virtual String className() const { return String("IndexedPoint3Array"); }
+
+  Int addPoint(const base::Point3& p);
+  Int indexOf(const base::Point3& p) throw(std::invalid_argument);
+
+  const base::Point3& operator[](Int i) const
+    { return points[index[i]]; }
+
+  const base::Point3& operator()(Int i) const
+    { return points[index[i-1]]; }
+
+  Int size() const { return index.size(); }
+
+  const array<base::Point3>& getPointArray() const;
+  const array<Int>&          getIndexArray() const;
+
+protected:
+  bool findPoint(const base::Point3& p, Int& index);
+
+  array<base::Point3> points;
+  array<Int>          index;
+};
+
+
+} // gfx
+
+#endif

@@ -1,0 +1,63 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: VEntry 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_VENTRY_
+#define _BASE_VENTRY_
+
+#include <base/base>
+#include <base/ReferencedObject>
+#include <base/PathName>
+
+
+namespace base {
+
+
+class VEntry : public ReferencedObject
+{
+public:
+  virtual ~VEntry() {}
+
+  virtual bool operator==(const VEntry& e) const { return pathname==e.pathname; }
+
+  virtual bool isDirectory() const = 0;
+  virtual const PathName path() const { return pathname.path(); }
+  virtual const PathName name() const { return pathname.name(); }
+  virtual const PathName pathName() const { return pathname; }
+  
+protected:  
+  PathName pathname;
+
+  VEntry() {}
+  VEntry(const PathName& pn) : pathname(pn) {}
+  VEntry(const VEntry& e) : pathname(e.pathname) {}
+  virtual VEntry& operator=(const VEntry& e) { pathname=e.pathname; return *this; }
+
+  friend class VDirectory;
+  friend class VFile;
+  friend class VFileSystem;
+};
+
+} // base
+
+#endif

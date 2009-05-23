@@ -1,0 +1,132 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: debugtools 1162 2004-09-29 17:54:46Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-09-29 13:54:46 -0400 (Wed, 29 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_DEBUGTOOLS_
+#define _BASE_DEBUGTOOLS_
+
+// Debug macros
+//  Use these to output debugging information
+
+// Example uses:
+//
+//  setDebugOutputID(JFKE); // typically in main()
+//  Debugln(JFKE,"This is " << getName()); // will output
+//  Debugln(Tmp, "this is unimportant");   // will not output
+//  UDebug("this text will always appear -");   // will Unconditionally output regardless of current debug output ID
+//  Debugcln(DebugIKOR,"a continuation.");      // will continue the prev line (will not output method names etc. regardless of the value of DEBUG_INCLUDE_CALLER_NAME)
+//
+// It is also possible to add more valid output id's. e.g.:
+//
+//  setDebugOutputID(JFKE);
+//  addDebugOutputID(IKOR);
+//  Debugln(IKOR, Matrix() << " is zero"); // will output
+//
+// NB: None of these will output anything (or even evaluate the output) if DEBUG is undefined.
+
+
+
+
+// Only use All & None in setDebugOutputID(), all others in Debug()
+//  In the calls the _Debug_ prefix is dropped.
+enum DebugID {
+  _Debug_All             = 0xffffffff,
+  _Debug_None            = 0,
+  _Debug_Tmp             = 1,
+  _Debug_DJ              = 1 << 1,
+  _Debug_LL              = 1 << 2,
+  _Debug_Ser             = 1 << 3,
+  _Debug_Base            = 1 << 4,
+  _Debug_Gfx             = 1 << 5,
+  _Debug_Physics         = 1 << 6,
+  _Debug_Collision       = 1 << 7,
+  _Debug_Robot           = 1 << 8,
+  _Debug_RobotSim        = 1 << 9,
+  _Debug_RobotControl    = 1 << 10,
+  _Debug_FSP             = 1 << 11,
+  _Debug_IKOR            = 1 << 12,
+  _Debug_JFKE            = 1 << 13
+};
+
+
+#ifdef DEBUG
+extern base::Int _debugID;
+#define setDebugOutputID(id) { _debugID = _Debug_##id; }
+#define addDebugOutputID(id) { _debugID |= _Debug_##id; }
+#else
+#define setDebugOutputID(id) {}
+#define addDebugOutputID(id) {}
+#endif
+
+
+#ifdef DEBUG
+#undef Debug
+
+#ifdef DEBUG_INCLUDE_CALLER_NAME
+// include the method or function that invoked Debug() in the message string
+#ifndef __GNUC__
+#define _DEBUG_CALLER_NAME base::className(typeid(*this)) << "::" << std::string(__func__)+" -- "
+#else
+// gcc has a nicer __PRETTY_FUNCTION__ builtin
+#define _DEBUG_CALLER_NAME std::string(__PRETTY_FUNCTION__)+" -- "
+#endif
+#else
+#define _DEBUG_CALLER_NAME ""
+#endif
+
+// for use inside methods
+#define UDebug(o) { base::_Debug << _DEBUG_CALLER_NAME << o; }
+#define UDebugln(o) { base::_Debug << _DEBUG_CALLER_NAME << o << std::endl; }
+#define Debug(id,o) { if (_Debug_##id & _debugID) UDebug(o); }
+#define Debugln(id,o) { if (_Debug_##id & _debugID) UDebugln(o); }
+
+// for use inside functions
+#define UDebugf(o) { base::_Debug << std::string(__func__)+" -- " << o; }
+#define UDebugfln(o) { base::_Debug << std::string(__func__)+" -- " << o << std::endl; }
+#define Debugf(id,o) { if (_Debug_##id & _debugID) UDebugf(o); }
+#define Debugfln(id,o) { if (_Debug_##id & _debugID) UDebugfln(o); }
+// a continuation of the previous output line - doesn't output any prefix (name etc. regardless of DEBUG_INCLUDE_CALLER_NAME)
+#define Debugc(id,o) { if (_Debug_##id & _debugID) { base::_Debug << o; } }
+#define Debugcln(id,o) { if (_Debug_##id & _debugID) { base::_Debug << o << std::endl; } }
+
+#define Unimplemented { Logln("unimplemented"); throw std::runtime_error(Exception("unimplemented")); }
+
+#else
+// DEBUG not defined
+#define UDebug(o) {}
+#define UDebugln(o) {}
+#define UDebugf(o) {}
+#define UDebugfln(o) {}
+#define Debug(id,o) {}
+#define Debugln(id,o) {}
+#define Debugf(id,o) {}
+#define Debugfln(id,o) {}
+#define Debugc(id,o) {}
+#define Debugcln(id,o) {}
+
+#define Unimplemented { throw std::runtime_error(Exception("The program attempted to perform a function that has not yet been implemented by the developers.  Please file a bug report. Sorry for the inconvenience.")); }
+
+#endif
+
+
+#endif

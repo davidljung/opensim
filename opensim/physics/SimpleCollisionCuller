@@ -1,0 +1,64 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SimpleCollisionCuller 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_SIMPLECOLLISIONCULLER_
+#define _PHYSICS_SIMPLECOLLISIONCULLER_
+
+#include <physics/physics>
+
+#include <physics/CollisionCuller>
+#include <physics/CollidableBody>
+
+
+namespace physics {
+
+/// Simple Collider that only culls Collidable pairs that have been disabled
+///  (also flattens a heirarchy of Collidable/CollidableGroups into a flat
+///  set of CollidableBodys)
+/// i.e. listeners will only be called with CollidableBodys, no CollidableGroups will be passed
+///   through - instead all combinations of pairs of CollidableBodys from any group will be
+///   passed. This is useful to pass to a CollisionDetector, which only accepts CollidableBodys.
+class SimpleCollisionCuller : public CollisionCuller
+{
+public:
+  SimpleCollisionCuller() {}
+  virtual ~SimpleCollisionCuller() {}
+  
+  virtual String className() const { return String("SimpleCollisionCuller"); }
+
+  virtual ref<CollidableGroup> createCollidableGroup() const
+  { return ref<CollidableGroup>(NewObj CollidableGroup()); }
+
+  virtual void collide(ref<const Collidable> collidable1, ref<const Collidable> collidable2);
+  virtual void collide(ref<const Collidable> collidable) { Collider::collide(collidable); }
+  
+protected:
+  SimpleCollisionCuller(const SimpleCollisionCuller& cc) : CollisionCuller(cc) {}
+  
+};
+
+
+} // physics
+
+#endif

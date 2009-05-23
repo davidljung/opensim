@@ -1,0 +1,20 @@
+project robot
+  : usage-requirements
+                 <library>/base//os_base
+  : requirements
+                 <library>/base//os_base
+  ;
+
+lib os_robot :  
+                AggregateControlInterface.cpp
+                KinematicChain.cpp
+                JFKengine.cpp
+                NumericKinematicEvaluator.cpp
+                PlatformDescription.cpp
+                ManipulatorDescription.cpp
+                ToolDescription.cpp
+                RobotDescription.cpp
+                Robot.cpp
+                TestRobot.cpp
+                ManipulatorJointTrajectory.cpp
+          ;                 

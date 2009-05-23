@@ -1,0 +1,79 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODEContactConstraint 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODECONTACTCONSTRAINT_
+#define _PHYSICS_ODECONTACTCONSTRAINT_
+
+#include <physics/physics>
+#include <physics/ODEConstraint>
+#include <physics/ContactConstraint>
+
+namespace physics {
+
+class ConstraintGroup;
+
+
+class ODEContactConstraint : virtual public ContactConstraint, public ODEConstraint
+{
+public:
+  ODEContactConstraint(); 
+  virtual ~ODEContactConstraint();
+
+  virtual String className() const { return String("ODEContactConstraint"); }
+
+  virtual void attach(ref<Body> body1, ref<Body> body2); ///< attach this constraint to two bodies
+  virtual ref<Body>       getBody(Int index);            ///< get Body (index is 1 or 2); returns null if unattached
+  virtual ref<const Body> getBody(Int index) const;
+
+  virtual void setContactPosition(const Point3& pos);    ///< set contact point (in body1 frame)
+  virtual void setContactNormal(const Vector3& normal);  ///< set contact normal (in body1 frame)
+  virtual void setContactDepth(Real depth);              ///< set contact depth
+ 
+  virtual void setParameter(const String& name, Real value, Int dof=1)
+    { ODEConstraint::setParameter(name, value, dof); }
+
+protected:
+  virtual void onConstraintGroupAdd(ref<ConstraintGroup> g); ///< called by ConstraintGroup::addConstraint()
+
+  inline void checkAddedAndAttached() const
+  {
+    Assertm(!((body1 == 0) && (body2 == 0)), "ContactConstraint is attached to Bodies"); //!!! check cond.
+    Assertm(group!=0,"ContactConstraint is member of ConstraintGroup");
+  }
+
+  ref<Body> body1;
+  ref<Body> body2;
+
+  bool addedToGroup;
+  
+  dContact oc;
+  Point3 position;
+  Vector3 normal;
+  Real depth;
+};
+
+
+} // physics
+
+#endif

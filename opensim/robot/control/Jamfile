@@ -1,0 +1,13 @@
+project robot_control
+  : usage-requirements
+                 <library>/robot//os_robot
+  : requirements
+                 <library>/robot//os_robot
+  ;
+
+lib os_robot_control :
+                ControllableAdaptor.cpp
+                ManipulatorPIDPositionController.cpp
+  ;
+ 
+

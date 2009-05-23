@@ -1,0 +1,86 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: PositionableOrientable 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_POSITIONABLEORIENTABLE_
+#define _PHYSICS_POSITIONABLEORIENTABLE_
+
+#include <physics/physics>
+
+#include <physics/Positionable>
+#include <physics/Orientable>
+
+#include <base/Transform>
+
+
+
+namespace physics {
+
+/// interface for things that can be positioned and oriented in 3D space
+class PositionableOrientable : public Positionable, public Orientable
+{
+public:
+  PositionableOrientable() {}
+  PositionableOrientable(const PositionableOrientable& po) { setConfiguration(po.getConfiguration()); }
+
+  virtual PositionableOrientable& operator=(const PositionableOrientable& po) { setConfiguration(po.getConfiguration()); return *this; }
+  
+  virtual void setPositionOrientation(const Point3& pos, const Orient& orient)
+  {
+    setConfiguration( base::Transform(pos, orient) );
+  }
+  
+  virtual void setConfiguration(const base::Transform& configuration)
+  {
+    setPosition( configuration.getTranslation() );
+    setOrientation( configuration.getRotation() );
+  }
+  
+  
+  virtual base::Transform getConfiguration() const 
+  {
+    return base::Transform( getPosition(), getOrientation() );
+  }
+  
+  
+  // convenience methods for 2D manipulations
+  
+  /// set the 2D (x,y,theta) position (theta is rot. angle about Z-axis)
+  virtual void setPosition2D(const base::Point2& p, Real theta);
+  
+  /// get the 2D (x,y) position 
+  virtual base::Point2 getPosition2D() const
+  {
+    Point3 pos( getPosition() );
+    return Point2(pos.x, pos.y);
+  }
+  
+  /// get the 2D angle theta (rot. angle about Z-axis)
+  Real getOrientation2D() const;
+  
+};
+  
+
+} // physics
+
+#endif

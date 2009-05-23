@@ -1,0 +1,104 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: LODTerrain 1139 2004-09-28 21:01:10Z jungd $
+
+****************************************************************************/
+
+#ifndef _PHYSICS_LODTERRAIN_
+#define _PHYSICS_LODTERRAIN_
+
+#include <physics/physics>
+#include <physics/Terrain>
+#include <gfx/CLODTerrainRenderer>
+#include <gfx/CLODTerrainDrawable>
+
+#include <osg/Geode>
+
+
+namespace physics {
+
+
+class LODTerrain : virtual public Terrain
+{
+public:
+  LODTerrain();
+  LODTerrain(const LODTerrain& t);
+  virtual ~LODTerrain();
+
+  virtual String className() const { return String("LODTerrain"); }
+
+  // Terrain
+  virtual void loadMap(ref<base::VFile> mapfile) throw(std::invalid_argument, base::io_error);
+  virtual void loadHeightField(ref<HeightField> heightfield) throw(std::invalid_argument, base::io_error);
+
+  virtual void setHeight(Real x, Real y, Real h) throw(std::out_of_range);
+  virtual Real getHeight(Real x, Real y) const   throw(std::out_of_range);
+  virtual base::Dimension3 getDimension() const;
+
+  // Shape
+  virtual base::Object& clone() const { return *NewNamedObj(className()) LODTerrain(*this); }
+  virtual BoundingBox    getBoundingBox() const;
+  virtual BoundingSphere getBoundingSphere() const;
+  virtual const MassProperties& getMassProperties(ref<const Material> material) const;
+
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const Point3& p) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Segment3& s) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Triangle3& tri) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Quad3& q) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t1, ref<const Shape> s, const base::Transform& t2) const;
+
+  // CollisionModelProvider
+  virtual ref<CollisionModel> getCollisionModel(CollisionModel::CollisionModelType modelType) const;
+
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Attributes visualAttributes=0) const;
+
+  virtual void serialize(base::Serializer& s);
+
+  // Externalizable
+  virtual bool formatSupported(String format, Real version = 1.0, ExternalizationType type = IO) const;
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+private:
+  osg::ref_ptr<gfx::CLODTerrainRenderer> renderer;
+  osg::ref_ptr<gfx::CLODTerrainDrawable> drawable;
+
+  mutable bool massPropertiesCached;
+  mutable Real density;
+  mutable MassProperties massProperties;
+
+  mutable Visual::Attributes attributes;
+  mutable ref_ptr<osg::Node> node;
+
+  mutable ref<CollisionModel> collisionModel;
+  mutable CollisionModel::CollisionModelType modelType;
+
+  mutable bool boundsCached;
+  mutable BoundingBox    boundingBox;
+  mutable BoundingSphere boundingSphere;
+
+  void computeBounds() const;
+};
+
+
+} // physics
+
+#endif

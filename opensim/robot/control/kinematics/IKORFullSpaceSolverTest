@@ -1,0 +1,75 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: IKORFullSpaceSolverTest 1078 2004-07-28 19:35:19Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-07-28 15:35:19 -0400 (Wed, 28 Jul 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_IKORFULLSPACESOLVERTEST_
+#define _ROBOT_CONTROL_KINEMATICS_IKORFULLSPACESOLVERTEST_
+
+#include <cppunit/extensions/HelperMacros.h>
+
+#include <base/Matrix>
+#include <robot/control/kinematics/IKORFullSpaceSolver>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+class IKORFullSpaceSolverTest : public CppUnit::TestFixture
+{
+  static const Int numOfTests = 4;
+
+  CPPUNIT_TEST_SUITE( IKORFullSpaceSolverTest );
+
+  CPPUNIT_TEST( testByHandCase1 );
+  CPPUNIT_TEST( testSpecialCase1 );
+  CPPUNIT_TEST( testSpecialCase2 );
+  CPPUNIT_TEST( testEnduranceExample );
+
+  CPPUNIT_TEST_SUITE_END();
+
+protected:
+  ref<IKORFullSpaceSolver> fsp;
+
+public:
+  IKORFullSpaceSolverTest();
+
+  int countTestCases () const { return numOfTests; }
+
+  void setUp();
+  void tearDown();
+
+  void testByHandCase1();
+  void testSpecialCase1();
+  void testSpecialCase2();
+  void testEnduranceExample();
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

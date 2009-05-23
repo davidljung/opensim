@@ -1,0 +1,90 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: BoundingBox 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+  
+****************************************************************************/
+
+#ifndef _PHYSICS_BOUNDINGBOX_
+#define _PHYSICS_BOUNDINGBOX_
+
+#include <physics/physics>
+
+#include <base/Dimension3>
+#include <base/Transform>
+
+
+namespace physics {
+
+
+class BoundingBox
+{
+public:
+  BoundingBox() {}
+  BoundingBox(const BoundingBox& bb) 
+    : center(bb.center), extent(bb.extent) {}
+  BoundingBox(const base::Point3& lower, const base::Point3& upper)
+    { setExtents(lower,upper); }
+  ~BoundingBox() {}
+  
+  base::Point3 lower() const { return center-extent; }
+  base::Point3 upper() const { return center+extent; }
+
+
+  void setExtents(const base::Point3& lower, const base::Point3& upper)
+    { extent = (upper-lower)/2.0; center = lower+extent; }
+
+  void setCenter(const base::Point3& center) { this->center=center; }
+  void setDimension(const base::Dimension3& dim) { extent = dim/2.0; }
+  base::Dimension3 getDimension() const { return extent*2.0; }
+
+  void setEmpty() {
+    center=base::Point3();
+    extent=base::Vector3(-consts::Infinity,-consts::Infinity,-consts::Infinity);
+  }
+    
+  void enclose(const BoundingBox& a, const BoundingBox& b);
+  void include(const base::Point3& p);
+  void include(const BoundingBox& bb) { enclose(*this, bb); }
+
+  /// take axis-aligned box represented by *this and transform it by t, yielding a
+  ///  non-axis-aliigned box.  *this becomes a new axis-aligned box that encloses the non-aligned box.
+  void transform(const base::Transform& t);
+  
+  // NB: half dimension of enclosing cube
+  Real size() const { return Math::maximum(Math::maximum(extent.x,extent.y),extent.z); }
+
+  Int longestAxis() const { return extent.largestAxis(); }
+
+  static bool intersect(const BoundingBox& a, const BoundingBox& b) {
+    return (Math::abs(a.center.x - b.center.x) <= (a.extent.x + b.extent.x)) &&
+      (Math::abs(a.center.y - b.center.y) <= (a.extent.y + b.extent.y)) &&
+      (Math::abs(a.center.z - b.center.z) <= (a.extent.z + b.extent.z));
+  }
+
+private:
+  base::Point3 center;
+  base::Vector3 extent;  // 1/2 dimension
+};
+
+
+} // math
+
+#endif

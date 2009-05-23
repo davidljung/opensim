@@ -1,0 +1,145 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Referenced 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_REFERENCED_
+#define _BASE_REFERENCED_
+
+#include <iostream>
+
+namespace base {
+
+/** Base class for intrusively referenced counted objects.
+    Used by class ref */
+class Referenced
+{
+  
+public:
+  Referenced() 
+    : _refCount(0), onUnreferenceEnabled(false)
+#ifdef DEBUG
+      ,_markedForDestruction(false)
+#endif
+  {
+#ifdef DEBUG
+    // check that *this is not allocated on the stack
+    //  (assumes stack is above heap in process vm space, and stack grows down)
+    int onstack;
+    if ( ((void*)this) > &onstack)
+      throw std::runtime_error(Exception("Referenced object allocated on the stack! (only Heap allocation allowed)"));
+#endif
+    //if (MemoryTracer::getName((void*)this) != 0) { Logln("Initialized " << MemoryTracer::getName((void*)this) << "+" << base::MemoryTracer::getOffset((void*)this) << " ptr " << ((const void*)this) << " to " << _refCount); }
+  }
+      
+  Referenced(const Referenced& c) 
+    : _refCount(0), onUnreferenceEnabled(c.onUnreferenceEnabled)
+#ifdef DEBUG
+      ,_markedForDestruction(false)
+#endif
+  {
+    //if (MemoryTracer::getName((void*)this) != 0) { Logln("Initialized " << MemoryTracer::getName((void*)this) << "+" << base::MemoryTracer::getOffset((void*)this) << " ptr " << ((const void*)this) << " to " << _refCount); }
+  }  
+
+  /** Increment the reference count by one, indicating that 
+      this object has another pointer which is referencing it.*/
+  inline void reference() const 
+  {
+    ++_refCount;
+    //if (MemoryTracer::getName((void*)this) != 0) { Logln("Incremented " << MemoryTracer::getName((void*)this) << "+" << base::MemoryTracer::getOffset((void*)this) << " ptr " << ((const void*)this) << " to " << _refCount); }
+#ifdef DEBUG
+    if (_markedForDestruction) {
+      std::cerr << "Warning: Object has been re-referenced() after being unreferenced() for the last time (deletion signalled)\n";
+    }
+#endif
+  }
+
+
+  /** Decrement the reference count by one, indicating that 
+      a pointer to this object is referencing it.  If the
+      refence count goes to zero, it is assumed that this object
+      is nolonger referenced and is automatically deleted.*/
+  inline bool unreference() const 
+    { 
+      --_refCount; 
+      if (onUnreferenceEnabled) 
+	onUnreference();
+
+      //if (MemoryTracer::getName((void*)this) != 0) { Logln("Decremented " << MemoryTracer::getName((void*)this) << "+" << base::MemoryTracer::getOffset((void*)this) << " ptr " << ((const void*)this) << " to " << _refCount); }
+      if (_refCount<=0) { 
+#ifdef DEBUG
+	if (_refCount < 0) {
+	  std::cerr << "Object has been unreferenced() too many times!\n";
+	  throw std::runtime_error(Exception("Object has been unreferenced() too many times!"));
+	}
+	else {
+	  if (_markedForDestruction) {
+	    return false; // don't destroy twice!
+	  }
+	  else {
+	    _markedForDestruction = true;
+	    //if (MemoryTracer::getName((void*)this) != 0) { Logln("Marked " << MemoryTracer::getName((void*)this) << "+" << base::MemoryTracer::getOffset((void*)this) << " ptr " << ((const void*)this) << " for deletion"); }
+	    return true; // signal caller to delete us
+	  }
+	}
+#else
+	return true; // signal caller to delete us
+#endif
+      } // _refCount<=0
+      return false;
+    }
+
+  /** Return the number pointers currently referencing this object. */
+  inline const int referenceCount() const { return _refCount; }
+
+  /** If enabled, each call to unreference() will also call virtual method onUnreference() */
+  void enableOnUnreferenceCall(bool enabled) { onUnreferenceEnabled=enabled; }
+
+  /** Called by unreference() if enabled via enableOnUnreferenceCall(true).  
+   *  Typically overridden in subclasses that wish to know about unreference() calls - for example
+   *  to handle manually breaking cyclic references
+   */
+  virtual void onUnreference() const {}
+
+
+  
+  virtual ~Referenced() 
+  {
+#ifdef DEBUG
+    if (_refCount > 0) {
+      std::cerr << "Object has been destructed with outstanding references.\n";
+      throw std::runtime_error(Exception("Object has been destructed with outstanding references."));
+    }
+#endif
+  }
+  
+protected:
+  mutable int _refCount;
+  bool onUnreferenceEnabled;
+#ifdef DEBUG
+  mutable bool _markedForDestruction; ///< true if _refCount has dropped to 0 after being non-zero
+#endif
+};
+
+};
+
+#endif

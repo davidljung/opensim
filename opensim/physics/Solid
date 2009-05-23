@@ -1,0 +1,108 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Solid 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_SOLID_
+#define _PHYSICS_SOLID_
+
+#include <physics/physics>
+
+#include <base/ref>
+#include <gfx/Visual>
+
+#include <physics/Body>
+#include <physics/Material>
+#include <physics/MassProperties>
+#include <physics/CollidableBody>
+#include <physics/CollidableProvider>
+
+#include <osg/MatrixTransform>
+#include <osg/Node>
+
+
+namespace physics {
+
+
+class Solid : public Body, public gfx::Visual, public CollidableProvider
+{
+public:
+  Solid(const Solid& s);
+  virtual ~Solid();
+
+  virtual String className() const { return String("Solid"); }
+
+  virtual void setName(const String& name) { base::Named::setName(name); }
+
+  virtual MassProperties massProperties() const;
+  virtual ref<const Material> getMaterial() const { return material; }
+
+  virtual void setEnabled(bool enable) = 0;
+  virtual bool isEnabled() const = 0;
+
+  // Force/Torque accumulator functions
+  //  (accumulated forces are zero'd before each step)
+  virtual void addForce(const Vector3& f) = 0;
+  virtual void addTorque(const Vector3& t) = 0;
+  virtual void addRelForce(const Vector3& f) = 0;
+  virtual void addRelTorque(const Vector3& t) = 0;
+  virtual void addForceAtPos(const Vector3& f, const Point3& p) = 0;
+  virtual void addForceAtRelPos(const Vector3& f, const Point3& p) = 0;
+  virtual void addRelForceAtPos(const Vector3& f, const Point3& p) = 0;
+  virtual void addRelForceAtRelPos(const Vector3& f, const Point3& p) = 0;
+
+  virtual Vector3 getForce() const = 0;
+  virtual Vector3 getTorque() const = 0;
+
+  
+  // CollidableProvider
+  static const CollidableProvider::CollidableFlag SolidNotConnected = 1;
+  /// create CollidableBody (not connected to Solid if flags contains SolidNotConnected - i.e. not SolidConnectedCollidableBody)
+  virtual ref<Collidable> createCollidable(CollidableFlags flags = 0) { return createCollidable(getShape(), flags); }
+  virtual ref<Collidable> createCollidable(ref<const Shape> collisionShape, CollidableFlags flags = 0) = 0;
+
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Visual::Attributes visualAttributes=0) const;
+
+protected:
+  Solid() {}
+  Solid(ref<const Shape> shape, ref<const Material> material);
+
+  virtual void updateVisual(); ///< update the visual to the current position & orientation state (does nothing if no Visual requested)
+
+  ref<const Material> material;
+  
+  mutable Visual::Attributes attributes;
+  mutable ref_ptr<osg::Node> node;
+
+  // !!! maybe this should be an osg::PositionAttitudeTransform instead??
+  mutable osg::MatrixTransform* worldTransform; ///< transforms visual to current solid position/orientation
+
+  friend class SolidSystem;
+
+};
+
+
+} // physics
+
+#endif

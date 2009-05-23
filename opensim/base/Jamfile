@@ -1,0 +1,67 @@
+.ext_dir = ../../../external ;
+
+project base
+  : usage-requirements <include>. 
+#If you use base header, You'll also need the headers of OSG, Xerces & CPPUnit
+                       <include>$(.ext_dir)/osg/include
+                       <include>$(.ext_dir)/xerces/include
+                       <include>$(.ext_dir)/cppunit/include
+                       <library>..//xercesc
+                       <library>..//cppunit
+
+#similarly, base needs them itself
+  : requirements       <include>$(.ext_dir)/osg/include
+                       <include>$(.ext_dir)/xerces/include
+                       <include>$(.ext_dir)/cppunit/include
+                       <library>..//xercesc
+                       <library>..//cppunit
+  ;
+
+lib os_base : 
+                        base.cpp 
+                        debugtools.cpp	
+                        BaseTest.cpp
+                        Object.cpp
+                        SmallObj.cpp
+                        MemoryTracer.cpp
+                        MD5.cpp
+                        Singleton.cpp
+                        Vector3.cpp
+                        Matrix3.cpp
+                        Matrix4.cpp
+                        Quat4.cpp
+                        Orient.cpp
+                        OrientTest.cpp
+                        Transform.cpp
+                        Path.cpp
+                        WaypointPathRep.cpp
+                        ParametricPathRep.cpp
+                        Trajectory.cpp
+                        WaypointTrajectoryRep.cpp
+                        ParametricTrajectoryRep.cpp
+                        Math.cpp
+                        MathTest.cpp
+                        SVD.cpp
+                        Time.cpp
+                        Cache.cpp
+                        Serializable.cpp
+                        Serializer.cpp
+                        BinarySerializer.cpp
+                        SimpleXMLSerializer.cpp
+                        Externalizable.cpp
+                        Externalizer.cpp
+                        Application.cpp
+                        PathName.cpp
+                        StdFileSystem.cpp
+                        VDirectory.cpp
+                        Directory.cpp
+                        File.cpp
+                        CacheDirectory.cpp
+                        CacheFile.cpp
+                        EventListenerList.cpp
+                        ResourceCache.cpp
+                        Universe.cpp
+                        Simulatable.cpp
+                        Expression.cpp
+                        CosExpression.cpp
+  ;

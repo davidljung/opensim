@@ -1,0 +1,140 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODESolidSystem 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.12 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+  
+****************************************************************************/
+
+#ifndef _PHYSICS_ODESOLIDSYSTEM_
+#define _PHYSICS_ODESOLIDSYSTEM_
+
+#include <base/reflist>
+#include <physics/physics>
+#include <physics/SolidSystem>
+#include <physics/CollidableGroup>
+#include <physics/PotentialCollisionListener>
+
+#include <ode/ode.h>
+
+
+namespace physics {
+
+
+class ODESolidSystem : public SolidSystem, public PotentialCollisionListener
+{
+public:
+  ODESolidSystem();
+  ODESolidSystem(const ODESolidSystem& ss);
+  virtual ~ODESolidSystem();
+  
+  virtual String className() const { return String("ODESolidSystem"); }
+  
+  virtual ref<Solid>             createSolid(ref<const Shape> shape, ref<const Material> material);  ///< create a new Solid
+  virtual ref<ConstraintGroup>   createConstraintGroup();  ///< new ConstraintGroup
+
+  virtual ref<BallJoint>         createBallJoint();        ///< new Ball & Socket joint constraint
+  virtual ref<HingeJoint>        createHingeJoint();       ///< new Hinge joint constraint
+  virtual ref<DoubleHingeJoint>  createDoubleHingeJoint(); ///< new Double Hinge joint constraint
+  virtual ref<SliderJoint>       createSliderJoint();      ///< new Slider joint constraint
+  virtual ref<UniversalJoint>    createUniversalJoint();   ///< new Universal joint constraint
+
+  virtual ref<FixedConstraint>   createFixedConstraint();  ///< new FixedConstraint
+  virtual ref<ContactConstraint> createContactConstraint();///< new ContactConstraint
+
+  virtual ref<Motor>             createMotor();            ///< new Joint Motor
+
+  virtual void setGround(ref<Solid> ground, const Point3& position); ///< Set the ground Solid (which is fixed to the world frame and doesn't move from position)
+  virtual ref<Solid> getGround() const;      ///< Get the ground Solid
+  virtual void setGravity(const Vector3& v); ///< set acceleration due to gravity
+  
+  virtual void addSolid(ref<Solid> solid); ///< add solid to the system (Solid must be from createSolid()
+  virtual void removeSolid(ref<const Solid> solid); ///< remove solid from the system
+
+  virtual void addConstraintGroup(ref<ConstraintGroup> group); ///< add a constraint group to the system
+  virtual void removeConstraintGroup(ref<const ConstraintGroup> group); ///< remove constraint group from the system
+
+  virtual void setCollidable(ref<Collidable> collidable) { this->collidable = collidable; }
+
+  virtual void setCollisionCuller(ref<CollisionCuller> collisionCuller);       ///< called to cull Collidables from collision detection
+  virtual ref<CollisionCuller>   getCollisionCuller() const;   ///< get the current CollisionCuller
+  
+  virtual void setCollisionDetector(ref<CollisionDetector> collisionDetector); ///< called to detect collisions
+  virtual ref<CollisionDetector> getCollisionDetector() const; ///< get the current CollisionDetector (or null if none)
+
+  virtual void setCollisionResponseHandler(ref<CollisionResponseHandler> collisionResponseHandler); ///< called to handle collisions
+  virtual ref<CollisionResponseHandler> getCollisionResponseHandler() const; 
+
+  virtual void setParameter(const String& name, Real value);
+
+  // Simulatable
+  virtual void preSimulate();
+  virtual void simulateForSimTime(const base::Time& dt);
+
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Visual::Attributes visualAttributes=0) const;
+  
+  // CollidableProvider
+  virtual ref<Collidable> createCollidable(CollidableFlags flags = 0);
+  
+  // PotentialCollisionListener
+  virtual void reset();
+  virtual void potentialCollision(ref<const Collidable> collidable1, ref<const Collidable> collidable2);
+
+protected:
+  bool active; ///< if false, physics simulation or collision detection is performed
+  
+  dWorldID worldID; ///< ODE's World ID
+
+  typedef base::reflist<Solid> Solids; 
+  Solids solids;
+  
+  typedef base::reflist<ConstraintGroup> ConstraintGroups;
+  ConstraintGroups constraintGroups;
+
+  enum CollisionListenMode { HandleCollisions, RecordInterpenetrations };
+  CollisionListenMode collisionListenMode;
+  bool initialPenetrations;
+  typedef std::pair< ref<const Collidable>, ref<const Collidable> > CollidablePair;
+  typedef array<CollidablePair> PenetratingPairs;
+  PenetratingPairs initiallyPenetratingPairs;
+
+  ref<CollisionCuller>   collisionCuller;
+  ref<CollisionDetector> collisionDetector;
+  ref<CollisionResponseHandler> collisionHandler;
+  
+  ref<Collidable> collidable;
+  
+  ref<Solid> ground; ///< the Solid ground (or 0)
+  dJointID groundJoint; ///< fixed joint that connects the ground Solid to the world frame.
+
+  bool preSimulateCalled;
+
+  // for Visual
+  mutable Visual::Attributes attributes;
+  mutable ref_ptr<osg::Group> node; // ==0 => no Visual has been created
+
+  void updateVisual() const;
+};
+
+} // physics
+
+
+#endif

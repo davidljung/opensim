@@ -1,0 +1,138 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: LineSegPathRep 1090 2004-09-13 17:35:50Z jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_LINESEGPATHREP_
+#define _BASE_LINESEGPATHREP_
+
+#include <base/PathRep>
+#include <base/Math>
+
+
+namespace base {
+
+
+/// Concrete path representation as a line segment
+class LineSegPathRep : public PathRep
+{
+public:
+  LineSegPathRep()
+    : flags(ConstPos | ConstOrient) {}
+  LineSegPathRep(const Point3& sp, const Orient& so, const Point3& ep, const Orient& eo)
+    : sp(sp), so(so), ep(ep), eo(eo), flags(None)
+  {
+    if (sp == ep) flags |= ConstPos;
+    if (so == eo) flags |= ConstOrient;
+  }
+
+  virtual Object& clone() const
+    { return *NewObj LineSegPathRep(sp, so, ep, eo); }
+
+  virtual String className() const { return String("LineSegPathRep"); }
+
+  /// get cartesian position at s:[0..1]
+  virtual Point3 position(Real s) const
+  {
+    if (flags & ConstPos)
+      return sp;
+    else {
+      Math::bound(s,0.0,1.0);
+      return sp+(s*(ep-sp));
+    }
+  }
+
+  /// get orientation at s:[0..1]
+  virtual Orient orientation(Real s) const
+  {
+    if (flags & ConstOrient)
+      return so;
+    else {
+      Math::bound(s,0.0,1.0);
+      return Orient::interpolate(so, eo, s);
+    }
+  }
+
+
+  /// translate the path position by t
+  virtual void translate(const Vector3& t)
+  { sp += t; ep += t; }
+
+  /// rotate the path orientation by r
+  virtual void rotate(const Quat4& r)
+  {
+    r.rotatePoint(sp);
+    r.rotatePoint(ep);
+    Quat4 sq(so.getQuat4());
+    Quat4 eq(eo.getQuat4());
+    so = r*sq;
+    eo = r*eq;
+  }
+
+
+  /// transform the path by m
+  virtual void transform(const Matrix4& m)
+  {
+    Point4 sp4(sp);
+    sp4 = m*sp4;
+    sp = Point3(sp4.x,sp4.y,sp4.z);
+
+    Point4 ep4(ep);
+    ep4 = m*ep4;
+    ep = Point3(ep4.x,ep4.y,ep4.z);
+
+    Quat4 r;
+    r.setRotation(m);
+    Quat4 sq(so.getQuat4());
+    Quat4 eq(eo.getQuat4());
+    so = r*sq;
+    eo = r*eq;
+  }
+
+
+  virtual void scalePosition(Real s)
+  {
+    sp *= s;
+    ep *= s;
+  }
+
+
+  virtual void serialize(Serializer& s)
+  {
+    s(flags,"flags");
+    s(sp,"startPoint");
+    s(so,"startOrient");
+    s(ep,"endPoint");
+    s(eo,"endOrient");
+  }
+
+protected:
+  Point3 sp; ///< start pos
+  Orient so; ///< start orient
+  Point3 ep; ///< end pos
+  Orient eo; ///< end orient
+
+  enum Flags { None=0, ConstPos=1, ConstOrient=2 };
+  Int flags;
+};
+
+
+} // base
+
+#endif

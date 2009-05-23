@@ -1,0 +1,130 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: ManipulatorDescription 1096 2004-09-27 21:48:29Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-09-27 17:48:29 -0400 (Mon, 27 Sep 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_MANIPULATORDESCRIPTION_
+#define _ROBOT_MANIPULATORDESCRIPTION_
+
+#include <robot/robot>
+
+#include <base/Named>
+#include <base/Externalizable>
+#include <base/ReferencedObject>
+#include <base/DOM>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+
+/**
+ * An abstract description of a manipulator
+ */
+class ManipulatorDescription : public base::Named, public base::Externalizable, public base::ReferencedObject
+{
+public:
+  enum Type { Serial, Parallel };
+
+  ManipulatorDescription() : mtype(Serial) {}
+  ManipulatorDescription(String name, Matrix4 baseTransform, KinematicChain kinematicChain)
+    : Named(name), mtype(Serial), baseTransform(baseTransform), kinematicChain(kinematicChain) {}
+  ManipulatorDescription(const ManipulatorDescription& md) 
+    : Named(md), mtype(md.mtype), baseTransform(md.baseTransform), kinematicChain(md.kinematicChain) {}
+
+  ManipulatorDescription& operator=(const ManipulatorDescription& md)
+    {
+      setName(md.getName());
+      mtype = md.mtype;
+      baseTransform = md.baseTransform;
+      kinematicChain = md.kinematicChain;
+      return *this;
+    }
+
+  virtual String className() const { return String("ManipulatorDescription"); }
+
+  void set(String name, Matrix4 baseTransform, KinematicChain kinematicChain)
+    {
+      setType(Serial);
+      setName(name);
+      setBaseTransform(baseTransform);
+      setKinematicChain(kinematicChain);
+    }
+  
+  
+  virtual Type type() const { return mtype; }
+
+  /**
+   * get a kinematic chain that describes this manipulator.
+   *  For serial manipulators this is a unique chain of joints.  For Parallel
+   *  manipulators the chain obtained depends on the parameter.
+   * The chain doesn't include the base link.
+   *  (NB: when/if parallel manipulator support is added, this argument may change
+   *   or be overloaded, but there will always be a default that will provide
+   *   the unique chain in the case of a serial manipulator)
+   */
+  virtual const KinematicChain& getKinematicChain(Int p=0) const
+    { return kinematicChain; }
+
+  /// the transformation from the mount origin to the base origin (the first joint)
+  virtual Matrix4 getBaseTransform() const { return baseTransform; }
+
+
+  bool operator==(const ManipulatorDescription& md)
+    {
+      if (&md == this) return true;
+      return (getName()==md.getName()) && (mtype==md.mtype)
+	&& (baseTransform==md.baseTransform) && (kinematicChain==md.kinematicChain);
+    }
+
+  bool operator!=(const ManipulatorDescription& md) { return !(*this == md); }
+
+  
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  ManipulatorDescription(String name) : Named(name) {}
+  
+  virtual void setType(Type type) { mtype=type; }
+  virtual void setBaseTransform(const Matrix4& m) { baseTransform=m; }
+  virtual void setKinematicChain(const KinematicChain& kc) { kinematicChain=kc; }
+
+  // externalization helpers
+  virtual void outputElementXML(base::Externalizer& e, base::dom::DOMElement* manipElem, String format, Real version) const;
+  virtual void inputElementXML(base::Externalizer& e, base::dom::DOMElement* manipElem, String format, Real version);
+
+  Type mtype;
+  Matrix4 baseTransform; ///< depricated
+  KinematicChain kinematicChain;
+
+  friend class Robot;
+};
+
+
+} // robot
+
+#endif

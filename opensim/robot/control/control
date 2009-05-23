@@ -1,0 +1,65 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: control 1037 2004-02-11 20:50:18Z jungd $
+  $Revision: 1.6 $
+  $Date: 2004-02-11 15:50:18 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_
+#define _ROBOT_CONTROL_
+
+#include <robot/robot>
+
+namespace robot { 
+namespace control {
+
+// These are used so commonly, we don't want to qualify them 
+//  (import them into namespace robot::control)
+using base::Math;
+using base::Point2;
+using base::Point3;
+using base::Vector2;
+using base::Vector3;
+using base::Quat4;
+using base::Matrix3;
+using base::Matrix4;
+using base::Vector;
+using base::zeroVector;
+using base::unitVector;
+using base::Range;
+using base::vectorRange;
+using base::Matrix;
+using base::zeroMatrix;
+using base::identityMatrix;
+using base::matrixRow;
+using base::matrixColumn;
+using base::matrixRange;
+using base::String;
+using base::ref;
+using base::reflist;
+using base::narrow_ref;
+
+
+
+    
+} 
+}
+
+#endif

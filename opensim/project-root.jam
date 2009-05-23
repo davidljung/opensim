@@ -1,0 +1,5 @@
+import project ;
+
+#define some project wide constants
+
+path-constant ext : /home/jungd/unix/dev/OpenSim/external ;

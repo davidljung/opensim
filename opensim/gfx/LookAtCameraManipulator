@@ -1,0 +1,123 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: LookAtCameraManipulator 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_GFX_LOOKATCAMERAMANIPULATOR_
+#define _ROBOT_GFX_LOOKATCAMERAMANIPULATOR_
+
+#include <gfx/gfx>
+
+#include <osgGA/MatrixManipulator>
+
+
+namespace gfx {
+
+/// OSG Specific Camera manipulator for looking at specific points
+/// \todo reimplement (as this is broken since switch to Producer)
+class LookAtCameraManipulator : public osgGA::MatrixManipulator
+{
+public:
+  LookAtCameraManipulator(Real alpha = 90, Real theta=10, Real d=5, Real targetx = 0, Real targety = 0, Real targetz = 0);
+  virtual ~LookAtCameraManipulator();
+
+  void setAlpha(Real alpha) { this->alpha = Math::degToRad(alpha); }
+  void setTheta(Real theta) { this->theta = Math::degToRad(theta); }
+  void setD(Real d) { this->d = d; }
+  Real getAlpha() const { return Math::radToDeg(alpha); }
+  Real getTheta() const { return Math::radToDeg(theta); }
+  Real getD() const { return d; }
+  
+  
+  void setTarget(Real targetx, Real targety, Real targetz)
+  {
+    target[0] = targetx;
+    target[1] = targety;
+    target[2] = targetz; 
+  }
+
+  Point3 getTarget() const 
+  {
+    return Point3(target[0], target[1], target[2]);
+  }
+  
+  
+  void trackingEnable() { tracking=true; }
+  void trackingDisable() { tracking=false; }
+  
+  bool trackingEnabled() const { return tracking; }
+  
+  /** Attach a node to the manipulator. 
+      Automatically detaches previously attached node.
+      setNode(NULL) detaches previously nodes.
+      Is ignored by manipulators which do not require a reference model.*/
+  virtual void setNode(osg::Node*);
+  
+  /** Return node if attached.*/
+  virtual const osg::Node* getNode() const;
+  
+  /** Return node if attached.*/
+  virtual osg::Node* getNode();
+  
+  /** Move the camera to the default position. 
+      May be ignored by manipulators if home functionality is not appropriate.*/
+  virtual void home(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& us);
+  
+  /** Start/restart the manipulator.*/
+  virtual void init(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& us);
+  
+  
+  /** handle events, return true if handled, false otherwise.*/
+  virtual bool handle(const osgGA::GUIEventAdapter& ea,osgGA::GUIActionAdapter& us);
+  
+  virtual osg::Matrixd getMatrix() const;  
+  virtual osg::Matrixd getInverseMatrix() const;
+  virtual void setByMatrix(const osg::Matrixd& matrix);
+  virtual void setByInverseMatrix(const osg::Matrixd& matrix);
+
+
+protected:
+  osg::Vec3 target; // target to look at
+  bool tracking;  // continous tracking on?
+
+  Real alpha; // angle about the z 'up' axis
+  Real theta; // angle rotated out of the x-y plane (into +z)
+  Real d;     // distance from target
+
+  Real halpha; // home pos
+  Real htheta; 
+  Real hd;     
+
+  // values at button press
+  Real x,y;
+  Real ialpha, itheta, id;
+  osg::Vec3 itarget;
+
+  osg::Vec3 calcPos() const; // calc eye pos from d,alpha & theta
+
+//  void updateCamera(osgGA::GUIActionAdapter& us);
+};
+  
+} // gfx
+
+#endif
+

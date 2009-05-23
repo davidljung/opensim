@@ -1,0 +1,87 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODECollisionModel 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODECOLLISIONMODEL_
+#define _PHYSICS_ODECOLLISIONMODEL_
+
+#include <physics/physics>
+#include <physics/CollisionModel>
+
+//#include <gfx/TriangleContainer>
+#include <physics/Box>
+#include <physics/Sphere>
+//#include <physics/Polyhedron>
+
+
+#include <ode/ode.h>
+
+
+namespace physics {
+
+
+class ODECollisionModel : public CollisionModel
+{
+public:
+  ODECollisionModel(const ODECollisionModel& cm);
+  ODECollisionModel(ref<const Shape> shape);
+  virtual ~ODECollisionModel();
+
+  virtual String className() const { return String("ODECollisionModel"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) ODECollisionModel(*this); }
+
+  virtual CollisionModelType getType() const { return ODEModel; }
+
+ 
+  class ODEModelState : public ModelState
+  {
+  public:
+    ODEModelState() {}
+    virtual ~ODEModelState() {}
+
+    virtual String className() const { return String("GJKCollisionModel::ODEModelState"); }
+    virtual base::Object& clone() const { return *NewNamedObj(className()) ODEModelState(); }
+ 
+
+  };
+
+
+  // OSGVisual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Visual::Attributes visualAttributes=0) const;
+
+protected:
+  ref<const Shape> shape; // model is based on this shape
+ 
+  void create(ref<const Shape> shape);
+
+  dGeomID  geomID;  ///< ODE's geom ID (corresponding to shape)
+
+  
+  friend class ODECollisionDetector;
+};
+
+
+} // physics
+
+#endif

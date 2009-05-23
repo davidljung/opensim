@@ -1,0 +1,548 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Vector 1085 2004-09-13 17:19:37Z jungd $
+  $Revision: 1.15 $
+  $Date: 2004-09-13 13:19:37 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_VECTOR_
+#define _BASE_VECTOR_
+
+#include <base/base>
+#include <base/consts>
+
+//#define USE_BOOST_UBLAS
+
+#include <base/Vector3>
+
+
+#ifndef USE_BOOST_UBLAS
+
+//
+// array wrapper implementation
+//
+
+namespace base {
+
+#include <base/array>
+
+
+template<typename T>
+class vector
+{
+public:
+  typedef T        value_type;
+  typedef T&       reference;
+  typedef const T& const_reference;
+  typedef SInt     difference_type;
+  typedef Int      size_type;
+
+  vector() {}
+  vector(size_type n) : a(n) {}
+  vector(const vector& v) : a(v.a) {}
+  vector(size_type n, const_reference p) : a(n) { for(size_type i=0; i<n; i++) a[i]=p; }
+  ~vector() {}
+
+
+  bool operator==(const vector&v) const { return a == v.a; }
+  bool operator!=(const vector&v) const { return a != v.a; }
+
+  bool equals(const vector& v, value_type eps = value_type(consts::epsilon) ) const
+  {
+    Assert(a.size() == v.size());
+    for(Int i=0; i<a.size(); i++)
+      if (!base::equals(a[i],v[i],eps)) return false;
+    return true;
+  }
+
+
+  reference operator[](size_type i) { return a[i]; }
+  const_reference operator[](size_type i) const { return a[i]; }
+
+  reference operator()(size_type i) { return a[i]; }
+  const_reference operator()(size_type i) const { return a[i]; }
+
+  size_type size() const { return a.size(); }
+
+  void clear() { a.clear(); }
+
+  void resize(size_type n) { a.resize(n); }
+
+  vector& operator=(const vector& v) { a = v.a; return *this; }
+  void reset(const vector& v) { *this = v; }
+
+  vector& operator+=(const vector& v) { Assert(size() == v.size()); for(size_type i=0; i<size(); i++) a[i]+=v.a[i]; return *this; }
+  vector& operator-=(const vector& v) { Assert(size() == v.size()); for(size_type i=0; i<size(); i++) a[i]-=v.a[i]; return *this; }
+  vector& operator*=(const value_type& t) { for(size_type i=0; i<size(); i++) a[i]*=t; return *this; }
+  vector& operator/=(const value_type& t) { for(size_type i=0; i<size(); i++) a[i]/=t; return *this; }
+  vector& negate() { for(size_type i=0; i<size(); i++) a[i]=-a[i]; return *this; }
+
+  value_type norm() const
+  { value_type r(0); for(size_type i=0; i<a.size(); i++) r+=(a[i]*a[i]); return r; }
+
+  value_type magnitude() const { return ::sqrt(norm()); }
+
+
+  typedef typename array<T>::iterator               iterator;
+  typedef typename array<T>::const_iterator         const_iterator;
+
+  iterator begin() { return a.begin(); }
+  const_iterator begin() const { return a.begin(); }
+
+  iterator end() { return a.end(); }
+  const_iterator end() const { a.end(); }
+
+  friend class matrix;
+
+protected:
+  array<T> a;
+
+};
+
+
+template<typename T>
+class range
+{
+public:
+  typedef T   value_type;
+  typedef Int size_type;
+
+  range(size_type b, size_type e) : b(b), e(e) { Assert(b<=e); }
+  ~range() {}
+
+  value_type b, e;
+};
+
+
+
+
+template<typename T>
+class const_vectorrange
+{
+public:
+  typedef T                             value_type;
+  typedef typename vector<T>::size_type size_type;
+
+  const_vectorrange(const vector<T>& v, const range<size_type>& r) : v(v), r(r) {}
+  const_vectorrange(const const_vectorrange& vr) : v(vr.v), r(vr.r) {}
+  ~const_vectorrange() {}
+
+  const value_type& operator[](size_type i) const { Assert(i<(r.e-r.b)); return _v[i]; }
+
+  const_vectorrange& operator=(const const_vectorrange& vr) {
+    v = vr.v;
+    r = vr.r;
+    return *this;
+  }
+
+
+  size_type size() const { return r.e-r.b; }
+
+  operator vector<T>() {
+    vector<T> rv(r.e-r.b);
+    for(size_type i=r.b; i<r.e; i++) rv[i-r.b]=v[i];
+    return rv;
+  }
+
+protected:
+  const_vectorrange() {}
+
+  const value_type& _v(size_type i) const { return v[i-r.b]; }
+
+  const vector<T>& v;
+  range<size_type> r;
+};
+
+
+
+
+
+template<typename T>
+class vectorrange
+{
+public:
+  typedef T                             value_type;
+  typedef typename vector<T>::size_type size_type;
+
+  vectorrange(vector<T>& v, const range<size_type>& r) : v(v), r(r) {}
+  vectorrange(const vectorrange& vr) : v(vr.v), r(vr.r) {}
+  ~vectorrange() {}
+
+  value_type& operator[](size_type i) { Assert(i<(r.e-r.b)); return _v[i]; }
+  const value_type& operator[](size_type i) const { Assert(i<(r.e-r.b)); return _v[i]; }
+
+  vectorrange& operator=(const vectorrange& vr) {
+    v = vr.v;
+    r = vr.r;
+    return *this;
+  }
+
+  vectorrange& operator=(const vector<T>& sv) {
+    Assert(sv.size() == (r.e-r.b));
+    for(size_type i=r.b; i<r.e; i++) v[i]=sv[i-r.b];
+    return *this;
+  }
+
+  vectorrange& operator+=(const vector<T>& v2) { Assert(size() == v2.size()); for(size_type i=0; i<size(); i++) this->_v(i)+=v2[i]; return *this; }
+  vectorrange& operator-=(const vector<T>& v2) { Assert(size() == v2.size()); for(size_type i=0; i<size(); i++) this->_v(i)-=v2[i]; return *this; }
+  vectorrange& operator*=(const value_type& t) { for(size_type i=0; i<size(); i++) this->_v(i)*=t; return *this; }
+  vectorrange& operator/=(const value_type& t) { for(size_type i=0; i<size(); i++) this->_v(i)/=t; return *this; }
+  vectorrange& negate() { for(size_type i=0; i<size(); i++) this->_v(i)=-this->_v(i); return *this; }
+
+
+  size_type size() const { return r.e-r.b; }
+
+  operator const_vectorrange<T>() const { return const_vectorrange<T>(v,r); }
+
+  operator vector<T>() {
+    vector<T> rv(r.e-r.b);
+    for(size_type i=r.b; i<r.e; i++) rv[i-r.b]=v[i];
+    return rv;
+  }
+
+protected:
+  vectorrange() {}
+
+  value_type& _v(size_type i) { return v[i-r.b]; }
+  const value_type& _v(size_type i) const { return v[i-r.b]; }
+
+  vector<T>& v;
+  range<size_type> r;
+};
+
+
+
+
+
+typedef vector<Real>            Vector;
+typedef vector<Int>             IVector;
+typedef range<Int>              Range;
+typedef vectorrange<Real>       VectorRange;
+typedef const_vectorrange<Real> ConstVectorRange;
+typedef vectorrange<Int>        IVectorRange;
+typedef const_vectorrange<Int>  ConstIVectorRange;
+
+
+/// N-dim zero Vector
+inline Vector zeroVector(const Int N) { return Vector(N,0); }
+inline IVector zeroIVector(const Int N) { return IVector(N,0); }
+
+/// N-dim unit Vector, with element i=1, all others 0
+inline Vector unitVector(const Int N, const Int i) { Assert(i<N); Vector v(N,0); v[i]=1; return v; }
+inline IVector unitIVector(const Int N, const Int i) { Assert(i<N); IVector v(N,0); v[i]=1; return v; }
+
+/// select Vector range (subvector)
+inline VectorRange vectorRange(Vector& v, const Range& r)
+{
+  Assert((r.b < v.size()) && (r.e <= v.size()));
+  return VectorRange(v,r);
+}
+
+inline ConstVectorRange vectorRange(const Vector& v, const Range& r)
+{
+  Assert((r.b < v.size()) && (r.e <= v.size()));
+  return ConstVectorRange(v,r);
+}
+
+
+inline IVectorRange vectorRange(IVector& v, const Range& r)
+{
+  Assert((r.b < v.size()) && (r.e <= v.size()));
+  return IVectorRange(v,r);
+}
+
+inline ConstIVectorRange vectorRange(const IVector& v, const Range& r)
+{
+  Assert((r.b < v.size()) && (r.e <= v.size()));
+  return ConstIVectorRange(v,r);
+}
+
+
+
+inline Real dot(const Vector& v1, const Vector& v2)
+{
+  Assert(v1.size()==v2.size());
+  Real d=0;
+  for(Int i=0; i<v1.size(); i++) d+=(v1[i]*v2[i]);
+  return d;
+}
+
+inline Real inner_prod(const Vector& v1, const Vector& v2)
+{ return dot(v1,v2); }
+
+
+inline base::Vector3 toVector3(const Vector& v)
+{
+  Assert(v.size()==3);
+  return base::Vector3(v[0],v[1],v[2]);
+}
+
+inline Vector fromVector3(const base::Vector3& v)
+{
+  Vector r(3);
+  r[0]=v.x; r[1]=v.y; r[2]=v.z;
+  return r;
+}
+
+
+inline Vector operator+(const Vector& v1, const Vector& v2)
+{ Vector r(v1); r+=v2; return r; }
+
+inline Vector operator-(const Vector& v1, const Vector& v2)
+{ Vector r(v1); r-=v2; return r; }
+
+inline Vector operator*(const Vector& v, const Real& s)
+{ Vector r(v); r*=s; return r; }
+
+inline Vector operator*(const Real& s, const Vector& v)
+{ Vector r(v); r*=s; return r; }
+
+inline Vector operator/(const Vector& v, const Real& s)
+{ Vector r(v); r/=s; return r; }
+
+inline Vector operator-(const Vector& v)
+{ Vector r(v); r.negate(); return r; }
+
+inline Real norm_2(const Vector& v) { return v.magnitude(); }
+
+
+inline bool equals(const Vector& v1, const Vector& v2, Real eps = consts::epsilon)
+{ return v1.equals(v2,eps); }
+
+
+inline Int max_index(const Vector& v)
+{
+  Int mi=0;
+  Real max=v[mi];
+  for(Int i=0; i<v.size(); i++)
+    if (v[i] > max) {
+      mi=i;
+      max=v[i];
+    }
+  return mi;
+}
+
+
+inline Int min_index(const Vector& v)
+{
+  Int mi=0;
+  Real min=v[mi];
+  for(Int i=0; i<v.size(); i++)
+    if (v[i] < min) {
+      mi=i;
+      min=v[i];
+    }
+  return mi;
+}
+
+
+inline std::ostream& operator<<(std::ostream& out, const Vector& v) // Output
+{
+  out << "[";
+  for(Int i=0; i<v.size(); i++)
+    out << v[i] << ((i!=v.size()-1)?",":"");
+  out << "]";
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const IVector& v) // Output
+{
+  out << "[";
+  for(Int i=0; i<v.size(); i++)
+    out << v[i] << ((i!=v.size()-1)?",":"");
+  out << "]";
+  return out;
+}
+
+
+
+} // base
+
+
+#else
+
+//
+// uBlas wrapper implementation
+//
+
+#include <boost/numeric/ublas/vector.hpp>
+
+namespace base {
+
+namespace ublas = boost::numeric::ublas; // alias
+
+/// Vector(size)
+typedef ublas::vector<base::Real> Vector;
+typedef ublas::vector<base::Int> IVector;
+
+typedef ublas::zero_vector<base::Real> ZeroVector;
+typedef ublas::zero_vector<base::Int>  ZeroIVector;
+typedef ublas::unit_vector<base::Real> UnitVector;
+typedef ublas::unit_vector<base::Int>  UnitIVector;
+
+/// N-dim zero Vector
+inline ZeroVector zeroVector(const Int N)
+{ return ZeroVector(N); }
+
+inline ZeroIVector zeroIVector(const Int N)
+{ return ZeroIVector(N); }
+
+/// N-dim unit Vector, with element i=1, all others 0
+inline UnitVector unitVector(const Int N, const Int i)
+{ return UnitVector(N, i); }
+
+inline UnitIVector unitIVector(const Int N, const Int i)
+{ return UnitIVector(N, i); }
+
+
+/// Range(start, stop) s.t. start <= index < stop
+/** i.e. index in [start,stop) */
+typedef ublas::range Range;
+
+typedef ublas::vector_range<Vector>        VectorRange;
+typedef ublas::vector_range<const Vector>  ConstVectorRange;
+typedef ublas::vector_range<IVector>       IVectorRange;
+typedef ublas::vector_range<const IVector> ConstIVectorRange;
+
+
+/// select Vector range (subvector)
+inline VectorRange vectorRange(Vector& v, const Range& r)
+{ return VectorRange(v,r); }
+
+inline ConstVectorRange vectorRange(const Vector& v, const Range& r)
+{ return ConstVectorRange(v,r); }
+
+inline IVectorRange vectorRange(IVector& v, const Range& r)
+{ return IVectorRange(v,r); }
+
+inline ConstIVectorRange vectorRange(const IVector& v, const Range& r)
+{ return ConstIVectorRange(v,r); }
+
+
+inline Real dot(const Vector& v1, const Vector& v2)
+{ return ublas::inner_prod(v1,v2); }
+
+
+inline base::Vector3 toVector3(const Vector& v)
+{
+  Assert(v.size()==3);
+  return base::Vector3(v[0],v[1],v[2]);
+}
+
+inline Vector fromVector3(const base::Vector3& v)
+{
+  Vector r(3);
+  r[0]=v.x; r[1]=v.y; r[2]=v.z;
+  return r;
+}
+
+
+
+template<class T>
+inline bool operator==(const ublas::vector<T>& v1, const ublas::vector<T>& v2)
+{
+  Assert(v1.size() == v2.size());
+  for(Int i=0; i<v1.size(); i++)
+    if (!(v1[i] == v2[i])) return false;
+  return true;
+}
+
+
+template<class T>
+inline bool equals(const ublas::vector<T>& v1, const ublas::vector<T>& v2, Real eps = consts::epsilon)
+{
+  Assert(v1.size() == v2.size());
+  for(Int i=0; i<v1.size(); i++)
+    if (!equals(v1[i],v2[i],eps)) return false;
+  return true;
+}
+
+template<class T>
+inline bool equals(const ublas::vector<T>& v1, const ublas::zero_vector<T>& v2, Real eps = consts::epsilon)
+{
+  Assert(v1.size() == v2.size());
+  for(Int i=0; i<v1.size(); i++)
+    if (!equals(v1[i],v2[i],eps)) return false;
+  return true;
+}
+
+
+template <class T>
+inline Int max_index(const ublas::vector<T>& v)
+{
+  Int mi=0;
+  Real max=v[mi];
+  for(Int i=0; i<v.size(); i++)
+    if (v[i] > max) {
+      mi=i;
+      max=v[i];
+    }
+  return mi;
+}
+
+
+template <class T>
+inline Int min_index(const ublas::vector<T>& v)
+{
+  Int mi=0;
+  Real min=v[mi];
+  for(Int i=0; i<v.size(); i++)
+    if (v[i] < min) {
+      mi=i;
+      min=v[i];
+    }
+  return mi;
+}
+
+
+template <class T>
+inline std::ostream& operator<<(std::ostream& out, const ublas::vector<T>& v) // Output
+{
+  out << "[";
+  for(Int i=0; i<v.size(); i++)
+    out << v[i] << ((i!=v.size()-1)?",":"");
+  out << "]";
+  return out;
+}
+
+
+} // base
+
+#endif
+
+
+// common utility functions
+
+namespace base {
+
+
+inline Vector combine(const Vector& v1, const Vector& v2)
+{
+  Vector r(v1.size()+v2.size());
+  vectorRange(r,Range(0,v1.size())) = v1;
+  vectorRange(r,Range(v1.size(), r.size())) = v2;
+  return r;
+}
+
+
+} // base
+
+
+#endif

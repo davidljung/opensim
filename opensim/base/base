@@ -1,0 +1,423 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: base 1045 2004-02-27 19:18:29Z jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_
+#define _BASE_
+
+#include <iostream>
+#include <string>
+#include <sstream>
+#include <list>
+#include <stdexcept>
+#include <algorithm>
+#include <typeinfo>
+#include <functional>
+
+#include <base/reflist>
+
+extern "C" {
+#include <string.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <GL/gl.h>
+}
+
+// instantiate unit tests
+#ifdef DEBUG
+#define INSTANTIATE_TEST_SUITES
+extern bool _abortOnAssertionFailure;
+#endif
+
+// add support for conversion to/from some Open Scene Graph (OSG) types
+#define USE_OSG
+
+
+
+namespace base {
+  typedef unsigned char     Byte;
+  typedef int               SInt;
+  typedef unsigned int      Int;
+  typedef long unsigned int LInt;
+  typedef std::string       String;
+  typedef double            Real;   // Real & GLreal must be the same built-in type
+  typedef GLdouble          GLreal;
+  const GLenum GL_REAL = GL_DOUBLE;
+  const GLenum GL_UINT = GL_UNSIGNED_INT; // GL_UINT must match Int
+
+
+  /// throw a std::runtime_error(errorstring).  If DEBUG, output an assertion failure message
+  ///  to the Log and abort() if abortOnAssertionFailure mode set
+  void assertionFailure(const String& errorstring);
+  
+  template<typename A> inline void tassert(A assertion, const String& errorstring)
+  {
+    if (!assertion) 
+      assertionFailure(errorstring);
+  }
+
+  template<typename T> void clearMemory(T* start, Int length)
+  { memset(start, 0, size_t(length*sizeof(T))); }
+
+  template<typename T> void copyMemory(const T* src, T* dest, Int length)
+  { memcpy(dest, src, length*sizeof(T)); }
+
+  // convenience: subscripting & indexing for list ( O(n) )
+  template<typename T> const T& elementAt(const std::list<T>& l, typename std::list<T>::size_type i) 
+  {
+    typename std::list<T>::const_iterator it = l.begin();
+    while ((it != l.end()) && (i > 0)) {
+      ++it; --i;
+    }
+    if (it == l.end()) throw std::out_of_range("elementAt - specified index not present");
+    return *it;
+  }
+
+  template<typename T> T& elementAt(std::list<T>& l, typename std::list<T>::size_type i) 
+  {
+    typename std::list<T>::iterator it = l.begin();
+    while ((it != l.end()) && (i > 0)) {
+      ++it; --i;
+    }
+    if (it == l.end()) throw std::out_of_range("elementAt - specified index not present");
+    return *it;
+  }
+
+
+  template<typename T> const ref<T> elementAt(const reflist<T>& l, typename reflist<T>::size_type i) 
+  {
+    typename reflist<T>::const_iterator it = l.begin();
+    while ((it != l.end()) && (i > 0)) {
+      ++it; --i;
+    }
+    if (it == l.end()) throw std::out_of_range("elementAt - specified index not present");
+    return *it;
+  }
+
+  template<typename T> ref<T> elementAt(reflist<T>& l, typename reflist<T>::size_type i) 
+  {
+    typename reflist<T>::iterator it = l.begin();
+    while ((it != l.end()) && (i > 0)) {
+      ++it; --i;
+    }
+    if (it == l.end()) throw std::out_of_range("elementAt - specified index not present");
+    return *it;
+  }
+
+  template<typename T> typename std::list<T>::size_type indexOf(const std::list<T>& l, const T& t)
+  {
+    typename std::list<T>::const_iterator it = l.begin();
+    typename std::list<T>::size_type index=0;
+    while ((it != l.end()) && (*it != t)) {
+      ++it; ++index;
+    }
+    if (it == l.end()) throw std::invalid_argument("indexOf - specificed element not in the list");
+    return index;
+  }
+
+  template<typename T> bool contains(const std::list<T>& l, const T& e)
+  {
+    typename std::list<T>::const_iterator it = std::find(l.begin(), l.end(), e);
+    return (it != l.end());
+  }
+
+  template<typename T> bool contains(const reflist<T>& l, ref<T> e)
+  {
+    typename reflist<T>::const_iterator_const it = std::find(l.const_begin(), l.const_end(), e);
+    return (it != l.const_end());
+  }
+
+  
+  template<typename T> void swap(T& a, T& b)
+  {
+    const T temp(a);
+    a = b;
+    b = temp;
+  }
+
+
+  template<typename C, typename Op> Op for_all(C& c, Op f)
+  {
+    typename C::const_iterator b = c.begin();
+    typename C::const_iterator e = c.end();
+    return std::for_each(b,e,f);
+  }
+
+
+  class DeleteObject {
+  public:
+    template<typename T> void operator()(const T* ptr) const { delete ptr; }
+  };
+
+  template<typename C> void delete_all(C& c)
+  {
+    for_all(c, DeleteObject());
+  }
+
+  
+  template<typename InputIterator, typename OutputIterator, typename Predicate>
+  OutputIterator copy_if(InputIterator begin, InputIterator end,
+			 OutputIterator destBegin, Predicate p)
+  {
+    while(begin!=end) {
+      if (p(*begin)) *destBegin++=*begin;
+      ++begin;
+    }
+    return destBegin;
+  }
+
+  String intToString(Int i);
+  String realToString(Real r);
+  Int stringToInt(const String& s);
+  Real stringToReal(const String& s);
+
+  template<typename T> String toString(const T& t)
+  {
+    std::ostringstream oss;
+    oss << t;
+    return oss.str();
+  }
+
+  template<typename T> T fromString(const String& s)
+  {
+    std::istringstream iss(s);
+    T t;
+    iss >> t;
+    return t;
+  }
+
+  
+
+  class Cloneable;
+  template<typename C> C& clone(const C& c) 
+  {
+    return dynamic_cast<C&>( static_cast<const Cloneable&>(c).clone());
+  }
+  
+
+
+  extern std::ostream& _Debug;
+  extern std::ostream& _Log;
+  extern std::ostream& _Console;
+
+  
+  /// convert typeid().name() string into demangled form (e.g. "base::Object")
+  String demangleTypeidName(const String& typeidName);
+
+  /// convert type_info into qualified class name (calls demangleTypeidName() )
+  String className(const std::type_info& ti);
+
+  extern int _currentDebugVerbosity;
+
+  // make narrow casting explicit for readability
+  template <
+    typename Sub,
+    typename Super>
+  //inline Sub* narrow_cast(Select< SUPERSUBCLASS_STRICT(Super,Sub),Super*,NullType>::Result p) { return static_cast<Sub*>(p); }
+  inline Sub* narrow_cast(Super* p) { return static_cast<Sub*>(p); }
+
+  template <
+    typename Sub,
+    typename Super>
+  //inline Sub& narrow_cast(Select< SUPERSUBCLASS_STRICT(Super,Sub),Super&,NullType>::Result p) { return static_cast<Sub&>(p); }
+  inline Sub& narrow_cast(Super& p) { return static_cast<Sub&>(p); }
+  
+} // base
+
+
+#include <base/MemoryTracer>
+
+
+// global names
+using std::for_each;
+using std::mem_fun;
+
+//using base::Byte;
+using base::Int;
+using base::SInt;
+using base::LInt;
+using base::String;
+using base::Real;
+using base::GLreal;
+using base::GL_REAL;
+using base::GL_UINT;
+using base::clone;
+using base::for_all;
+using base::narrow_cast;
+
+
+
+// Use Log() funcions to output to the log file.  This will remain in
+//  release code.  Use Debug() if you want output that will dissapear
+//  in release code.  Use Console() to write on the graphical console
+//  (e.g. for user status messages etc.)
+// NB: see debugtools header for Debug() usage.
+
+#include <base/debugtools>
+
+#ifdef __mips
+#define __func__ String("unknown")
+#endif
+
+#ifdef __GNUC_
+#define _LOG_CALLER_NAME __PRETTY_FUNCTION__ << " -- "
+#else
+#define _LOG_CALLER_NAME base::className(typeid(*this)) << "::" << __func__ << " -- "
+#endif
+
+#define Log(o) { base::_Log << _LOG_CALLER_NAME << o; }
+#define Logln(o) { base::_Log << _LOG_CALLER_NAME << o << "\n"; }
+#define Logc(o) { base::_Log << o; }
+#define Logcln(o) { base::_Log << o << "\n"; }
+
+#define Logf(o) { base::_Log << __func__ << " -- " << o; }
+#define Logfln(o) { base::_Log << __func__ << " -- " << o << "\n"; }
+#define Logfc(o) Logc(o)
+#define Logfcln(o) Logcln(o)
+
+#define Console(o) { base::_Console << o; }
+#define Consoleln(o) { base::_Console << o << std::endl; }
+
+
+
+// Often, when an Assert() fails, it is not clear where the exception
+//  was raised from the message alone.  Enabling this flag will cause
+//  the program to abort() from inside Assert() so that a debugger 
+//  stack trace can show the point of failure.
+#ifdef DEBUG
+  extern bool _abortOnAssertionFailure;
+  #define abortOnAssertionFailureEnabled(e) _abortOnAssertionFailure=(e)
+#else
+  #define abortOnAssertionFailureEnabled(e)
+#endif
+
+
+// During development it is not unusual for exceptions to be thrown in unexpected places. For example,
+//  from a function declared with throw().  It also happens when an exception tries to propagate
+//  through C code in the call stack.  For example, this is common if the main loop of the app
+//  is being executed from a C library callback (e.g. from GLUT).
+//  This typically results in a call to abort() before the exception is caught.  The only way to trace where
+//  the exception was thrown in that case is via the debugger.  To make life a little easier, in DEBUG mode
+//  the Exception() macro is defined to print the exception text upon construction - so it can be seen even if
+//  the exception is not caught.  However, this can be annoying in circumstances when exceptions are
+//  expected (for example, in test cases that test for correct exception throwing).  Consequently, it may
+//  be disabled.
+#ifdef DEBUG
+  extern bool _outputExceptionOnConstruction;
+  #define exceptionOutputEnabled(e) _outputExceptionOnConstruction=(e)
+#else
+  #define exceptionOutputEnabled(e)
+#endif
+
+// If an exception is caught and the program exits normally, it may still be useful for
+//  debugging to know where it was originally constructed.  For this reason, it is possible
+//  to cause an abort() at the construction point.
+#ifdef DEBUG
+  extern bool _abortOnExceptionConstruction;
+  #define abortOnExceptionConstructionEnabled(e) _abortOnExceptionConstruction=(e)
+#else
+  #define abortOnExceptionConstructionEnabled(e)
+#endif
+
+
+
+#ifdef __GNUC__
+
+  #ifdef DEBUG
+    #define _PrintConstructingException(o) \
+              printf("constructing exception: %s\n", \
+               (String(__PRETTY_FUNCTION__)+" (line "+base::intToString(__LINE__)+") - "+String(o)).c_str())
+  
+  
+    #define Exception(o) ( \
+                          ( (_abortOnExceptionConstruction? \
+                              (_PrintConstructingException(o),::abort(),0) \
+                            : (_outputExceptionOnConstruction?(_PrintConstructingException(o)):(0)) \
+                            ) \
+                          ), \
+                             String(String("exception thrown: ")+__PRETTY_FUNCTION__+":\n - "+String(o)) \
+                         )
+
+
+  #else   // ndef DEBUG
+    #define Exception(o) String(String("exception thrown: ")+__PRETTY_FUNCTION__+" - "+String(o))
+  #endif  // DEBUG
+
+  #define Exceptionf(o) String(String("exception thrown: ")+__PRETTY_FUNCTION__+":\n - "+String(o))
+  #define Assertion(o) String(String("assertion failed: ")+__PRETTY_FUNCTION__+" (line "+base::intToString(__LINE__)+") - "+String(o))
+  #define Assertionf(o) String(String("assertion failed: ")+__PRETTY_FUNCTION__+" (line "+base::intToString(__LINE__)+") - "+String(o))
+
+
+#else // ndef __GNUC__
+
+  #ifdef DEBUG
+
+    #define _PrintConstructingException(o) \
+              printf("constructing exception: %s\n", \
+               (String(base::className(typeid(*this)))+"::"+String(__func__)+" - "+String(o)).c_str())
+  
+    #define Exception(o) ( \
+                           ( (_abortOnExceptionConstruction? \
+                               (_PrintConstructingException(o),::abort(),0) \
+                             : (_outputExceptionOnConstruction?(_PrintConstructingException(o)):(0)) \
+                             ) \
+                           ), \
+                              String(String("exception thrown: ")+String(base::className(typeid(*this)))+"::"+String(__func__)+":\n - "+String(o)) \
+                         )
+  #else
+    #define Exception(o) String(String("exception thrown: ")+String(base::className(typeid(*this)))+"::"+String(__func__)+":\n - "+String(o))
+  #endif
+  #define Exceptionf(o) String(String("exception thrown: ")+String(__func__)+":\n - "+String(o))
+  #define Assertion(o) String(String("assertion failed: ")+String(base::className(typeid(*this)))+"::"+String(__func__)+" - "+String(o))
+  #define Assertionf(o) String(String("assertion failed: ")+String(__func__)+" - "+String(o))
+
+#endif // __GNUC__
+
+#ifdef DEBUG
+
+  #define Assert(a) { if (!(a)) base::assertionFailure(Assertion(#a)); }
+  #define Assertf(a) { if (!(a)) base::assertionFailure(Assertionf(#a)); }
+  #define Assertm(a,s) { if (!(a)) base::assertionFailure(Assertion(s)); }
+  #define Assertmf(a,s) { if (!(a)) base::assertionFailure(Assertionf(s)); }
+#else // ndef DEBUG
+  #define Assert(a) 
+  #define Assertf(a) 
+  #define Assertm(a,s) 
+  #define Assertmf(a,s) 
+#endif // DEBUG
+
+#define Assertifm(f,a,s) Assertm(!f || a,s)
+#define Assertifmf(f,a,s) Assertmf(!f || a,s)
+
+#define instanceof(var,type) (dynamic_cast<type*>(&var) != 0)
+
+
+
+// More globals
+
+#include <base/array>
+#include <base/ref>
+using base::array;
+using base::ref;
+
+
+#endif
+

@@ -1,0 +1,92 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: LineSegTrajectoryRep 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_LINESEGTRAJECTORYREP_
+#define _BASE_LINESEGTRAJECTORYREP_
+
+#include <base/LineSegPathRep>
+#include <base/TrajectoryTimeRep>
+#include <base/Math>
+
+
+namespace base {
+
+
+/// Concrete trajectory representation as a line segment
+class LineSegTrajectoryRep : public LineSegPathRep, public TrajectoryTimeRep
+{
+public:
+  LineSegTrajectoryRep() 
+  : st(0), et(1) {}
+  LineSegTrajectoryRep(const Point3& sp, const Orient& so, Time st,
+		       const Point3& ep, const Orient& eo, Time et)
+    : LineSegPathRep(sp,so,ep,eo), st(st), et(et) {}
+
+  virtual Object& clone() const
+    { return *NewObj LineSegTrajectoryRep(sp, so, st, ep, eo, et); }
+
+  virtual String className() const { return String("LineSegTrajectoryRep"); }
+
+
+  /// get time at s:[0..1]
+  virtual Time time(Real s) const
+  {
+    return st+(s*(et-st));
+  }
+
+  /// shift time by dt
+  virtual void shiftTime(const Time& dt) 
+  { st+=dt; et+=dt; }
+
+  /// scale time by s
+  virtual void scaleTime(Real s)
+  { st*=s; et*=s; }
+
+  /// get parameter s value at time t
+  virtual Real gets(const Time& t) const
+  {
+    Time bt(t);
+    Math::bound<Time>(bt,st,et);
+    return (bt-st).seconds()/((et-st).seconds());
+  }
+
+
+
+  virtual void serialize(Serializer& s) 
+  { 
+    LineSegPathRep::serialize(s);
+    s(st,"startTime");
+    s(et,"endTime");
+  }
+
+protected:
+  Time st; ///< start time
+  Time et; ///< end time
+
+};
+
+
+} // base
+
+#endif

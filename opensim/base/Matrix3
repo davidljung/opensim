@@ -1,0 +1,332 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Matrix3 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.10 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_MATRIX3_
+#define _BASE_MATRIX3_
+
+#include <iostream>
+
+#include <base/base>
+#include <base/Object>
+#include <base/Vector3>
+
+
+#define MATRIX3_ACCESS(r,c) (3*(c-1)+r-1)
+
+
+namespace base {
+
+class Serializer;
+class Matrix3;
+
+// classes to help speed up common vector/matrix operations
+//  (not used directly by the user)
+
+struct M3V3mul {
+  const Matrix3& m;
+  const Vector3& v;
+
+  M3V3mul(const Matrix3& mm, const Vector3& vv) : m(mm), v(vv) {}
+
+  operator Vector3() const;
+};
+
+struct M3V3mulV3add {
+  const Matrix3& m;
+  const Vector3& v;
+  const Vector3& v2;
+
+  M3V3mulV3add(const M3V3mul& mv, const Vector3& vv) : m(mv.m), v(mv.v), v2(vv) {}
+
+  operator Vector3() const;
+};
+
+
+//
+// The matrix
+//
+
+class Matrix3 
+{
+
+public:
+  Matrix3() { setIdentity(); }
+  Matrix3(const Matrix3& m) { this->operator=(m); }
+  Matrix3(const Real& s) { setDiag(s); }
+  Matrix3(Real e11, Real e12, Real e13,
+	  Real e21, Real e22, Real e23,
+	  Real e31, Real e32, Real e33)
+  {
+    e(1,1)=e11; e(1,2)=e12; e(1,3)=e13;
+    e(2,1)=e21; e(2,2)=e22; e(2,3)=e23;
+    e(3,1)=e31; e(3,2)=e32; e(3,3)=e33;
+  }
+  ~Matrix3() {}
+
+  
+  Matrix3& setIdentity() throw()
+  {
+    setDiag(Real(1)); return *this;
+  }
+
+  Matrix3& setZero() throw()
+  {
+    setDiag(Real(0)); return *this;
+  }
+
+
+  Real& e(Int row, Int col) throw()
+  { 
+    Assertm( !((row < 1) || (row > 3) || (col < 1) || (col > 3)), "matrix row and col within bounds (debug only check)");
+    return m[MATRIX3_ACCESS(row,col)]; 
+  }
+
+  const Real& e(Int row, Int col) const throw()
+  {
+    Assertm( !((row < 1) || (row > 3) || (col < 1) || (col > 3)), "matrix row and col within bounds (debug only check)");
+    return m[MATRIX3_ACCESS(row,col)]; 
+  }
+
+  Real& at(Int row, Int col) throw(std::out_of_range)
+  {
+    if ((row < 1) || (row > 3) || (col < 1) || (col > 3))
+      throw std::out_of_range(Exception("matrix row or col out of bounds"));
+
+    return m[MATRIX3_ACCESS(row,col)];
+  }
+
+  const Real& at(Int row, Int col) const throw(std::out_of_range)
+  {
+    if ((row < 1) || (row > 3) || (col < 1) || (col > 3))
+      throw std::out_of_range(Exception("matrix row or col out of bounds"));
+
+    return m[MATRIX3_ACCESS(row,col)];
+  }
+
+  Real& operator()(Int row, Int col) throw()
+  {
+#ifdef DEBUG
+    return at(row,col);
+#else
+    return e(row,col);
+#endif
+  }
+
+  const Real& operator()(Int row, Int col) const throw()
+  {
+#ifdef DEBUG
+    return at(row,col);
+#else
+    return e(row,col);
+#endif
+  }
+
+
+
+
+
+  Vector3 row(Int row) const         // extract row vector
+  { return Vector3(e(row,1),e(row,2),e(row,3)); }
+
+  Vector3 column(Int col) const      // extract column vector
+  { return Vector3(e(1,col),e(2,col),e(3,col)); }
+
+  void setRow(Int row, const Vector3& r) throw()
+  { e(row,1)=r.x; e(row,2)=r.y; e(row,3)=r.z; }
+
+  void setColumn(Int col, const Vector3& c) throw()
+  { e(1,col)=c.x; e(2,col)=c.y; e(3,col)=c.z; }
+
+  void swapColumns(Int col1, Int col2) throw(std::out_of_range)
+  {
+    if ((col1 < 1) || (col1 > 3) || (col2 < 1) || (col2 > 3))
+      throw std::out_of_range(Exception("matrix col out of bounds"));
+
+    Vector3 tmp(column(col1));
+    setColumn(col1,column(col2));
+    setColumn(col2,tmp);
+  }
+
+  void swapRows(Int row1, Int row2) throw(std::out_of_range)
+  {
+    if ((row1 < 1) || (row1 > 3) || (row2 < 1) || (row2 > 3))
+      throw std::out_of_range(Exception("matrix row out of bounds"));
+
+    Vector3 tmp(row(row1));
+    setRow(row1,row(row2));
+    setRow(row2,tmp);
+  }
+
+
+  Vector3 operator[](Int r) const  // row
+  { return row(r); }
+
+
+  int index(Int row, Int col) const throw()
+  { return MATRIX3_ACCESS(row,col); }
+
+  Matrix3& operator=(const Matrix3& src) throw()
+  { 
+    if (&src != this)
+      for(int i=0; i<9; i++)
+	m[i] = src.m[i];
+    return *this;
+  }
+
+
+  bool operator==(const Matrix3& m1) const throw()
+  {
+    for(int i=0; i<9; i++)
+      if (m1.m[i]!=m[i]) return false;
+    return true;
+  }
+
+  bool equals(const Matrix3& m1, Real epsilon = consts::epsilon) const throw()
+  {
+    for(int i=0; i<9; i++)
+      if (!base::equals(m1.m[i],m[i],epsilon)) return false;
+    return true;
+  }
+
+
+  Matrix3& transpose();
+  Matrix3& invert();
+  Matrix3& negate() throw();
+
+  /// sets the matrix to the right-handed orthonormal basis for vector v
+  void setOrthonormalBasisOf(const Vector3& v);
+  
+  // Find LUP decomposition.  P is represented by the vector Pi, where the element
+  //  values represent the column of P containing a 1. i.e. Pi[i]=j => P[i][j]=1
+  void decomposeLUP(Matrix3& L, Matrix3& U, Vector3& Pi) const;
+  
+  /// Solve Ax=b for x, given b, where A=*this (returns x)
+  Vector3  solve(const Vector3& b) const; 
+
+  // Computes the eigen values/vectors in dout & vout resp.
+  //  (returns the no. of iterations taken (upto max) )
+  Int eigenJacobi(Matrix3& vout, Vector3& dout, Int maxIter=50) const;
+
+  Matrix3& operator*=(const Matrix3& m2);
+  Matrix3& operator+=(const Matrix3& m2);
+  Matrix3& operator-=(const Matrix3& m2);
+  Matrix3& operator*=(const Real& s);
+  Matrix3& operator/=(const Real& s);
+
+
+  const Real* c_array() const { return m; }
+  Real* c_array() { return m; }
+
+  /// Solve for xA = b, given LUP decomposition of A as L, U and Pi, and given b, returns x
+  static Vector3 solveLUP(const Matrix3& L, const Matrix3& U, const Vector3& Pi, const Vector3& b);
+
+  static void decomposeLUP(const Matrix3& A, Matrix3& L, Matrix3& U, Vector3& Pi)
+  { A.decomposeLUP(L,U,Pi); }
+
+  // best to use the operators than use these directly
+  static Vector3 matrixMulVector(const Matrix3& m, const Vector3& v); // m x v
+  static Vector3 matrixMulVectorAddVector(const Matrix3& m, const Vector3& v, const Vector3& v2); // m x v + v2
+
+  void serialize(Serializer& s); ///< read or write object state to Serializer
+
+private:
+  Real m[9];
+  
+  void setDiag(const Real& d)
+  {
+    m[0] = d;
+    m[1] = Real(0);
+    m[2] = Real(0);
+    m[3] = Real(0);
+    m[4] = d;
+    m[5] = Real(0);
+    m[6] = Real(0);
+    m[7] = Real(0);
+    m[8] = d;
+  }
+
+};
+
+
+// Operations
+
+
+inline Matrix3 operator*(const Matrix3& m1, const Matrix3& m2) // Matrix multiplication
+{ Matrix3 r(m1); return r *= m2; }
+
+inline Matrix3 operator+(const Matrix3& m1, const Matrix3& m2) // Addition
+{ Matrix3 r(m1); return r += m2; }
+
+inline Matrix3 operator-(const Matrix3& m1, const Matrix3& m2) // Subtraction
+{ Matrix3 r(m1); return r -= m2; }
+
+inline Matrix3 operator-(const Matrix3& m1) // Negation
+{ Matrix3 r(m1); return r.negate(); }
+
+inline Matrix3 operator*(const Matrix3& m1, const Real& s) // Scalar multiplication
+{ Matrix3 r(m1); return r *= s; }
+
+inline Matrix3 operator*(const Real& s, const Matrix3& m1) // Scalar multiplication
+{ Matrix3 r(m1); return r *= s; }
+
+inline Matrix3 operator/(const Matrix3& m1, const Real& s) // Scalar division
+{ Matrix3 r(m1); return r /= s; }
+
+inline Matrix3 transpose(const Matrix3& m) // Transpose
+{ Matrix3 r(m); return r.transpose(); }
+
+inline Matrix3 inverse(const Matrix3& m) // Inverse
+{ Matrix3 r(m); return r.invert(); }
+
+
+
+
+
+// These functions and the structs above provide closures for common vector matrix
+//  operations.
+// For example, an expression like m*v+v2 will expand to:
+//              Matrix3::matrixMulVectorAddVector(m,v,v2);
+// rather than: Vector3 r(operator*(m,v)); r.operator+=(v2), return r
+//   (saving a couple copies between temporaries)
+
+inline M3V3mulV3add operator+(const M3V3mul& mv, const Vector3& vv)
+{ return M3V3mulV3add(mv,vv); }
+
+inline M3V3mul operator*(const Matrix3& mm, const Vector3& vv)
+{ return M3V3mul(mm,vv); }
+
+inline M3V3mul::operator Vector3() const
+{ return Matrix3::matrixMulVector(m,v); }
+
+inline M3V3mulV3add::operator Vector3() const
+{ return Matrix3::matrixMulVectorAddVector(m,v,v2); }
+
+
+std::ostream& operator<<(std::ostream& out, const Matrix3& m); // Output
+
+
+} // base
+
+#endif
+

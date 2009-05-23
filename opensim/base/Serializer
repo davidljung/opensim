@@ -1,0 +1,487 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Serializer 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.11 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_SERIALIZER_
+#define _BASE_SERIALIZER_
+
+#include <base/base>
+#include <base/Serializable>
+#include <base/Referenced>
+#include <base/array>
+#include <base/ref>
+#include <base/reflist>
+#include <base/serialization_error>
+#include <base/VFile>
+
+#include <base/Time>
+#include <base/Vector3>
+#include <base/Quat4>
+#include <base/Orient>
+#include <base/Matrix3>
+#include <base/Matrix4>
+#include <base/Vector>
+#include <base/Matrix>
+
+
+#include <iostream>
+#include <list>
+
+
+namespace base {
+
+class Serializable;
+
+
+class Serializer : public Object
+{
+public:
+  enum SerializerType { Input=0, Output=1 };
+  Serializer(SerializerType type);
+  Serializer(SerializerType type, ref<VFile> archive); 
+  Serializer(SerializerType type, std::ios& stream);
+  virtual ~Serializer();
+
+  virtual bool isOutput() const { return output; }     ///< true is this is an output serialization stream
+  virtual bool isInput() const { return !isOutput(); } ///< true if this is an input serialization stream
+
+  /** If follow is true (default) serialized references will cause the object being referenced to 
+      be serialized (if it hasn't been already).  For complex data structures this recursive serialization
+      of objects (and hence object they reference in turn), may cause excessive stack usage.
+      If follow is false then the objects to which references refer will NOT be serialized.  It is then
+      up to the client to ensure that all referenced objects are ultimately serialized in the stream.
+      Upon destruction, the Serializer *may* throw an exception if there are outstanding references
+      to objects that have not been serialized.
+      Returns the previous value (which most serialize() methods should restore before returning)
+  */
+  virtual bool followReferences(bool follow);
+
+
+  /** The operator() method is overloaded for all types that can be serialized
+      (including classes that derive from Serializable, in which case their
+       serialize() method is called with *this Serializer).
+      For example: (assuming class B is-a Serialiable)
+      class A : public Serializable
+      {
+      public:
+        int  a;
+	Real b
+	ref<B> c;
+	B d;
+	std::list<B> e;
+
+	void serialize(Serializer& s) { s(a)(b)(c)(d)(e); }
+      }
+      
+      The serialize() method will input or output (depending in the type of
+       the Serializer s) the values a & b, will call c->serialize(s) if necessary
+       (for example, on Output, if the object *c hasn't already been serialized),
+       will call d.serialize() and also B::serialize(s) for each element of e.
+
+      NB: all serialization operator() methods have undefined behavior
+      for input streams that are exhausted, except char & Byte, which return std::EOF
+   */
+
+  
+  /// emit comments into the serialization stream.  Does nothing if not an output stream or the format doesn't support comments
+  Serializer& comment(const String& comment) { serializeComment(comment); return *this; }
+
+  enum Hint { Indent=0, Unindent=1 };
+  /// provide a hint.  The meaning is specific particular serializers and may be ignored/have no effect
+  virtual Serializer& hint(Int h) { return *this; }
+
+
+  // Serialization of simple types 
+  Serializer& operator()(char& c, const String& memberName = "")       { return serialize(c, memberName); }
+  Serializer& operator()(const char& c, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<char&>(c), memberName); }
+
+  Serializer& operator()(Byte& b, const String& memberName = "")       { return serialize(b, memberName); }
+  Serializer& operator()(const Byte& b, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<Byte&>(b), memberName); }
+
+  Serializer& operator()(bool& b, const String& memberName = "")       { return serialize(b, memberName); }
+  Serializer& operator()(const bool& b, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<bool&>(b), memberName); }
+
+  Serializer& operator()(SInt& i, const String& memberName = "")       { return serialize(i, memberName); }
+  Serializer& operator()(const SInt& i, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<SInt&>(i), memberName); }
+
+  Serializer& operator()(Int& i, const String& memberName = "")        { return serialize(i, memberName); }
+  Serializer& operator()(const Int& i, const String& memberName = "")  
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<Int&>(i), memberName); }
+
+  Serializer& operator()(LInt& i, const String& memberName = "")       { return serialize(i, memberName); }
+  Serializer& operator()(const LInt& i, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<LInt&>(i), memberName); }
+
+  Serializer& operator()(Real& r, const String& memberName = "")       { return serialize(r, memberName); }
+  Serializer& operator()(const Real& r, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<Real&>(r), memberName); }
+
+
+  // Serialization of light weight (non-Serializable) composite types 
+  Serializer& operator()(String& s, const String& memberName = "")     { return serialize(s, memberName); }
+  Serializer& operator()(const String& s, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<String&>(s), memberName); }
+
+  Serializer& operator()(Time& t, const String& memberName = "")
+  { t.serialize(*this); return *this; }
+  Serializer& operator()(const Time& t, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Time&>(t), memberName); }
+
+  Serializer& operator()(Vector3& v, const String& memberName = "")
+  { v.serialize(*this); return *this; }
+  Serializer& operator()(const Vector3& v, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Vector3&>(v), memberName); }
+
+  Serializer& operator()(Quat4& q, const String& memberName = "")
+  { q.serialize(*this); return *this; }
+  Serializer& operator()(const Quat4& q, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Quat4&>(q), memberName); }
+
+  Serializer& operator()(Orient& o, const String& memberName = "")
+  { o.serialize(*this); return *this; }
+  Serializer& operator()(const Orient& o, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Orient&>(o), memberName); }
+
+  Serializer& operator()(Matrix3& m, const String& memberName = "")
+  { m.serialize(*this); return *this; }
+  Serializer& operator()(const Matrix3& m, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Matrix3&>(m), memberName); }
+
+  Serializer& operator()(Matrix4& m, const String& memberName = "")
+  { m.serialize(*this); return *this; }
+  Serializer& operator()(const Matrix4& m, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Matrix4&>(m), memberName); }
+
+  Serializer& operator()(Vector& v, const String& memberName = "");
+  Serializer& operator()(const Vector& v, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Vector&>(v), memberName); }
+
+  Serializer& operator()(Matrix& m, const String& memberName = "");
+  Serializer& operator()(const Matrix& m, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return operator()(const_cast<Matrix&>(m), memberName); }
+    
+
+
+  // serialization of references complex types (derived from Serializable),
+  //  references (ref<T>, T derived from Serializable), and supported containers
+  //  (e.g. array)
+
+  Serializer& operator()(Serializable& r, const String& memberName = "") { return serialize(r, memberName); }
+  Serializer& operator()(const Serializable& r, const String& memberName = "") 
+  { if (!output) throw serialization_error(Exception(inputToConstErrorString)); else return serialize(const_cast<Serializable&>(r), memberName); }
+
+
+  // ref<T>
+  template<class T>
+  Serializer& operator()(ref<T>& r, const String& memberName = "")
+  {
+    T* p = GetImplRef(r);
+    
+    Serializable* sp = 0;
+    if (p!=0) {
+      if (!instanceof(*p,Serializable))
+	throw serialization_error(Exception("can only archive references to Serializable derived classes (ref<Serializable>)"));
+      sp = dynamic_cast<Serializable*>(p);
+    }
+
+    if (!output) {
+      Serializable::SerializableDerivedInstantiator<T> i;
+      serializePointer(sp,(sp==0)?&i:0, memberName);
+      Assert(sp);
+      p = dynamic_cast<T*>(sp);
+      Reset(r,p);  
+    }
+    else
+      serializePointer(sp,0, memberName);
+
+    return *this;
+  }
+
+  // ref<T> where T is a (possible abstract) base of the subclass being serialized
+  template<class T>
+  Serializer& baseRef(ref<T>& r, const String& memberName = "")
+  {
+    T* p = GetImplRef(r);
+    
+    Serializable* sp = 0;
+    if (p!=0) {
+      if (!instanceof(*p,Serializable))
+	throw serialization_error(Exception("can only archive references to Serializable derived classes (ref<Serializable>)"));
+      sp = dynamic_cast<Serializable*>(p);
+    }
+
+    if (!output) {
+      // can't utilize an existing instance it may not be the correct subclass
+      r = ref<T>();
+      sp = 0; 
+      serializePointer(sp,0, memberName,true);
+      Assert(sp);
+      p = dynamic_cast<T*>(sp);
+      Reset(r,p);  
+    }
+    else
+      serializePointer(sp,0, memberName, true);
+
+    return *this;
+  }
+
+
+  template<class T>
+  Serializer& operator()(const ref<T>& r, const String& memberName = "")
+  {
+    if (!output)
+      throw serialization_error(Exception("can't input to a const ref<>"));
+
+    T* p = GetImplRef(r);
+
+    Serializable* sp = 0;
+    if (p != 0) {
+      if (!instanceof(*p,Serializable))
+	throw serialization_error(Exception("can only archive references to Serializable derived classes (ref<Serializable>)"));
+      sp = dynamic_cast<Serializable*>(p);
+    }
+    serializePointer(sp,0, memberName);
+    return *this;
+  }
+
+
+  // array
+  template<class T>
+  Serializer& operator()(array<T>& a, const String& memberName = "")
+  {
+    serializeComment(String("begin array ")+memberName);
+    Int size = a.size();
+    operator()(size, "size");
+    for(Int i=0; i<size; i++)
+      operator()(a.at(i));
+    serializeComment(String("end array ")+memberName);
+    return *this;
+  }
+
+  template<class T>
+  Serializer& operator()(const array<T>& a, const String& memberName = "")
+  {
+    if (!output)
+      throw serialization_error(Exception(inputToConstErrorString));
+
+    serializeComment(String("begin array ")+memberName);
+    Int size = a.size();
+    operator()(size, "size");
+    for(Int i=0; i<a.size(); i++)
+      operator()(a[i]);
+    serializeComment(String("end array ")+memberName);
+    return *this;
+  }
+
+  // std::list<T>
+  template<class T>
+  Serializer& operator()(std::list<T>& l, const String& memberName = "")
+  {
+    if (output) {
+      serializeComment(String("begin list ")+memberName);
+      Int size = l.size();
+      operator()(size, "size");
+      typename std::list<T>::iterator i = l.begin();
+      typename std::list<T>::iterator end = l.end();
+      while (i != end) {
+	operator()(*i);
+	++i;
+      }
+      serializeComment(String("end list ")+memberName);
+    }
+    else {
+      l.clear();
+      Int size;
+      operator()(size, "size");
+      if (size > 0) {
+	T e;
+	for(Int i=0; i<size; i++) {
+	  operator()(e);
+	  l.push_back( e );
+	}
+      }
+    }
+
+    return *this;
+  }
+
+  template<class T>
+  Serializer& operator()(const std::list<T>& a, const String& memberName = "")
+  {
+    if (!output)
+      throw serialization_error(Exception(inputToConstErrorString));
+    return operator()(const_cast<std::list<T>&>(a), memberName);
+  }
+
+
+  // reflist<T>
+  template<class T>
+  Serializer& operator()(reflist<T>& l, const String& memberName = "")
+  {
+    if (output) {
+      serializeComment(String("begin reflist ")+memberName);
+      Int size = l.size();
+      operator()(size, "size");
+      typename reflist<T>::iterator i = l.begin();
+      typename reflist<T>::iterator end = l.end();
+      while (i != end) {
+	operator()(*i);
+	++i;
+      }
+      serializeComment(String("end reflist ")+memberName);
+    }
+    else {
+      l.clear();
+      Int size;
+      operator()(size, "size");
+      if (size > 0) {
+	for(Int i=0; i<size; i++) {
+	  ref<T> e(0);
+	  operator()(e);
+	  l.push_back( e );
+	}
+      }
+    }
+
+    return *this;
+  }
+
+  template<class T>
+  Serializer& operator()(const reflist<T>& l, const String& memberName = "")
+  {
+    if (!output)
+      throw serialization_error(Exception(inputToConstErrorString));
+    return operator()(const_cast<reflist<T>&>(l), memberName);
+  }
+
+
+  virtual void flush() = 0;
+
+protected:  
+  Serializer(const Serializer& s) : output(s.output), follow(s.follow), aborted(s.aborted) {}
+
+  const static String inputToConstErrorString;
+
+  // helpers
+  virtual void serializeReferenceIndex(Int& index)
+    { operator()(index,"refindex"); }
+  virtual void serializePointer(Serializable*& p, Serializable::SerializableInstantiator* i, const String& memberName, bool forceTypeSerialization = false);
+
+  void abort(const String& exceptionString); // flags the serialization as aborted and throws an exception
+
+
+  // specialized Serializers need only implement these
+  //  (for convenience only the non-const parameter versions are
+  //   required.  This means that for Output type serializers,
+  //   these functions should *not* modify the parameter.  The
+  //   parameter has had its constness cast away before being passed)
+  virtual Serializer& serialize(char& c, const String& memberName) = 0;
+  virtual Serializer& serialize(Byte& b, const String& memberName) = 0;
+  virtual Serializer& serialize(bool& b, const String& memberName) = 0;
+  virtual Serializer& serialize(SInt& i, const String& memberName) = 0;
+  virtual Serializer& serialize(Int& i, const String& memberName) = 0;
+  virtual Serializer& serialize(LInt& i, const String& memberName) = 0;
+  virtual Serializer& serialize(String& s, const String& memberName) = 0;
+  virtual Serializer& serialize(Real& r, const String& memberName) = 0;
+
+
+  enum TypeModifier { UnknownType          = 0,
+		      ObjectType           = 1,
+		      ReferencedObjectType = 2,
+		      ObjectReferenceType  = 3,
+                      InvalidType          = 4 };
+  ///  serializes object or reference header
+  /**
+   *   Typically serializes the object or reference type (at minimum a flag indicating if a referenced object is present in the
+   *   stream, or just an object reference).  Called just before an object or reference is serialized (by serialize(Serializable&) 
+   *   or serializePointer() ).
+   *    
+   *   @param      typeName      Object type name as returned from typeid().name(). 
+   *                             For output, the type of the object is passed.  In the case of referenced objects
+   *                             it shound't be the pointer or reference type, just the referenced object type.
+   *                             For input streams, the expected type is passed, or the empty string if the object type
+   *                             to be read is unknown (if, for example, the serialization format doesn't include type information)
+   *                             If the serialization format does contain the object type information, it is returned, otherwise
+   *                             the parameter is unaltered.
+   *
+   *   @param      typeModifier  Modifies typeName to indicate unreferencable objects, referenced objects and object references.
+   *                             For output, the value ObjectType is passed for single instance objects.  For referenced objects,
+   *                             ReferencedObjectType is passed if the object itself will subsequently be serialized,
+   *                             or ObjectReferenceType if subsequently only a reference to the object (elsewhere in
+   *                             the stream) will be serialized.
+   *                             For input, the values passed are as for output, except that if it is unknown if
+   *                             a referenced object or just a reference will subsequently be read, UnknownType is passed,
+   *                             and either the value ReferencedObjectType or ObjectReferenceType will be returned.
+   *
+   *   @param      memberName    An optional name for the reference being serialized.  This must be the same on input
+   *                             as was supplied on output.
+   *
+   *   @param      forceTypeSerialization Usually the type of object being input can be deduced from the type of
+   *                                      the reference.  However, when serializing derived classes via a reference
+   *                                      to a base class, it is not possible to determine which derived class to
+   *                                      instantiate on input unless the type is stored in the serialization stream.
+   *                                      For Serializers that don't usually store the referenced object type on output,
+   *                                      this parameter is used to force them to do so.
+   *
+   *   @return     For output, the parameter typeModifier is returned.  For input, one of ObjectType, ReferencedObjectType or ObjectReferenceType is returned.
+   *   @exception  serialization_error if unexpected input is found.
+   *
+   * Note that as the strings returned by typeid().name() are not portable accross compilers, they shouldn't be
+   *      embedded into serialization streams.  Use base::className(typeid()) to obtain a portable type string.
+   */
+  virtual TypeModifier preSerializeObject(String& typeName, TypeModifier typeModifier, const String& memberName, bool forceTypeSerialization = false) = 0;
+
+  /// serialize an object or reference 'footer'
+  /** Called just after an object or reference has been serialized (by serialize(Serializable&) or serializePointer() ). */
+  virtual void         postSerializeObject(const String& memberName) = 0;
+
+
+  /// only override this to re-implement 
+  virtual Serializer& serialize(Serializable& r, const String& memberName);
+
+  /// override this if the serialization format supports comments
+  virtual void serializeComment(const String& comment) {}
+
+
+
+
+  bool output;
+  bool follow;
+  bool aborted;
+
+  Int ptrIndex(Serializable* p);
+
+  array<Serializable*> ptrs;
+  array<bool>          serialized;
+  Int serializePointerRecursionDepth;
+  Int depthAtFollowDisable; // serializePointerRecursionDepth value when follow was last set false (follow pointer's only one level below)
+};
+
+
+} // base
+
+#endif

@@ -1,0 +1,120 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Robot 1118 2004-09-27 22:13:27Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_ROBOT_
+#define _ROBOT_ROBOT_
+
+#include <robot/robot>
+
+#include <base/array>
+
+#include <robot/Controllable>
+#include <robot/RobotDescription>
+#include <robot/ToolDescription>
+
+
+namespace robot {
+
+/**
+ * An abstract Robot
+ */
+class Robot : public Controllable
+{
+public:
+
+  /**
+   * A Robot provides a number of ControlInterfaces for various parts, such as
+   *  its drive platform, manipulators and other sensors etc.
+   * Refer to documentation for specific concrete Robot implementation for specific
+   *  ControlInterface names and descriptions.
+   * This method enumerates the ControlInterface names and their types.  The interfaces
+   *  can be obtained by passing the name to the getControlInterface() method.
+   */
+  virtual array<std::pair<String,String> > controlInterfaces() const;
+
+  /// get a ControlInterface by name (or throw if the name isn't a valid interface)
+  virtual ref<ControlInterface> getControlInterface(String interfaceName="") throw(std::invalid_argument) = 0;
+
+
+  /// is there a description of this robot available?
+  virtual bool isDescriptionProvided() const { return false; }
+
+  /// get a description of the robot, if provided.  Throws an exception if no description can be provided.
+  virtual ref<const RobotDescription> getRobotDescription() const throw(std::logic_error)
+    {
+      if (isDescriptionProvided())
+        return robotDescription;
+      else
+        throw std::logic_error(Exception("no description available"));
+    }
+
+
+  // factory
+  virtual ref<RobotDescription>       newRobotDescription() const { return ref<RobotDescription>(NewObj RobotDescription()); }
+  virtual ref<PlatformDescription>    newPlatformDescription() const { return ref<PlatformDescription>(NewObj PlatformDescription()); }
+  virtual ref<ManipulatorDescription> newManipulatorDescription() const { return ref<ManipulatorDescription>(NewObj ManipulatorDescription()); }
+
+
+  // various coordinate frames in which points are often expressed
+  enum CoordFrame {
+    UnknownFrame,         // ""         the coord frame is unknown
+    EndEffectorFrame,     // "ee"       frame of a manipulator end-effector
+    EndEffectorBaseFrame, // "eebase"   frame with origin at a manipulator end-effector but axes alighed with the manipulator base frame
+    BaseFrame,            // "base"     frame of a manipulator's base link
+    MountFrame,           // "mount"    frame of a manipulator's mount (other end of base link - where manipulator is mounted to the robot platform)
+    PlatformFrame,        // "platform" frame of a robot platform
+    WorldFrame            // "world"    the global world frame
+  };
+
+  // utility methods for converting between coordinate frames
+
+  /// Obtain transformation that will transform between coordinate frames
+  /// Some transformations will require further information, such as specifying the forward kinematics
+  ///  transform from the base frame to the end-effector frame, or which manipulator
+  ///   (EndEffector[Base]Frame, BaseFrame & MountFrame)
+  /// Transformations involving the WorldFrame require the platform position and orientation.
+  base::Matrix4 coordFrameTransform(CoordFrame from, CoordFrame to = PlatformFrame,
+                                    Int manipulatorIndex=0,
+                                    const base::Matrix4& T = base::Matrix4(),
+                                    const base::Point3& platformPosition = base::Point3(),
+                                    const base::Orient& platformOrientation = base::Orient()) const;
+
+  /// convert String coord. frame specifier to CoordFrame
+  static CoordFrame coordFrame(const String& frameString);
+
+  /// convert coord. frame specifier to String
+  static String coordFrame(CoordFrame coordFrame);
+
+protected:
+  Robot() {}
+  Robot(const Robot& r)
+    : robotDescription(r.robotDescription) {}
+
+  void setRobotDescription(ref<const RobotDescription> robotDescription) { this->robotDescription=robotDescription; }
+
+private:
+  ref<const RobotDescription> robotDescription; ///< the description
+};
+
+
+} // robot
+
+#endif

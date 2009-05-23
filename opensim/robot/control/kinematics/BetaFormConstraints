@@ -1,0 +1,212 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: BetaFormConstraints 1036 2004-02-11 20:48:55Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-02-11 15:48:55 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_BETAFORMCONSTRAINTS_
+#define _ROBOT_CONTROL_KINEMATICS_BETAFORMCONSTRAINTS_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <sstream>
+
+#include <base/Named>
+#include <robot/control/kinematics/Optimizer>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// Representation of a Optimizer::Constraints expressed in the form of a beta expression
+///   (and optionally a single non-holonomic constraint in the form of an alpha expression).
+/**
+ * Paper 1 below introduces an analytic optimization method where the constraints are
+ *  expressed in terms betajs
+ *  betaj . t - 1 = 0, j=1..r 
+ *
+ * Paper 2 below adds a non-holonomic constraint expressed terms of alpha
+ *  alpha^T . t = 0
+ *  
+ * This class represents the constraints in this form.
+ *
+ * see 1. "Resolving Kinematic Redundancy with Constraints 
+ * Using the FSP (Full Space Parameterization) Approach", Francois G. Pin & Faithlyn A. Tulloch,
+ * Proceedings of the 1996 IEEE International Conference on Robotics and Automation.
+ *
+ * see 2. "Motion Planning for Mobile Manipulators with a Non-Holonomic Constraint
+ * Using the FSP (Full Space Marameterization) Method", Francois G. Pin, Kristi A. Morgansen,
+ * Faithlyn A. Tulloch, Charles J. Hacker and Kathryn B. Gower,
+ * Journal of Robotic Systems 13(11), 723-736 (1996).
+ */
+class BetaFormConstraints : public Optimizer::Constraints
+{
+public:
+  /// Abstract interface for a constraint expressed in beta form
+  class BetaFormConstraint : public base::ReferencedObject, public base::Named
+  {
+  public:
+    BetaFormConstraint() : Named(className()), id(0) {}
+    BetaFormConstraint(const BetaFormConstraint& bc) : Named(bc), id(bc.id), beta(bc.beta) {}
+    BetaFormConstraint(const Vector& beta) : id(0), beta(beta) { setName(className()); }
+
+    virtual String className() const { return String("BetaFormConstraint"); }
+    
+    virtual Int    getID() const { return id; }
+    virtual void   setID(Int id) { this->id = id; }
+    
+    virtual Vector getBeta() const { return beta; }
+
+    virtual String toString() const { return String(); }
+    
+  protected:
+    Int id; ///< user specified id (not interpreted by this)
+    Vector beta;
+  };
+
+
+  BetaFormConstraints() 
+    : numBetas(0), nonholonomicConstraint(false) {}
+
+  virtual String className() const { return String("BetaFormConstraints"); }
+
+  virtual ConstraintsType getConstraintsType() const              { return Linear; }
+  virtual ConstraintType  getConstraintType(Int constraint) const { return Equality; }
+  virtual Int numConstraints() const           { return numBetas+(nonholonomicConstraint?1:0); }
+  virtual Int numEqualityConstraints() const   { return numConstraints(); }
+  virtual Int numInequalityConstraints() const { return 0; }
+  
+  virtual Real   evaluate(Int constraint, const Vector& x, const Vector& a) const
+    {
+      Assert( constraint < numConstraints() );
+      const Vector& t(a);
+      if (constraint < numBetas) { // eval beta
+	Assert(t.size() == betas.size1());
+	return (inner_prod(matrixColumn(betas,constraint),t) - 1.0);
+      }
+      else  { // eval alpha
+	Assert(t.size() == alpha.size());
+	return inner_prod(alpha, t);
+      }
+    }
+
+  virtual Vector evaluate(const Vector& x, const Vector& a) const
+    {
+      const Vector& t(a);
+      Vector C(numConstraints());
+      for(Int c=0; c<numBetas; c++)
+	C[c] = (inner_prod(matrixColumn(betas,c),t) - 1.0);
+      if (nonholonomicConstraint)
+	C[numConstraints()-1] = inner_prod(alpha, t);
+      return C;
+    }
+
+
+  void addConstraint(ref<BetaFormConstraint> constraint)
+    { 
+      constraints.push_back(constraint);
+      
+      Vector beta(constraint->getBeta());
+
+      // resize Matrix if necessary
+      if (numBetas == 0) {
+	betas.resize(beta.size(),16);
+      }
+      else {
+	if (numBetas == betas.size2()) {
+	  // double no. of columns and copy betas to new Matrix
+	  Matrix newbetas(betas.size1(), betas.size2()*2);
+	  matrixRange(newbetas,Range(0,betas.size1()),Range(0,numBetas)) = betas;
+	  betas = newbetas;
+	}
+      }
+
+      Assert( beta.size() == betas.size1() );
+      matrixColumn(betas,numBetas) = beta;
+      ++numBetas;
+    }
+
+  void setAlphaConstraint(const Vector& alpha)
+    {
+      nonholonomicConstraint = true;
+      this->alpha.reset(alpha);
+    }
+
+  bool isAlphaConstraint() const { return nonholonomicConstraint; }
+
+  
+  void clear() { betas.resize(0,0); numBetas=0; constraints.clear(); nonholonomicConstraint = false; }
+  ref<BetaFormConstraint> getConstraint(Int i) { return constraints[i]; }
+  Vector getBeta(Int i) const { return matrixColumn(betas,i); }
+  
+  Vector getAlpha() const { return nonholonomicConstraint?alpha:Vector(); }
+
+
+  /// get Matrix of beta column vectors 
+  Matrix getBetas() const 
+  {
+    Matrix allbetas(betas.size1(), numBetas);
+    allbetas = matrixRange(betas,Range(0,betas.size1()), Range(0,numBetas));
+    return allbetas;
+  } 
+
+  Int  numBetaConstraints() const { return numBetas; }
+
+  
+  String toString() const
+  {
+    std::ostringstream str;
+    if (nonholonomicConstraint) 
+      str << "non-holonomic alpha=" << alpha << "\n";
+    for(Int i=0; i<numBetaConstraints(); i++) {
+      ref<BetaFormConstraint> bfc(constraints[i]);
+      str << bfc->getName() << "[id:" << bfc->getID() << "]: " << bfc->toString() << "\n";
+    }
+    return str.str();
+  }
+  
+protected:
+  typedef array< ref<BetaFormConstraint> > ConstraintArray;
+
+  Int numBetas;
+  ConstraintArray constraints;  ///< array of constraints (index corresponds to betas matrix column)
+  Matrix betas;                 ///< columns vectors (no. cols is may be larger than necessary (numBetas))
+  bool nonholonomicConstraint;  ///< is there a non-holonomic constraint specified via alpha?
+  Vector alpha;                 ///< alpha form non-holonomic constraint
+};
+  
+
+inline std::ostream& operator<<(std::ostream& out, const BetaFormConstraints::BetaFormConstraint& bc)
+{ out << bc.toString(); return out; }
+
+inline std::ostream& operator<<(std::ostream& out, const BetaFormConstraints& bcs)
+{ out << bcs.toString(); return out; }
+
+  
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif
+

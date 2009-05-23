@@ -1,0 +1,71 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: BinarySerializer 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_BINARYSERIALIZER_
+#define _BASE_BINARYSERIALIZER_
+
+#include <base/base>
+#include <base/array>
+#include <base/Serializer>
+
+
+namespace base {
+
+
+class BinarySerializer : public Serializer
+{
+public:
+  BinarySerializer(SerializerType type, ref<VFile> archive);
+  BinarySerializer(SerializerType type, std::ios& stream);
+  virtual ~BinarySerializer();
+
+  virtual String className() const { return String("BinarySerializer"); }
+
+  virtual bool followReferences(bool follow);
+  virtual void flush(); ///< flush output stream (no-op on input).  Should use this before closing an output file before Serializer goes out-of-scope.
+
+protected:
+  BinarySerializer(const BinarySerializer& a) 
+    : Serializer(a), stream(a.stream), buf(a.buf) {}
+
+  virtual Serializer& serialize(char& c, const String& memberName);
+  virtual Serializer& serialize(Byte& b, const String& memberName);
+  virtual Serializer& serialize(bool& b, const String& memberName);
+  virtual Serializer& serialize(SInt& i, const String& memberName);
+  virtual Serializer& serialize(Int& i, const String& memberName);
+  virtual Serializer& serialize(LInt& i, const String& memberName);
+  virtual Serializer& serialize(String& s, const String& memberName);
+  virtual Serializer& serialize(Real& r, const String& memberName);
+
+  virtual TypeModifier preSerializeObject(String& typeName, TypeModifier typeModifier, const String& memberName, bool forceTypeSerialization = false);
+  virtual void         postSerializeObject(const String& memberName) {}
+
+  std::ios& stream;
+  std::streambuf& buf;
+
+};
+
+} // base
+
+#endif

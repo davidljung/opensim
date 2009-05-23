@@ -1,0 +1,171 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Math 1084 2004-09-13 17:18:15Z jungd $
+  $Revision: 1.11 $
+  $Date: 2004-09-13 13:18:15 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_MATH_
+#define _BASE_MATH_
+
+#include <base/base>
+#include <base/consts>
+
+#include <base/Object>
+#include <base/Vector>
+#include <base/Matrix>
+
+
+namespace base {
+
+
+/// class of useful math utilities
+/**
+ * NB: see also functions in Consts
+ *  \todo consider using a Singelton policy template class for this
+ *        (and perhaps also Application)
+ */
+class Math : public Object
+{
+public:
+  virtual String className() const { return String("Math"); }
+
+  /// convert degrees to radians
+  inline static Real degToRad(Real d) { return (d*consts::TwoPi)/360.0; }
+  /// convert radians to degrees
+  inline static Real radToDeg(Real r) { return (r*360.0)/consts::TwoPi; }
+
+  /// square (i.e. n*n)
+  inline static Real sqr(Real n) { return n*n; }
+  /// squate root (i.e. n^.5)
+  inline static Real sqrt(Real n) { Assert(n>=0); return ::sqrt(n); }
+  /// cube (i.e. n*n*n)
+  inline static Real cube(Real n) { return n*n*n; }
+  /// absolute value (i.e. |s|)
+  inline static Real abs(Real s) { return fabs(s); }
+  /// sign (i.e. -1 if n<0, 0 if n=0, 1 if n>0)
+  inline static Real sign(Real n) { return (n<0)?-1:((n>0)?1:0); }
+  /// x raised to the power y
+  inline static Real pow(Real x, Real y) { return ::pow(x,y); }
+  /// random number [0..1]
+  inline static Real random()
+    { return Real(::random())/Real(/*2^31*/2147483648U-1); }
+
+  /// true if n is Not-A-Number
+  inline static bool isNAN(Real n)
+    { return isnan(n); }
+
+  // usual trig functions (just make them available so the Math:: notation can be used consistiently)
+  inline static Real sin(Real a) { return ::sin(a); }
+  inline static Real cos(Real a) { return ::cos(a); }
+  inline static Real tan(Real a) { return ::tan(a); }
+  inline static Real asin(Real a) { return ::asin(a); }
+  inline static Real acos(Real a) { return ::acos(a); }
+  inline static Real atan(Real a) { return ::atan(a); }
+  inline static Real atan2(Real a, Real b) { return ::atan2(a,b); }
+
+
+  /// equals within eps (i.e. true if |r1-r2| < eps)
+  inline static bool equals(const Real r1, const Real r2, Real eps = consts::epsilon)
+  { return ::fabs(r1-r2) < eps; }
+
+  /// 0 if in neighbourhood of 0 (i.e. 0 if |n| < neighbourhoodRadius, n otherwise)
+  inline static Real zeroIfNeighbour(Real n, Real neighbourhoodRadius = consts::epsilon)
+  { return (::fabs(n) < neighbourhoodRadius)?0:n; }
+
+
+  /// minimum (i.e. t1 if t1<t2, t2 otherwise)
+  template<typename T> static inline T minimum(const T& t1, const T& t2) { return (t1<t2)?t1:t2; }
+  /// minimum (i.e. minimum(t1,t2) if minimum(t1,t2) < minimum(t2,t3), minimum(t2,t3) otherwise)
+  template<typename T> static inline T minimum(const T& t1, const T& t2, const T& t3) { return (t1<t2)?((t1<t3)?t1:t3):((t2<t3)?t2:t3); }
+  /// maximum (i.e. t1 if t1>t2, t2 otherwise)
+  template<typename T> static inline T maximum(const T& t1, const T& t2) { return (t1>t2)?t1:t2; }
+  /// maximum (i.e. maximum(t1,t2) if maximum(t1,t2) > maximum(t2,t3), maximum(t2,t3) otherwise)
+  template<typename T> static inline T maximum(const T& t1, const T& t2, const T& t3) { return (t1>t2)?((t1>t3)?t1:t3):((t2>t3)?t2:t3); }
+
+
+  /// bound a value to the specified range
+  template<typename T> static void bound(T& v, const T& lower, const T& upper)
+  { if (v<lower) v=lower; else { if (v>upper) v=upper; } }
+
+
+  /// normalize angles (in radians) to the range (-pi..pi]
+  static inline Real normalizeAngle(Real angle)
+  {
+    while (angle > consts::Pi) angle-=consts::TwoPi;
+    while (angle <= -consts::Pi) angle+=consts::TwoPi;
+    return angle;
+  }
+
+  /// normalize angles (in radians) to the range [0..2pi)
+  static inline Real normalizeAngle2PI(Real angle)
+  {
+    while (angle >= consts::TwoPi) angle-=consts::TwoPi;
+    while (angle < 0) angle+=consts::TwoPi;
+    return angle;
+  }
+
+  /// difference between two angles (e.g. -160deg - 170deg = 30deg)
+  /// Return is normalized (-pi..pi]
+  static Real angleDifference(Real angle1, Real angle2);
+
+
+  /// Find LUP decomposition of Matrix.
+  /** P is represented by the vector Pi, where the element
+   *  values represent the column of P containing a 1. i.e. Pi[i]=j => P[i][j]=1
+   */
+  static void decomposeLUP(const Matrix& A, Matrix& L, Matrix& U, Vector& Pi, Real epsilon = consts::epsilon2);
+
+  /// Solve for Ax = b, given LUP decomposition of A as L, U and Pi, and given b, returns x
+  static Vector solveLUP(const Matrix& L, const Matrix& U, const Vector& Pi, const Vector& b);
+
+
+  /// inverse of A (using LUP decomposition)
+  static Matrix inverse(const Matrix& A, Real epsilon = consts::epsilon2);
+
+
+  /// null-space of Matrix A (using Singular Value Decomposition - SVD)
+  /**
+   *   @param      A             input matrix for which the null-space is calculated (MxN, where M<=N)
+   *   @param      nullSpaceRank output rank of the null space returned
+   *   @param      k2            output matrix condition number
+   *   @return                   null-space vectors
+   */
+  static Matrix nullSpace(const Matrix& A, Int& nullSpaceRank, Real& k2);
+
+
+  /// the Moore-Penrose pseudo-inverse of A (using SVD)
+  static Matrix pseudoInverse(const Matrix& A);
+
+  /// get the cross-product matrix S for a 3-vector v
+  static Matrix S(const Vector& v);
+
+
+protected:
+  // can't instantiate it
+  Math() {}
+  Math(const Math&) {}
+  virtual ~Math() {}
+};
+
+
+} // base
+
+#endif

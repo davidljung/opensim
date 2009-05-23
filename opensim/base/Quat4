@@ -1,0 +1,261 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Quat4 1081 2004-09-13 17:16:14Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-09-13 13:16:14 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_QUAT4_
+#define _BASE_QUAT4_
+
+#include <iostream>
+
+#include <base/base>
+#include <base/consts>
+#include <base/Object>
+#include <base/Vector3>
+#include <base/Vector4>
+#include <base/Point3>
+#include <base/Point4>
+#include <base/Matrix4>
+
+
+namespace base {
+
+class Quat4;
+class Serializer;
+inline Quat4 inverse(const Quat4& q); //forward
+
+
+/**
+ * Quaternion.
+ * Used for representing rotations.
+ */
+class Quat4
+{
+
+public:
+  Quat4() { setIdentity(); }
+  Quat4(const Quat4& q) { this->operator=(q); }
+  Quat4(const Vector3& v) : v(v), w(Real(1)) {}
+  Quat4(const Vector4& v) : v(v.x,v.y,v.z), w(v.w) {}
+  explicit Quat4(const Real& s) : v(Real(0),Real(0),Real(0)), w(s) {}
+  Quat4(Real x, Real y, Real z, Real w) : v(x,y,z), w(w) {}
+  Quat4(const Vector3& axis, Real angle) { setRotation(axis,angle); }
+  ~Quat4() {}
+
+  static const Int X = 1;
+  static const Int Y = 2;
+  static const Int Z = 3;
+  static const Int W = 4;
+
+  void setIdentity() throw()
+  {
+    v.x=v.y=v.z=Real(0); w=Real(1);
+  }
+
+  void setZero() throw()
+  {
+    setIdentity(); w=Real(0);
+  }
+
+
+  Real& e(Int i) throw()
+  {
+#ifdef DEBUG
+    if ((i < 1) || (i > 4))
+      throw std::runtime_error(Exception("quaternion index out of bounds (debug only check)"));
+#endif
+    return (i<4)?v.e(i):w;
+  }
+
+  const Real& e(Int i) const throw()
+  {
+#ifdef DEBUG
+    if ((i < 1) || (i > 4))
+      throw std::runtime_error(Exception("quaternion index out of bounds (debug only check)"));
+#endif
+    return (i<4)?v.e(i):w;
+  }
+
+  Real& at(Int i) throw(std::out_of_range)
+  {
+    if ((i < 1) || (i > 4))
+      throw std::out_of_range(Exception("quaternion index out of bounds"));
+
+    return (i<4)?v.e(i):w;
+  }
+
+  const Real& at(Int i) const throw(std::out_of_range)
+  {
+    if ((i < 1) || (i > 4))
+      throw std::out_of_range(Exception("quaternion index out of bounds"));
+
+    return (i<3)?v.e(i):w;
+  }
+
+  Real& operator[](Int i)
+  { return e(i); }
+
+  const Real& operator[](Int i) const
+  { return e(i); }
+
+  Quat4& operator=(const Quat4& src) throw()
+  {
+    if (&src != this) {
+      v=src.v; w=src.w;
+    }
+    return *this;
+  }
+
+  bool operator==(const Quat4& q) const throw()
+  {
+    if (&q == this) return true;
+
+    return ((v==q.v)&&(w==q.w));
+  }
+
+  bool equals(const Quat4& q) const throw()
+  {
+    if (&q == this) return true;
+
+    return (v.equals(q.v) && (base::equals(w,q.w)));
+  }
+
+  Real norm() const throw()
+  { return v.x*v.x+v.y*v.y+v.z*v.z+w*w; }
+
+  Quat4& normalize() throw()
+    {
+      Real n = norm();
+
+      if ((!base::equals(n,1)) && (n>0)) {
+        Real l = base::sqrt(n);
+        v /= l;
+        w /= l;
+      }
+      return *this;
+    }
+
+  Quat4& conjugate() { v.negate(); return *this; }
+
+  Quat4& invert() throw()
+  {
+    Real n;
+    if (base::equals(n=norm(),1))
+      conjugate();
+    else {
+      conjugate();
+      if (n>0)
+        *this /= n;
+    }
+    return *this;
+  }
+
+
+  Real dot(const Quat4& q) const
+  {
+    return base::dot(v,q.v) + w*q.w;
+  }
+
+
+  // get 3x3 matrix E = wI - S(v), where S(v) is cross-product matrix of v (see Math::S(v))
+  Matrix3 E() const;
+
+
+  Quat4& operator*=(const Quat4& qr);
+  Quat4& operator*=(Real s) { v*=s; w*=s; return *this; }
+  Quat4& operator/=(Real s) { v/=s; w/=s; return *this; }
+  Quat4& operator+=(const Quat4& q) { v+=q.v; w+=q.w; return *this; }
+  Quat4& operator-=(const Quat4& q) { v-=q.v; w-=q.w; return *this; }
+
+  Quat4& negate() throw() { v.negate(); w=-w; return *this; }
+
+  /// Generate quat corresponding to rotation component of matrix.
+  void setRotation(const Matrix4& rotation);
+
+  void setRotation(const Vector3& axis, Real angle);
+  void getRotation(Vector3& axis, Real& angle) const;
+  void rotatePoint(Point4& p) const;
+  void rotatePoint(Point3& p) const
+    { Point4 p4(p); p4.w=0; rotatePoint(p4); p=Point3(p4.x,p4.y,p4.z); }
+  Point3 rotate(const Point3& p) const
+    { Point4 ret(p); rotatePoint(ret); return Point3(ret.x,ret.y,ret.z); }
+  Point4 rotate(const Point4& p) const
+    { Point4 ret(p); rotatePoint(ret); return ret; }
+
+  static Quat4 interpolate(const Quat4& from, const Quat4& to, Real t); ///< interpolate between from-to an amount t:[0..1] using SLERP
+  static Real  angleBetween(const Quat4& q1, const Quat4& q2); ///< angle seperating the orientations q1 & q2
+
+  operator Matrix4() const;   ///< convert to corresponding rotation matrix
+
+  Real* c_array() { return &v.x; }
+
+  void serialize(Serializer& s); ///< read or write object state to Serializer
+
+  Vector3 v;
+  Real w;
+
+  friend std::ostream& operator<<(std::ostream&, const Quat4&);
+
+};
+
+
+// Operations
+
+
+inline Quat4 operator*(const Quat4& q1, const Quat4& q2) // Quaternion multiplication
+{ Quat4 r(q1); return (r *= q2); }
+
+inline Quat4 operator+(const Quat4& q1, const Quat4& q2) // Addition
+{ Quat4 r(q1); return (r += q2); }
+
+inline Quat4 operator-(const Quat4& q1, const Quat4& q2) // Subtraction
+{ Quat4 r(q1); return (r += q2); }
+
+inline Quat4 operator-(const Quat4& q1) // Negation
+{ Quat4 r(q1); return r.negate(); }
+
+inline Quat4 operator*(const Quat4& q1, const Real& s) // Scalar multiplication
+{ Quat4 r(q1); return (r *= s); }
+
+inline Quat4 operator*(const Real& s, const Quat4& q1) // Scalar multiplication
+{ Quat4 r(q1); return (r *= s); }
+
+inline Quat4 operator/(const Quat4& q1, const Real& s) // Scalar division
+{ Quat4 r(q1); return (r /= s); }
+
+inline Quat4 inverse(const Quat4& q) // inverse q^-1
+{ Quat4 r(q); return r.invert(); }
+
+inline Quat4 conjugate(const Quat4& q)  // conjugate q*
+{ Quat4 r(q); return r.conjugate(); }
+
+inline Real dot(const Quat4& q1, const Quat4& q2)
+{ return q1.dot(q2); }
+
+
+std::ostream& operator<<(std::ostream& out, const Quat4& q); // Output
+
+
+} // base
+
+#endif
+

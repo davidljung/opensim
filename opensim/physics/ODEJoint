@@ -1,0 +1,74 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODEJoint 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODEJOINT_
+#define _PHYSICS_ODEJOINT_
+
+#include <physics/physics>
+#include <physics/Joint>
+#include <physics/ODEMotor>
+#include <physics/ODEConstraint>
+
+
+namespace physics {
+
+
+class ODEJoint : virtual public Joint, public ODEConstraint
+{
+public:
+  ODEJoint();
+  virtual ~ODEJoint();
+
+  virtual void attach(ref<Body> body1, ref<Body> body2); ///< attach this constraint to two bodies
+  virtual ref<Body>       getBody(Int index); ///< get Body (index is 1 or 2); returns null if unattached
+  virtual ref<const Body> getBody(Int index) const;
+
+  virtual void attachMotor(Int dof, ref<Motor> motor); ///< attach Motor to dof n, or remove if motor==0
+  virtual ref<Motor>       getMotor(Int dof);          ///< get Motor on dof n, or 0 if none
+  virtual ref<const Motor> getMotor(Int dof) const;
+
+protected:
+
+  inline void checkAddedAndAttached() const
+  {
+    Assertm(!((body1 == 0) && (body2 == 0)), "Joint is attached to Bodies");
+    Assertm(group!=0,"Joint is member of ConstraintGroup");
+  }
+
+  ref<Body> body1;
+  ref<Body> body2;
+
+  virtual bool hasMotor(Int dof) const = 0; ///< implemented by concrete ODEJoint classes to indicate which DOF's can have a Motor attached
+  virtual void setMotorTargetVel(Int dof, Real vel) = 0; ///< implemented by concrete ODEJoint classes
+  virtual void setMotorMaxForce(Int dof, Real force) = 0;///< implemented by concrete ODEJoint classes
+
+  ref<ODEMotor> motors[6]; // no ODE joint has more than 6 dof
+
+  friend class ODEMotor;
+};
+
+
+} // physics
+
+#endif

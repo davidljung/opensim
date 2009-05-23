@@ -1,0 +1,99 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2004 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedRobotDescription 1033 2004-02-11 20:47:52Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:47:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_SIMULATEDROBOTDESCRIPTION_
+#define _ROBOT_SIMULATEDROBOTDESCRIPTION_
+
+#include <robot/robot>
+
+#include <base/array>
+
+#include <robot/RobotDescription>
+#include <robot/sim/SimulatedManipulatorDescription>
+
+
+namespace robot {
+namespace sim {
+  
+/**
+ * An description of a Robot specific to simulations
+ * (includes information relevant to a simulation, such as the visual appearance,
+ *  geometry etc. of the robot)
+ */
+class SimulatedRobotDescription : public RobotDescription
+{
+public:
+  SimulatedRobotDescription() {}
+  SimulatedRobotDescription(String name, ref<const PlatformDescription> platformDescription, 
+		   array<ref<const ManipulatorDescription> > manipulatorDescriptions, 
+		   array<Vector3> manipulatorOffsets)
+      : RobotDescription(name, platformDescription, manipulatorDescriptions, manipulatorOffsets)
+    {}
+
+  SimulatedRobotDescription(const RobotDescription& r) 
+      : RobotDescription(r)
+    {}
+
+  SimulatedRobotDescription(const SimulatedRobotDescription& r) 
+      : RobotDescription(r)
+    {}
+
+  virtual String className() const { return String("SimulatedRobotDescription"); }
+
+  
+  // factory
+  virtual ref<PlatformDescription>    newPlatformDescription() const { return ref<PlatformDescription>(NewObj PlatformDescription()); }
+  virtual ref<ManipulatorDescription> newManipulatorDescription() const { return ref<SimulatedManipulatorDescription>(NewObj SimulatedManipulatorDescription()); }
+
+
+  SimulatedRobotDescription& operator=(const SimulatedRobotDescription& r)
+    {
+      RobotDescription::operator=(r);
+      return *this;
+    }
+
+  
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0)
+    { RobotDescription::externalize(e,format,version); }
+  void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+
+protected:
+  SimulatedRobotDescription(const String& name) : RobotDescription(name) {}
+  
+private:
+  
+
+  friend class SimulatedRobot;
+};
+
+
+}
+} // robot::sim
+
+#endif

@@ -1,0 +1,123 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: GJKCollisionModel 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_GJKCOLLISIONMODEL_
+#define _PHYSICS_GJKCOLLISIONMODEL_
+
+#include <physics/physics>
+#include <physics/CollisionModel>
+
+#include <physics/Box>
+#include <physics/Sphere>
+#include <physics/Polyhedron>
+
+#include <gfx/TriangleContainer>
+
+
+namespace physics {
+
+
+class GJKCollisionModel : public CollisionModel
+{
+public:
+  GJKCollisionModel(const GJKCollisionModel& cm);
+  GJKCollisionModel(const gfx::TriangleContainer& triangles);
+  GJKCollisionModel(ref<const Shape> shape);
+  virtual ~GJKCollisionModel();
+
+  virtual String className() const { return String("GJKCollisionModel"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) GJKCollisionModel(*this); }
+
+  virtual CollisionModelType getType() const { return GJKModel; }
+
+ 
+  class GJKModelState : public ModelState
+  {
+  public:
+    GJKModelState() {}
+    GJKModelState(ref<const Polyhedron::Vertex> v)
+      : lastSupport(v) {}
+    virtual ~GJKModelState() {}
+
+    virtual String className() const { return String("GJKCollisionModel::GJKModelState"); }
+    virtual base::Object& clone() const { return *NewNamedObj(className()) GJKModelState(); }
+ 
+    ref<const Polyhedron::Vertex> lastSupport; /// last support vertex of the GJK algorithm
+    Point3 lastSupportPoint;                   /// actual local coords. of lastSupport 
+  };
+
+
+protected:
+  ref<const Shape> shape; // model is based on this shape
+ 
+
+  // GJK algorithm Support mapping functions
+  void initSupportFunction();
+  base::Point3 support(ref<GJKModelState> s, const base::Vector3& v) const
+  { 
+    Assert(supportFunction);
+    s->lastSupportPoint = (*supportFunction)(s,v);
+    return s->lastSupportPoint;
+  }
+
+  struct SupportFunction : public std::binary_function<ref<GJKModelState>, const base::Vector3&, base::Point3>
+  {
+    SupportFunction() {}
+    virtual ~SupportFunction() {}
+    virtual Point3 operator()(ref<GJKModelState> s, const Vector3& v) const = 0;
+  };
+
+
+  struct BoxSupport : public SupportFunction
+  {
+    BoxSupport(ref<const Shape> s) : box(base::dynamic_cast_ref<const Box>(s)) {}
+    virtual Point3 operator()(ref<GJKModelState> s, const Vector3& v) const;
+    ref<const Box> box;
+  };
+
+  struct SphereSupport : public SupportFunction
+  {
+    SphereSupport(ref<const Shape> s) : sphere(base::dynamic_cast_ref<const Sphere>(s)) {}
+    virtual Point3 operator()(ref<GJKModelState> s, const Vector3& v) const;
+    ref<const Sphere> sphere;
+  };
+
+  struct PolyhedronSupport : public SupportFunction
+  {
+    PolyhedronSupport(ref<const Shape> s) : poly(base::dynamic_cast_ref<const Polyhedron>(s)) {}
+    virtual Point3 operator()(ref<GJKModelState> s, const Vector3& v) const;
+    ref<const Polyhedron> poly;
+  };
+
+
+  SupportFunction* supportFunction; // instantiated support function from above
+
+  
+  friend class GJKCollisionDetector;
+};
+
+
+} // physics
+
+#endif

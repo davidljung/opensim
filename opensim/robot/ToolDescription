@@ -1,0 +1,97 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: ToolDescription 1122 2004-09-27 22:16:57Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_TOOLDESCRIPTION_
+#define _ROBOT_TOOLDESCRIPTION_
+
+#include <robot/robot>
+
+#include <base/Named>
+#include <base/ReferencedObject>
+#include <base/Externalizable>
+#include <base/DOM>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+
+/**
+ * An abstract description of a Tool
+ */
+class ToolDescription : public base::Named, public base::Externalizable, public base::ReferencedObject
+{
+public:
+  ToolDescription() {}
+  ToolDescription(const ToolDescription& t)
+    : Named(t), kinematicChain(t.kinematicChain) {}
+
+  virtual String className() const { return String("ToolDescription"); }
+
+  ToolDescription& operator=(const ToolDescription& t)
+    { setName( t.getName() ); kinematicChain=t.kinematicChain; return *this; }
+
+  /**
+   * get a kinematic chain that describes this tool.
+   * The first link of a tool is static (0-dof).  For example, a simple extension
+   *  tool consists of a single static link, thus has 0-dof.
+   *  In general, tools can have an arbitrary number of links, possibly with
+   *   joints, analogous to a manipulator.
+   */
+  virtual KinematicChain getKinematicChain(Int p=0) const
+    { return kinematicChain; }
+
+
+  bool operator==(const ToolDescription& td) const
+    {
+      if (&td == this) return true;
+      return (kinematicChain==td.kinematicChain);
+    }
+
+  bool operator!=(const ToolDescription& td) const { return !(*this == td); }
+
+  bool equals(ref<const ToolDescription> td) const { return (*this == *td); }
+
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  ToolDescription(const String& name) : Named(name) {}
+
+  virtual void setKinematicChain(const KinematicChain& kc) { kinematicChain=kc; }
+
+  // externalization helpers
+  virtual void outputElementXML(base::Externalizer& e, base::dom::DOMElement* toolElem, String format, Real version) const;
+  virtual void inputElementXML(base::Externalizer& e, base::dom::DOMElement* toolElem, String format, Real version);
+
+  KinematicChain kinematicChain;
+
+  friend class Robot;
+};
+
+
+} // robot
+
+#endif

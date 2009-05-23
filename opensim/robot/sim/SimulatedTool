@@ -1,0 +1,191 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedTool 1108 2004-09-27 22:01:43Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_SIMULATEDTOOL_
+#define _ROBOT_SIM_SIMULATEDTOOL_
+
+#include <robot/sim/sim>
+
+#include <robot/Robot>
+
+#include <robot/sim/SimulatedKinematicChain>
+#include <robot/sim/SimulatedToolDescription>
+
+#include <physics/SolidSystem>
+#include <physics/Solid>
+#include <physics/Spatial>
+#include <physics/SpatialGroup>
+#include <physics/SpatialTransform>
+#include <physics/Motor>
+
+#include <robot/ToolDescription>
+#include <robot/KinematicChain>
+
+
+
+
+namespace robot {
+namespace sim {
+
+
+/**
+ * Represents a simulated manipulator tool according to a supplied
+ * D-H parameter specification.
+ *  Simulated using gfx/physics.
+ */
+class SimulatedTool : public SimulatedKinematicChain
+{
+public:
+/*
+  SimulatedTool(ref<base::VFile> toolSpecification,
+                    const base::Point3& initialPosition, const base::Orient& initialOrientation,
+                      ref<physics::SolidSystem> solidSystem, bool dynamic=true);
+*/
+   SimulatedTool(ref<const robot::ToolDescription> toolDescription,
+                             const base::Point3& initialPosition, const base::Orient& initialOrientation,
+                             ref<physics::SolidSystem> solidSystem, bool dynamic=true);
+
+  virtual String className() const { return String("SimulatedTool"); }
+
+  virtual void setDynamic(bool enabled) { dynamic = enabled; }
+
+  virtual void setSolidSystem(ref<physics::SolidSystem> solidSystem)
+    { this->solidSystem = solidSystem; }
+
+  ref<const robot::ToolDescription> getToolDescription() const { return toolDescr; }
+
+  ref<physics::Solid> getFirstLinkSolid() const  ///< get the Solid for first link
+    { return firstSolid; }
+
+  ref<physics::Collidable> getFirstLinkCollidable() const ///< get the Collidable associated with the first link
+    { Assert(collidables.size() > 1); return collidables[1]; }
+
+  ref<physics::Collidable> getFirstLinkProximitySensorCollidable() const ///< get the Collidable associated with the first link's proximity sensor
+    { Assert(proximityCollidables.size() > 1); return proximityCollidables[1]; }
+
+  /// Set the force (torque for revolute joints) of joint j (first joint j=1)
+  void setJointForce(Int j, Real f);
+
+  /// Set the velocity (ang. velocity for revolute joints) of joint j (first joint j=1)
+  /** NB: As the simulation is force controlled, this will set the target velocity */
+  void setJointVel(Int j, Real v, Real maxForce=10.0);
+
+  /// Set the position (angle for revolute joints) of joint j (first joint j=1)
+  /** NB: This will instantaneously move the joint to the specified angle - which obviously
+   *      is not physically realistic.  Consequently, for dynamic simulations, this can
+   *      cause large forces in the system and possibly numerical instability in the
+   *      simulation.  It is intended for non-dynamic simulations.
+   *  NB: the angle is relative to the theta home position.
+   */
+  void setJointPos(Int j, Real p);
+
+
+  /// Get the current theta* angle (revolute) or position d (prismatic) of the joint
+  /** *NB: the angle is relative to the theta home position. */
+  Real getJointPos(Int j) const;
+
+  /// Get the current joint velocity (ang. velocity for revolute joints)
+  Real getJointVel(Int j) const;
+
+
+  /// attach the base Solid to the specified solid - this is the first joint
+  void attachTo(ref<physics::Solid> manipEESolid);
+
+  /// detatch base Solid
+  void detatch();
+
+
+  // Proximity sensor methods
+
+  /// get distance to closest object detected by proximity sensors on the link
+  Real    getClosestObjectDistance(Int link) const;
+
+  /// get the direction vector to the closest object detected by proximity sensors on the link
+  Vector3 getClosestObjectDirection(Int link) const;
+
+  /// get the distance along the link x-axis of the proximity sensor that detected the closest object to the link
+  Real    getClosestObjectSensorPosition(Int link) const;
+
+
+  // Spatial
+  virtual void   setPosition(const Point3& pos);
+  virtual Point3 getPosition() const;
+  virtual void   setOrientation(const Orient& orient);
+  virtual Orient getOrientation() const;
+  virtual void   setConfiguration(const base::Transform& configuration);
+  virtual base::Transform getConfiguration() const;
+
+  // CollidableProvider
+  virtual ref<physics::Collidable> createCollidable(CollidableFlags flags = 0);
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(base::Externalizer& e, const String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+  void externalize(base::Externalizer& e, const String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  SimulatedTool(const SimulatedTool& st) { Unimplemented; }
+
+  ref<const robot::sim::SimulatedToolDescription> toolDescr;
+
+  /// construct an approximation of the tool from the D-H parameters (best we can do)
+  void construct(const base::Point3& initialPosition, const base::Orient& initialOrientation);
+
+
+  /// compute transform information for chain
+  TransformInfo computeLinkTransforms(const Transform& mountTransform, const base::Vector& q) const;
+
+
+  /// create the Solids for each link and assemble them into a Spatial tree (and add them to solidSystem)
+  virtual void createLinks(const array<base::Dimension3>& linkDims);
+
+  /// position the links
+  virtual void positionLinks(const TransformInfo& transformInfo);
+
+  virtual void disableCollisions(const array<ref<physics::Collidable> >& collidables,
+                                 const array<ref<physics::Collidable> >& proximityCollidables);
+
+  virtual void attachJoints(const TransformInfo& transformInfo);
+
+  virtual void handleCollision(ref<physics::CollisionState> collisionState);  ///< called from ProximityCollisionResponseHandler::handleCollision()
+
+
+  ref<physics::Solid> firstSolid; ///< Solid for the first link
+  ref<physics::Solid> endSolid;   ///< Solid for the tool end-effector
+  base::Transform firstLinkSolidToMount;       ///< transform from origin of first link Solid to mount origin
+  ref<physics::SpatialTransform> mountSpatial; ///< Spatial who's configuration is that of the tool's mount point
+  ref<physics::SpatialGroup> spatialGroup;     ///< a group containing the Solids
+  bool attached;                                       ///< is this tool attached to the end-effector of a manipulator?
+  ref<physics::ConstraintGroup> mountConstraintGroup;  ///< group that holds the joint attaching the tool to the manipulator end-effector (valid if attached is true)
+
+
+  friend class SimulatedRobot;
+  friend class base::Serializable::SerializableDerivedInstantiator<SimulatedTool>;
+
+};
+
+
+
+}
+} // robot::sim
+
+#endif

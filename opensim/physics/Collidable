@@ -1,0 +1,73 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Collidable 1155 2004-09-29 17:41:57Z jungd $
+
+****************************************************************************/
+
+#ifndef _PHYSICS_COLLIDABLE_
+#define _PHYSICS_COLLIDABLE_
+
+#include <physics/physics>
+
+#include <base/ReferencedObject>
+#include <base/Named>
+#include <physics/BoundingBox>
+
+
+namespace physics {
+
+
+class Collidable : virtual public base::Named, virtual public base::ReferencedObject
+{
+public:
+  virtual BoundingBox getBoundingBox() const = 0;
+
+  virtual void setName(const String& name) { Named::setName(name); }
+
+  virtual void setInterpenetrationIsNormal(bool interpenetrationIsNormal) { interpenetrationNormal=interpenetrationIsNormal; }
+  virtual bool isInterpenetrationNormal() const { return interpenetrationNormal; }
+
+  virtual ref<const Collidable> findNamed(const String& name, bool recurse=true) const
+  { if (getName() == name) return ref<const Collidable>(this); else return ref<const Collidable>(0); }
+
+  virtual ref<Collidable> findNamed(const String& name, bool recurse=true)
+  { if (getName() == name) return ref<Collidable>(this); else return ref<Collidable>(0); }
+
+  virtual void setUserData(ref<base::ReferencedObject> data) { userData = data; }
+  virtual ref<base::ReferencedObject> getUserData() const { return userData; }
+
+  /// Collisions between Collidables of the same class number (>0) are culled
+  virtual void setUserClass(Int userClass = 0) { this->userClass = userClass; }
+  virtual Int  getUserClass() const { return userClass; }
+
+protected:
+  Collidable(bool interpenetrationNormal=false) : interpenetrationNormal(interpenetrationNormal), userClass(0) {}
+  Collidable(const Collidable& c) : Named(c), interpenetrationNormal(interpenetrationNormal), userData(c.userData) {}
+
+  /// if under normal circumstances this Collidable is expected to sometimes be interpenetrating another Collidable, this is true
+  bool interpenetrationNormal;
+
+  ref<base::ReferencedObject> userData;
+  Int userClass;
+};
+
+
+
+} // physics
+
+#endif

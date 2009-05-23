@@ -1,0 +1,105 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Universe 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_UNIVERSE_
+#define _BASE_UNIVERSE_
+
+#include <base/base>
+#include <base/reflist>
+#include <base/Object>
+#include <base/Simulatable>
+#include <base/VFileSystem>
+#include <base/Cache>
+#include <base/PathName>
+#include <base/World>
+
+#include <list>
+
+
+namespace base {
+
+
+class Universe : public Simulatable
+{
+public:
+  Universe(ref<VFileSystem> fs, const String& resourceDirectoryName, const String& cacheDirectoryName="cache");
+  virtual ~Universe();
+  
+  virtual String className() const { return String("Universe"); }
+  virtual Object& clone() const { return *(Object*)this; } // singelton, just return THE instance 
+
+
+  // Simulatable
+  virtual void preSimulate();
+  virtual void simulateForSimTime(const Time& dt);
+  virtual void simulateForRealTime(const Time& dt, Real simTimeStepSize = minSimStepSize);
+
+  void setResourceDirectory(const PathName& resourceDirectory);
+  void setCacheDirectory(const PathName& cacheDirectory);
+  ref<Cache> cache() { return masterCache; }
+  ref<VFileSystem> filesystem() { return vfilesystem; }
+
+  void addWorld(ref<World> world);
+  ref<World> removeWorld(ref<World> world);
+
+  void renderWorlds(); ///< render a single frame of  all Worlds ( renderFrame() )
+
+  long renderedFrameCount() const { return frameCount; }
+  static const int maxDisplayFrameRate = 30; // Hz
+
+  void enableSimulationRendering(bool renderWorlds) { renderWorldsDuringSim=renderWorlds; }
+  
+  void addSimulatable(ref<Simulatable> simulatable);
+  ref<Simulatable> removeSimulatable(ref<Simulatable> simulatable);
+  
+  Time simTime;
+  
+protected:
+
+private:
+  Universe(Universe& u) 
+    : vfilesystem(u.vfilesystem), 
+    renderWorldsDuringSim(true)
+  {
+    masterCache = ref<Cache>( NewNamedObj("masterCache") Cache(u.vfilesystem, u.masterCache->resourceDirectory(), u.masterCache->cacheDirectory() ) );
+  }
+
+
+  ref<VFileSystem> vfilesystem;
+  ref<Cache>       masterCache;
+
+  bool renderWorldsDuringSim;  // render Worlds during simulation?
+
+  reflist<World> worlds;
+  reflist<Simulatable> simulatables;
+
+  Time startRealTime;
+  long frameCount;
+
+};
+
+
+} // base
+
+#endif

@@ -1,0 +1,112 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Quad3 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_QUAD3_
+#define _GFX_QUAD3_
+
+#include <gfx/gfx>
+#include <base/Point3>
+#include <base/Vector3>
+#include <gfx/Segment3>
+#include <gfx/Triangle3>
+
+#include <iostream>
+
+
+namespace gfx {
+
+/// four sided planar polygon (3D) 
+class Quad3
+{
+
+public:
+  Quad3() {}
+  Quad3(const Quad3& q) 
+    : c1(q.c1), c2(q.c2), c3(q.c3), c4(q.c4) {}
+  Quad3(const Point3& c1, const Point3& c2, const Point3& c3, const Point3& c4);
+  ~Quad3() {}
+
+  const Point3& operator[](Int i) const { return (i==1)?c1:((i==2)?c2:((i==3)?c3:c4)); }
+  Point3& operator[](Int i) { return (i==1)?c1:((i==2)?c2:((i==3)?c3:c4)); }
+  
+  
+  Quad3& operator*=(Real s) { c1*=s; c2*=s; c3*=s; c4*=s; return *this; }
+  Quad3& operator/=(Real s) { c1/=s; c2/=s; c3/=s; c4/=s; return *this; }
+  
+  void transform(const base::Transform& t)
+  {
+    c1=t*c1;
+    c2=t*c2;
+    c3=t*c3;
+    c4=t*c4;
+  }
+
+  /// shortest distance between quad and p
+  Real distanceTo(const Point3& p) const;
+  
+  /// find point on quad that is closest to p
+  Point3 pointClosestTo(const Point3& p) const;
+  
+  /// return the shortest segment between this quad and the segment s
+  Segment3 shortestSegmentBetween(const Segment3& s) const;
+  
+  /// return the shortest segment between this quad and the triangle t
+  Segment3 shortestSegmentBetween(const Triangle3& t) const;
+  
+  /// return the shortest segment between this quad and the quad q
+  Segment3 shortestSegmentBetween(const Quad3& q) const;
+
+  /// shortest distance between this quad and the segment s
+  Real distanceTo(const Segment3& s) const;
+  
+  /// shortest distance between this quad and the triangle t
+  Real distanceTo(const Triangle3& t) const;
+  
+  /// shortest distance between this quad and the quad q
+  Real distanceTo(const Quad3& q) const;
+
+  
+  Point3 c1, c2, c3, c4; /// corners
+};
+
+
+// Operations
+
+inline Quad3 operator*(const Quad3& q, Real s)
+{ Quad3 r(q); r*=s; return r; }
+
+inline Quad3 operator*(Real s, const Quad3& q)
+{ Quad3 r(q); r*=s; return r; }
+
+inline Quad3 operator/(const Quad3& q, Real s)
+{ Quad3 r(q); r/=s; return r; }
+
+
+inline std::ostream& operator<<(std::ostream& out, const Quad3& q) // Output
+{ return out << "[" << q.c1 << "-" << q.c2 << "-" << q.c3 << "-" << q.c4 << "]"; }
+
+
+} // gfx
+
+#endif

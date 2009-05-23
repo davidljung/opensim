@@ -1,0 +1,85 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: MassProperties 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_MASSPROPERTIES_
+#define _PHYSICS_MASSPROPERTIES_
+
+#include <physics/physics>
+#include <base/Object>
+#include <base/Matrix4>
+#include <base/Point3>
+#include <gfx/TriangleContainer>
+
+
+namespace physics {
+
+class Material;
+
+
+class MassProperties : public base::Object
+{
+public:
+  MassProperties();
+  MassProperties(const MassProperties& mp) 
+    : mass(mp.mass), centerOfMass(mp.centerOfMass),
+      _Ibody(mp._Ibody), _IbodyInv(mp._IbodyInv) {}
+  MassProperties(const gfx::TriangleContainer& triangles, ref<const Material> material);
+  virtual ~MassProperties() {}
+
+  virtual String className() const { return String("MassProperties"); }
+
+  const Matrix3& Ibody() const { return _Ibody; }
+  const Matrix3& IbodyInv() const { return _IbodyInv; }
+  
+  void setIbody(const Matrix3& Ibody);
+  
+  Real         mass;            // mass
+  base::Point3  centerOfMass;    // (in body coords.)
+
+protected:
+  base::Matrix3 _Ibody;          // Inertia tensor in body coords.
+  base::Matrix3 _IbodyInv;       // Inverse Inertia tensor in body coords.
+	
+
+  // helpers for computing the mass properties from the triangle set of a tesselatable
+  // See the paper:
+  //  "Fast and Accurate Computation of Polyhedral Mass Properties"
+  //    Brian Mirtich, University of California at Berkeley
+  
+  void computeMassProperties(const gfx::TriangleContainer& triangles, ref<const Material> material);
+
+  class VolData;
+  class WTriangle;
+
+  void compVolumeIntegrals(const gfx::TriangleContainer& triangles, VolData& v);
+  void compFaceIntegrals(const WTriangle& t, VolData& v);
+  void compProjectionIntegrals(const WTriangle& t, VolData& v);
+};
+
+
+std::ostream& operator<<(std::ostream& out, const MassProperties& mp); // Output
+
+} // physics
+
+#endif

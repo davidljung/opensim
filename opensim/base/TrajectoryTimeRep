@@ -1,0 +1,66 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: TrajectoryTimeRep 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_TRAJECTORYTIMEREP_
+#define _BASE_TRAJECTORYTIMEREP_
+
+#include <base/base>
+
+#include <base/ReferencedObject>
+#include <base/Serializable>
+#include <base/Cloneable>
+
+#include <base/Time>
+
+
+namespace base {
+
+
+/**
+ *  Abstract interface for concrete trajectory time representations used by class Trajectory.
+ *  (users should use class Trajectory directly; implementors of new representations
+ *   should implement this interface and add appropriate support in Trajectory)
+ */
+class TrajectoryTimeRep : public ReferencedObject, virtual public Serializable, virtual public Cloneable
+{
+public:
+
+  /// get time at s:[0..1]
+  virtual Time time(Real s) const = 0;
+
+  /// shift time by dt
+  virtual void shiftTime(const Time& dt) = 0;
+
+  /// scale time by s
+  virtual void scaleTime(Real s) = 0;
+
+  /// get parameter s value at time t
+  virtual Real gets(const Time& t) const = 0;
+  
+};
+
+
+} // base
+
+#endif

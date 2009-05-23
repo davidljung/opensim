@@ -1,0 +1,264 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Polyhedron 1151 2004-09-28 21:12:49Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-09-28 17:12:49 -0400 (Tue, 28 Sep 2004) $
+  $Author: jungd $
+  
+****************************************************************************/
+
+#ifndef _PHYSICS_POLYHEDRON_
+#define _PHYSICS_POLYHEDRON_
+
+#include <base/MemoryTracer>
+
+#include <base/reflist>
+#include <base/SmallObj>
+#include <base/Dimension3>
+#include <base/VFile>
+#include <base/Serializable>
+#include <base/Serializer>
+#include <gfx/TriangleContainer>
+#include <physics/physics>
+#include <physics/Shape>
+#include <physics/ComplexShape>
+
+
+
+namespace physics {
+
+
+class Polyhedron : virtual public ComplexShape
+{
+public:
+  Polyhedron();
+  explicit Polyhedron(ref<base::VFile> file) throw(std::invalid_argument, base::io_error);
+  Polyhedron(const Polyhedron& p);
+  Polyhedron(const gfx::TriangleContainer& tris);
+  Polyhedron(osg::Node& n);
+  Polyhedron(const Shape& s);
+  virtual ~Polyhedron();
+
+  virtual String className() const { return String("Polyhedron"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) Polyhedron(*this); }
+
+  class Vertex;
+  class Edge;
+  class Polygon;
+
+  typedef base::reflist<Vertex>  VertexList;
+  typedef base::reflist<Edge>    EdgeList;
+  typedef base::reflist<Polygon> PolygonList;
+
+
+  class Vertex : public base::ReferencedObject, public base::Serializable, public base::SmallObject<>
+  {
+  public:
+    Vertex() {}
+    Vertex(const Vertex& v)
+      : coord(v.coord), edges(v.edges) {}
+    virtual ~Vertex() {}
+
+    virtual String className() const { return String("Vertex"); }
+    virtual Object& clone() const { return *NewObj Vertex(*this); }
+    
+    Vertex& operator=(const Vertex& v)
+      { coord=v.coord; edges = v.edges; return *this; }
+
+    const Point3& coordinate() const
+      { return coord; }
+
+    bool operator==(const Vertex& v) const { return this==&v; }
+    bool operator!=(const Vertex& v) const { return this!=&v; }
+
+    EdgeList::const_iterator_const edges_begin() const { return edges.const_begin(); }
+    EdgeList::const_iterator_const edges_end()   const { return edges.const_end(); }
+
+    EdgeList::const_iterator edges_begin() { return edges.begin(); }
+    EdgeList::const_iterator edges_end()   { return edges.end(); }
+
+    virtual void serialize(base::Serializer& s) {
+      s(coord.x)(coord.y)(coord.z);
+      s(edges);
+    }
+
+  protected:
+    Vertex(const Point3& p)
+      : coord(p) {}
+    Point3 coord; // coordinate.  Only one Vertex exists with any given coord.
+    EdgeList edges;  // list of Edges that contain this Vertex
+
+    friend class Polyhedron;
+  };
+
+  class Edge : public ReferencedObject, public base::Serializable, public base::SmallObject<>
+  {
+  public:
+    Edge() 
+      : polys(0) {}
+    Edge(const Edge& e)
+      : v1(e.v1), v2(e.v2), polys(e.polys), poly1(e.poly1), poly2(e.poly2)
+      {}
+    virtual ~Edge() {}
+
+    virtual String className() const { return String("Edge"); }
+    virtual Object& clone() const { return *NewObj Edge(*this); }
+
+    Edge& operator=(const Edge& e)
+      { v1=e.v1; v2=e.v2; polys=e.polys; poly1=e.poly1; poly2=e.poly2; return *this; }
+
+    bool operator==(const Edge& e) const { return this==&e; }
+    bool operator!=(const Edge& e) const { return this!=&e; }
+
+    ref<const Vertex> vertex1() const { return v1; }
+    ref<const Vertex> vertex2() const { return v2; }
+
+    ref<const Vertex> otherVertex(ref<const Vertex> v) const
+      { if (v == v1) return v2; else return v1; }
+
+    virtual void serialize(base::Serializer& s) {
+      s(v1)(v2)(polys);
+      if (polys>0) {
+	s(poly1);
+	if (polys>1)
+	  s(poly2);
+      }
+    }
+
+  protected:
+    Edge(ref<Vertex> v1, ref<Vertex> v2) : v1(v1), v2(v2), polys(0) {}
+    void addPoly(ref<Polygon> poly)
+    { 
+      if (polys==0) 
+	poly1 = poly;
+      else 
+	poly2 = poly;
+      polys++;
+    }
+    ref<Vertex> v1, v2;        // Verticies (only one Edge exists with these Vertex's - independent of order)
+    Int polys;                 // 0,1,2 = no. polys that contain this Edge
+    ref<Polygon> poly1, poly2; // Polygons that contan this Edge
+
+    friend class Polyhedron;
+  };
+
+
+  class Polygon : public ReferencedObject, public base::Serializable, public base::SmallObject<>
+  {
+  public:
+    Polygon() {}
+    virtual ~Polygon() {}
+
+    virtual String className() const { return String("Polygon"); }
+    virtual Object& clone() const { return *NewObj Polygon(*this); }
+
+    Polygon& operator=(const Polygon& p)
+      { edges=p.edges; return *this; }
+
+    virtual void serialize(base::Serializer& s) {
+      s(edges);
+    }
+
+  protected:
+    Polygon(const Polygon& p)
+      : edges(p.edges) {}
+    void addEdge(ref<Edge> e) 
+      { edges.push_back(e); }
+    EdgeList edges; // list of Edges
+
+    friend class Polyhedron;
+  };
+
+
+  // Accessors
+  VertexList::const_iterator_const vertices_begin() const { return verts.const_begin(); }
+  VertexList::const_iterator_const vertices_end()   const { return verts.const_end(); }
+
+  EdgeList::const_iterator_const edges_begin() const { return edges.const_begin(); }
+  EdgeList::const_iterator_const edges_end()   const { return edges.const_end(); }
+
+  PolygonList::const_iterator_const polygon_begin() const { return polys.const_begin(); }
+  PolygonList::const_iterator_const polygon_end()   const { return polys.const_end(); }
+
+
+
+  
+  // Shape
+  virtual BoundingBox    getBoundingBox() const;
+  virtual BoundingSphere getBoundingSphere() const;
+  
+  virtual const MassProperties& getMassProperties(ref<const Material> material) const;
+
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const Point3& p) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Segment3& s) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Triangle3& tri) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Quad3& q) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t1, ref<const Shape> s, const base::Transform& t2) const;
+
+  // CollisionModelProvider
+  virtual ref<CollisionModel> getCollisionModel(CollisionModel::CollisionModelType modelType) const;
+
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Attributes visualAttributes=0) const;
+
+  virtual void serialize(base::Serializer& s);
+  
+  // Externalizable
+  virtual bool formatSupported(String format, Real version = 1.0, ExternalizationType type = IO) const;
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+  
+protected:
+  mutable bool boundsCached;
+  mutable BoundingBox    boundingBox;
+  mutable BoundingSphere boundingSphere;
+
+  mutable bool massPropertiesCached;
+  mutable Real density;
+  mutable MassProperties massProperties;
+
+  // the geometric model
+  VertexList  verts;
+  EdgeList    edges;
+  PolygonList polys;
+  ref<Vertex> vertex(const Point3& p); ///< return Vertex with coord p (create if necessary)
+  ref<Edge>   edge(ref<Vertex> v1, ref<Vertex> v2); ///< return Edge with vertices v1 & v2 - any order (create if necessary)
+
+
+  // Convert a set of triangles into the Vertex, Edge, Polygon geometry data structure
+  //  This is expensive.  Only do it 'off-line' or in initialization
+  void buildGeometry(const gfx::TriangleContainer& tris);
+
+  void getAdjacentVertices(const Point3& v, array<Point3>& adjacent) const;
+
+  mutable Visual::Attributes attributes;
+  mutable ref_ptr<osg::Node> model;
+  mutable ref_ptr<osg::Node> node;
+  
+  mutable ref<CollisionModel> collisionModel;
+  mutable CollisionModel::CollisionModelType modelType;
+
+  void computeBounds() const;
+};
+
+
+} // physics
+
+#endif

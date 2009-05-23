@@ -1,0 +1,80 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: CacheDirectory 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_CACHEDIRECTORY_
+#define _BASE_CACHEDIRECTORY_
+
+#include <base/base>
+#include <base/VDirectory>
+#include <base/CacheFile>
+
+#include <base/path_not_found>
+#include <base/io_error>
+
+
+namespace base {
+
+class CacheDirectory : public VDirectory
+{
+public:
+  virtual ~CacheDirectory();
+
+  virtual String className() const { return String("CacheDirectory"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) CacheDirectory(*this); }
+
+  virtual void operator=(const CacheDirectory& d);
+  
+  virtual bool contains(ref<const VEntry> name) const;
+  virtual bool contains(const PathName& name) const;
+
+  virtual ref<VFile>      file(const PathName& name) const throw(path_not_found); ///< construct a new VFile object 
+  virtual ref<VDirectory> directory(const PathName& name) const throw(path_not_found); ///< construct a new VDirectory object
+
+  virtual ref<VFile>      createFile(const PathName& name) const throw(io_error); ///< create a new file in this directory
+  virtual void            deleteFile(const PathName& name) const throw(path_not_found, io_error); ///< delete a file in this directory
+  virtual ref<VDirectory> createDirectory(const PathName& name) const throw(io_error); ///< create a new directory in this directory
+  virtual void            deleteDirectory(const PathName& name) const throw(path_not_found, io_error); ///< delete a directory in this directory
+
+protected:
+  ref<VEntry> find(const String& name) const;
+  ref<VDirectory> actualDir;
+  String prefix;
+
+  void load() const;
+  virtual ref<VEntry> entry(Int i) const;
+  virtual Int size() const;
+
+  mutable bool loaded;
+  typedef array<ref<CacheFile> > CacheFileEntries;
+  mutable CacheFileEntries entries;
+
+  CacheDirectory(const CacheDirectory& d);
+  CacheDirectory(ref<VDirectory> actualDir, const String& prefix);
+
+  friend class Cache;
+};
+
+} // base
+
+#endif

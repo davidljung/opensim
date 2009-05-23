@@ -1,0 +1,86 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: BasicControlInterface 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_BASICCONTROLINTERFACE_
+#define _ROBOT_BASICCONTROLINTERFACE_
+
+#include <robot/robot>
+#include <robot/ControlInterface>
+
+#include <base/Vector>
+
+
+namespace robot {
+
+/**
+ * Partial inplementation of ControlInterface to ease the implementation
+ *  of concrete ControlInterface subclasses.
+ */
+class BasicControlInterface : public ControlInterface
+{
+public:
+  BasicControlInterface(String name, String type, Int inputSize=0, Int outputSize=0)
+    : ControlInterface(name,type), numInputs(inputSize), numOutputs(outputSize),
+      lastInputs(inputSize) {}
+
+  BasicControlInterface(const BasicControlInterface& bci)
+    : ControlInterface(bci), numInputs(bci.numInputs), numOutputs(bci.numOutputs),
+      lastInputs(bci.numInputs) {}
+
+  virtual Int           inputSize() const 
+    { recomputeInputSize(); return numInputs; }
+  virtual String        inputName(Int i) const = 0;
+  virtual Real          getInput(Int i) const = 0;
+  virtual const Vector& getInputs() const 
+    {
+      recomputeInputSize();
+      for(Int i=0; i<numInputs; i++)
+	lastInputs[i] = getInput(i);
+      return lastInputs;
+    }
+
+  virtual Int    outputSize() const 
+    { recomputeOutputSize(); return numOutputs; }
+  virtual String outputName(Int i) const = 0;
+  virtual void   setOutput(Int i, Real value) = 0;
+  virtual void   setOutputs(const Vector& values) 
+    {
+      recomputeOutputSize();
+      Assert(values.size() == numOutputs);
+      for(Int o=0; o<numOutputs; o++)
+	setOutput(o, values[o]);
+    }
+
+protected:
+  virtual void recomputeInputSize() const {}
+  virtual void recomputeOutputSize() const {}
+
+  mutable Int numInputs, numOutputs;
+  mutable Vector lastInputs;
+};
+
+
+} // robot
+
+#endif

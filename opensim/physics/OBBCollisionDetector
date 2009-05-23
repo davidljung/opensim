@@ -1,0 +1,131 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: OBBCollisionDetector 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_OBBCOLLISIONDETECTOR_
+#define _PHYSICS_OBBCOLLISIONDETECTOR_
+
+#include <physics/physics>
+#include <base/array>
+#include <physics/CollisionDetector>
+#include <physics/OBBCollisionModel>
+#include <base/Vector3>
+#include <base/Matrix3>
+#include <gfx/Triangle3>
+#include <vector>
+
+
+namespace physics {
+
+
+class OBBCollisionDetector : public CollisionDetector
+{
+public:
+  OBBCollisionDetector() 
+    : collisionDetectionEnabled(true) {}
+
+  virtual String className() const { return String("OBBCollisionDetector"); }
+
+  virtual CollisionModel::CollisionModelType getType() const
+    { return CollisionModel::OBBModel; }
+
+
+  virtual bool collision(ref<const Solid> solid1, ref<const Solid> solid2, CollisionQueryType queryType);
+  
+  
+  virtual bool collisionEnable(bool enabled) 
+    {
+      bool oldEnable = collisionDetectionEnabled;
+      collisionDetectionEnabled=enabled; 
+      return oldEnable;
+    }
+  
+
+  Int numBoxTests;
+  Int numTriTests;
+  
+protected:
+  bool collisionDetectionEnabled;
+  
+  base::Vector3 i1,i2,i3;
+  base::Matrix3 Bf;
+  base::Matrix3 mR;
+  base::Vector3 mT;
+  Real ms;
+  
+  std::vector<std::pair<gfx::Triangle3,gfx::Triangle3> > contacts;
+  
+  bool firstContact;
+  
+  void Collide(const base::Matrix3& R1, const base::Vector3& T1, 
+	       ref<const OBBCollisionModel> model1,
+	       const base::Matrix3& R2, const base::Vector3& T2, 
+	       ref<const OBBCollisionModel> model2,
+	       CollisionQueryType queryType);
+  void Collide(const base::Matrix3& R1, const base::Vector3& T1, Real s1, 
+	       ref<const OBBCollisionModel> model1,
+	       const base::Matrix3& R2, const base::Vector3& T2, Real s2, 
+	       ref<const OBBCollisionModel> model2,
+	       CollisionQueryType queryType);
+  
+  void collideRecursive(const OBBCollisionModel::OBB& b1, 
+			const OBBCollisionModel::OBB& b2,
+			const base::Matrix3& R, const base::Vector3& T, double s);
+  
+  void triContact(const OBBCollisionModel::OBB& b1, const OBBCollisionModel::OBB& b2);
+  bool triContact(const base::Vector3& P1, const base::Vector3& P2, const gfx::Vector3& P3,
+		  const base::Point3& Q1, const base::Point3& Q2, const gfx::Point3& Q3);
+  bool project6(const Vector3& ax, 
+		const Vector3& p1, const Vector3& p2, const Vector3& p3,
+		const Vector3& q1, const Vector3& q2, const Vector3& q3) const;
+  Int OBBDisjoint(const base::Matrix3& B, const base::Vector3& T,
+		  const base::Vector3& a, const base::Vector3& b);
+
+
+  
+  class OBBCollisionState : public CollisionState
+  {
+  public:
+    OBBCollisionState(ref<const Solid> solid1, ref<const Solid> solid2)
+      : CollisionState(solid1, solid2) {}
+    virtual ~OBBCollisionState() {}
+
+    virtual String className() const { return String("OBBCollisionState"); }
+    
+  };
+  
+  virtual ref<CollisionState> newCollisionState(ref<const Solid> solid1, ref<const Solid> solid2) const
+    { return ref<CollisionState>(NewNamedObj("OBBSollisionState") OBBCollisionState(solid1,solid2)); }
+
+  
+  // temporaries
+  base::Vector3 p1, p2, p3, q1, q2, q3, e1, e2, e3, f1, f2, f3,
+    g1, g2, g3, h1, h2, h3, n1, m1, z,
+    ef11, ef12, ef13, ef21, ef22, ef23, ef31, ef32, ef33;
+  
+};
+
+
+} // physics
+
+#endif

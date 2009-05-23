@@ -1,0 +1,122 @@
+/****************************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: TestBasicEnvironment 1117 2004-09-27 22:12:01Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_TESTBASICENVIRONMENT_
+#define _ROBOT_SIM_TESTBASICENVIRONMENT_
+
+#include <robot/sim/sim>
+
+#include <robot/sim/BasicEnvironment>
+
+#include <robot/TestRobot>
+
+#include <list>
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * A basic environment for robots and simple obstacles without any simulation.
+ *  Useful for testing.  Added Robot instances are typically of type TestRobot.
+ */
+class TestBasicEnvironment : public robot::sim::BasicEnvironment
+{
+public:
+  TestBasicEnvironment(ref<base::VFileSystem> fs, ref<base::Cache> cache, const String& name = "");
+
+  virtual String className() const { return String("TestBasicEnvironment"); }
+
+
+  // methods to add/remove robots
+  virtual ref<RobotDescription> newRobotDescription() const
+    { return ref<RobotDescription>(NewObj RobotDescription()); }
+
+  virtual ref<Robot> addRobot(ref<const robot::RobotDescription> robotDescription,
+                              const base::Point3& position,
+                              const base::Orient& orientation,
+                              bool anchored = false);
+
+  virtual void removeRobot(ref<robot::Robot> robot);
+
+  virtual Int numRobots() const { return robots.size(); }
+  virtual ref<Robot> getRobot(Int i) { return base::elementAt(robots,i); }
+  virtual ref<Robot> getRobot(String name);
+
+
+  // methods to add/remove tools
+  virtual ref<Tool> addTool(ref<const robot::ToolDescription> toolDescription,
+                            const base::Point3& position,
+                            const base::Orient& orientation);
+
+  virtual void removeTool(ref<Tool> tool);
+
+  virtual Int numTools() const { return tools.size(); };
+  virtual ref<Tool> getTool(Int i) { return base::elementAt(tools,i); }
+  virtual ref<const Tool> getTool(Int i) const { return base::elementAt(tools,i); }
+
+  /// place the specified tool within grasping range of the end-effector of the specified robot manipulator
+  virtual void placeToolInProximity(ref<Tool> tool, ref<Robot> robot, Int manipulatorIndex=0);
+
+
+  // methods to add/remove simple objects to the environment
+
+  virtual ref<Obstacle> addBoxObstacle(base::Dimension3 dim,
+                                       const base::Point3& position,
+                                       const base::Orient& orientation,
+                                       const String& name="");
+
+  virtual ref<Obstacle> addSphereObstacle(Real radius,
+                                          const base::Point3& position,
+                                          const base::Orient& orientation,
+                                          const String& name="");
+
+  virtual void removeObstacle(ref<Obstacle> obstacle);
+
+  virtual Int numObstacles() const { return obstacles.size(); }
+  virtual ref<Obstacle> getObstacle(Int i) { return base::elementAt(obstacles,i); }
+  virtual ref<const Obstacle> getObstacle(Int i) const { return base::elementAt(obstacles,i); }
+
+
+  // Simulatable
+  virtual void preSimulate();
+  virtual void simulateForSimTime(const base::Time& dt);
+
+ // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(base::Externalizer& e, const String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+
+protected:
+  typedef reflist<robot::TestRobot> RobotList;
+  typedef reflist<Tool> ToolList;
+  typedef reflist<Obstacle> ObstacleList;
+
+  RobotList    robots;    ///< list of robots in the environment
+  ToolList     tools;     ///< list of tools in the environment
+  ObstacleList obstacles; ///< list of obstacles in the environment
+
+};
+
+
+}
+} // robot::sim
+
+#endif

@@ -1,0 +1,143 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: ControllableAdaptor 1037 2004-02-11 20:50:18Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-02-11 15:50:18 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROLLABLEADAPTOR_
+#define _ROBOT_CONTROLLABLEADAPTOR_
+
+#include <robot/control/control>
+
+#include <robot/Controller>
+#include <robot/Controllable>
+
+
+namespace robot {
+namespace control {
+
+
+/// Adapts one of a Controllable's ControlInterfaces in various ways.
+/**
+ * For example, by selecting a range of inputs and outputs.
+ * \todo perhaps a ControlInterfaceAdaptor would be a better idea
+ *       (avoid dependance on Controllable). Could implement a
+ *       ControlInterfaceCombiner to joint interfaces.
+ *       Couldn't then have any active adaptation scheme as is possible with this class.
+ */
+class ControllableAdaptor : public robot::Controller, public robot::Controllable
+{
+public:
+  enum AdaptorType { PassThrough, Range, Stride };
+  enum Param { End = -1 };
+
+  ControllableAdaptor(AdaptorType type, ref<Controllable> controllable, 
+		      const String& interfaceName="", const String& adaptedInterfaceName="",
+		      const String& adaptedInterfaceType="");
+  ControllableAdaptor(const ControllableAdaptor& c);
+
+  virtual String className() const { return String("ControllableAdaptor"); }
+  virtual Object& clone() const { return *NewObj ControllableAdaptor(*this); } 
+
+  /// select subranges of input & output vectors 
+  void setRanges(Int inputStart=0, Int outputStart=0, SInt inputEnd=End, SInt outputEnd=End);
+
+  /// select periodic elements from input & output vectors 
+  void setStrides(Int inputStart=0, Int outputStart=0, Int inputStride=1, Int outputStride=1);
+
+
+  virtual void setControlInterface(ref<ControlInterface> controlInterface);
+
+  virtual bool isConnected() const { return (adaptedInterface!=0); }
+
+  virtual bool iterate(const base::Time& time); 
+
+  virtual ref<ControlInterface> getControlInterface(String interfaceName="") throw(std::invalid_argument);
+
+protected:
+
+  AdaptorType type;
+  bool rangesSet;
+  Int inputStart, outputStart;
+  mutable SInt inputEnd, outputEnd;
+  bool stridesSet;
+  Int inputStride, outputStride;
+  
+
+
+  void indexOutOfRange() const
+    { throw std::out_of_range(Exception("index out of range")); }
+
+  Int adaptInputIndex(Int i) const;
+  Int adaptOutputIndex(Int i) const;
+
+
+  class AdaptorControlInterface : public robot::ControlInterface
+  {
+  public:
+    AdaptorControlInterface(ref<ControllableAdaptor> c)
+      : c(c) { setName(c->newInterfaceName); setType(c->newInterfaceType); }
+    AdaptorControlInterface(const AdaptorControlInterface& i)
+      : c(i.c), inputs(i.inputs), outputsSize(i.outputsSize) {}
+
+    virtual String className() const { return String("AdaptorControlInterface"); }
+    virtual Object& clone() const { return *NewObj AdaptorControlInterface(*this); } 
+
+    Int inputSize() const;
+    String inputName(Int i) const; ///< \todo implement
+    Real getInput(Int i) const;
+    const Vector& getInputs() const;
+    
+    Int outputSize() const;
+    String outputName(Int i) const; ///< \todo implement
+    void setOutput(Int i, Real value);
+    void setOutputs(const Vector& values);
+    
+  protected:
+    virtual void onUnreference() const ///< break cyclic reference with c
+    {
+      if ((referenceCount()==1) && (c->referenceCount()==1)) 
+	Release(c);
+    }
+
+    mutable ref<ControllableAdaptor> c;
+    mutable Vector inputs;
+    mutable Int outputsSize;
+
+    friend class ControllableAdaptor;
+  };
+
+  virtual void onUnreference() const; ///< break cyclic reference with adaptorInterface
+
+  ref<Controllable> controllable;          ///< Controllable we're adapting 
+  ref<ControlInterface> adaptedInterface;  ///< interface to be adapted
+  mutable ref<AdaptorControlInterface> adaptorInterface; ///< interface that adapts the controllable
+  String newInterfaceName;
+  String newInterfaceType;
+
+  friend class AdaptorControlInterface;
+};
+
+
+}
+} // robot::control
+
+#endif

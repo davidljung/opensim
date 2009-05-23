@@ -1,0 +1,66 @@
+/****************************************************************************
+  Copyright (C)2004 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ControlInterfaceWidget 1059 2004-02-27 19:28:44Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-27 14:28:44 -0500 (Fri, 27 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _APPS_CONTROLINTERFACEWIDGET_
+#define _APPS_CONTROLINTERFACEWIDGET_
+
+#include <gtkmm.h>
+
+#include <base/base>
+#include <robot/robot>
+
+#include <robot/ControlInterface>
+#include <robot/sim/BasicEnvironment>
+
+#include <apps/GUIControlWindow>
+
+
+namespace apps {
+
+// abstract base for GUI Widgets that provide interaction with a ControlInterface 
+class ControlInterfaceWidget : virtual public Gtk::VBox, public base::Object
+{
+
+public:
+  ControlInterfaceWidget(GUIControlWindow& parentWindow) 
+    : Gtk::VBox(false,5), parentWindow(parentWindow) {}
+    
+  virtual ~ControlInterfaceWidget() {}
+  
+  virtual void init(ref<robot::sim::BasicEnvironment> env, ref<robot::Robot> robot, Int index, ref<robot::ControlInterface> interface) = 0;
+  virtual void finalize() {}
+  
+  virtual void iterate(const base::Time& simTime) = 0;
+  
+protected:
+  ControlInterfaceWidget(const ControlInterfaceWidget& ciw) : parentWindow(ciw.parentWindow) {}
+
+  GUIControlWindow& parentWindow;
+};
+
+
+} // app
+
+#endif
+

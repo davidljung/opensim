@@ -1,0 +1,80 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Application 1164 2004-09-29 18:05:20Z jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_APPLICATION_
+#define _BASE_APPLICATION_
+
+#include <base/base>
+
+#include <base/Object>
+#include <base/Universe>
+#include <base/Directory>
+#include <base/Cache>
+
+
+namespace base {
+
+class Universe;
+class VFileSystem;
+class Time;
+
+// singelton
+class Application : public Object
+{
+public:
+  Application(const String& resourceDirectoryName, const String& cacheDirectoryName = "cache");
+  virtual ~Application();
+
+  virtual String className() const { return String("Application"); }
+
+  static Application* getInstance()
+    {
+      Assertm(app,"Application singelton instantiated.");
+      return app;
+    }
+
+  ref<Universe>    universe() { return theUniverse; }
+  ref<VFileSystem> filesystem() { return theFileSystem; }
+
+  static const Int versionMajor = 0; // e.g. 1.4.1
+  static const Int versionMinor = 4;
+  static const Int versionSubMinor = 5;
+
+  static String getShortName() { return "opensim"; }
+  static String getLongName() { return "Open Simulator (OpenSim)"; }
+  static String getVersion() { return intToString(versionMajor) + "." + intToString(versionMinor) + "." + intToString(versionSubMinor); }
+
+  void displayHeader(const String& appName="");
+
+private:
+  Application(const Application&)  {}
+
+  ref<Universe>    theUniverse;
+  ref<VFileSystem> theFileSystem;
+  Time *theTime; // singleton
+
+  static Application* app;  // the single instance
+};
+
+
+} // base
+
+#endif

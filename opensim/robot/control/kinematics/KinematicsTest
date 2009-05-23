@@ -1,0 +1,91 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: KinematicsTest 1036 2004-02-11 20:48:55Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:48:55 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_KINEMATICSTEST_
+#define _ROBOT_CONTROL_KINEMATICS_KINEMATICSTEST_
+
+#include <cppunit/extensions/HelperMacros.h>
+
+#include <base/Matrix>
+#include <base/Expression>
+#include <robot/TestRobot>
+#include <robot/control/kinematics/LeastNormIKSolver>
+#include <robot/control/kinematics/IKOR>
+#include <robot/control/kinematics/OldIKOR>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+class KinematicsTest : public CppUnit::TestFixture 
+{
+  static const Int numOfTests = 1;//4;
+
+  CPPUNIT_TEST_SUITE( KinematicsTest );
+
+  CPPUNIT_TEST( testNoMotion );
+  //  CPPUNIT_TEST_EXCEPTION( testImpossibleMotion, std::invalid_argument );
+  //  CPPUNIT_TEST( testLeastNormCriteria );
+
+  CPPUNIT_TEST_SUITE_END();
+
+protected:
+  static const Int dof = 6;
+  static const Int dof2 = 5;
+
+  // D-H param vectors for test robot manipulator
+  base::IVector jt, jt2; // joint type
+  base::Vector alpha, a, d, theta;
+  base::Vector alpha2, a2, d2, theta2;
+
+  ref<robot::TestRobot> robot, robot2;
+  robot::KinematicChain chain, chain2;
+
+  ref<IKOR> ikor;
+  ref<OldIKOR> oldikor;
+  ref<LeastNormIKSolver> lnsolver;
+
+  
+public:
+  KinematicsTest();
+
+  int countTestCases () const { return numOfTests; }
+  
+  void setUp();
+  void tearDown();
+  
+  void testNoMotion();
+  void testImpossibleMotion();
+  void testLeastNormCriteria();
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

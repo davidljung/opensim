@@ -1,0 +1,161 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: IKORFullSpaceSolver 1080 2004-07-28 19:51:26Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-07-28 15:51:26 -0400 (Wed, 28 Jul 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_IKORFULLSPACESOLVER_
+#define _ROBOT_CONTROL_KINEMATICS_IKORFULLSPACESOLVER_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <robot/control/kinematics/FullSpaceSolver>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+
+/// Solver that finds the Full-space using the IKOR project method
+///  (refer to the OpenSim manual and references publications for detail)
+class IKORFullSpaceSolver : public FullSpaceSolver
+{
+public:
+  IKORFullSpaceSolver();
+
+  virtual String className() const { return String("IKORFullSpaceSolver"); }
+  virtual Object& clone() const { return *NewObj IKORFullSpaceSolver(*this); }
+
+  /// Computes a set of vectors gi that can be used to find solutions to Ax=b for x
+  /**
+   *   @param A_in                     NxM Matrix
+   *   @param b_in                     N-dim Vector
+   *   @param dependentRowsEliminated  is filled out with the indices of rows of A_in
+   *                                   that are eliminated from the computation because they
+   *                                   are dependent (actually if Ai|bi is dependent.  If only
+   *                                   Ai is dependent but bi conflicts an exception is throw
+   *                                   because solution is impossible)
+   *   @return      returns the set of vector gis as columns of a Matrix
+   *   @exception   std::invalid_argument if gis can't be found for the provided A & b
+   */
+   virtual Matrix solve(const Matrix& A_in, const Vector& b_in,
+                        array<Int>& dependentRowsEliminated);
+
+protected:
+  IKORFullSpaceSolver(const IKORFullSpaceSolver& c) : FullSpaceSolver(c) {}
+
+  // Constants to indicate which rows/cols have been eliminated from A, any why.
+  //  used in solve()'s rowElim/colElim vectors
+  //  (NB: the actual values are the same as those used in IKORv2.0, for comparison)
+  static const Int NotEleminated = 0;
+  static const Int Eliminated_ZeroOrRestriction = 1;
+  static const Int RowEliminated_Dependent = 2;
+  static const Int RowEliminated_Special = 1;
+  static const Int ColEliminated_SpecialCase1 = 2;
+  static const Int ColEliminated_SpecialCase2 = 3;
+
+  inline static bool isSmall(Real a) { return Math::abs(a) < 5.0e-05; /*(=def. SMALL)*/ }
+
+
+  /// Reduces the A matrix
+  /**
+   * This is what IKORv2.0 had to say (below).
+   * Again; why a general solution method for Matrices is talking
+   * about work spaces, joint etc. is a little concerning!
+   *
+   * Restricted work space motions can be
+   * identified by rows of the A which only
+   * have one nonzero element.  Since the
+   * corresponding column must be present in
+   * all final joint space solutions, the
+   * appropriate joint space motion will be
+   * calculated before any redundancy
+   * resolution is performed, and the
+   * appropriate motions and joints will be
+   * removed from the work space and A
+   * respectively.  Also such cases as
+   * dependent rows, and SpecialCase1 must be
+   * identified and dealt with.
+   */
+  void reduceA(const Matrix& A, Matrix& Ared,
+               const Vector& b, Vector& bred,
+               const Int M, const Int N,
+               Int& Mred, Int& Nred,
+               base::IVector& colElim, base::IVector& rowElim,
+               Matrix& specialg, Int& numSpecialgs);
+
+
+  /// calculate a new g vector for a given square blocking pattern
+  void blockColFindX(Vector& g,
+                     const base::IVector& tackon, const Vector& block,
+                     const Vector& b, const Matrix& A,
+                     const Int Mred, const Int Nred);
+
+
+  /// Finds the remaining solution vectors after the first has been selected.
+  /** It is recursive and thus calls itself when a
+   *  valid solution is found, if this solution
+   *  leads to a dead end, it will pop back to
+   *  last solution and build from there.  This
+   *  insures that all possible combinations of
+   *  blocking patterns are available, given
+   *  first one, in pattern which follows the
+   *  algoritm presented in the article.
+   */
+  void restOfSoln( const Int M, const Int N, const Int Mred, const Int Nred,
+                  Int nextToFind,
+                  Matrix& block, Matrix& g,
+                  const Vector& bred, const Matrix& Ared,
+                  const base::IVector& tackon, base::IVector& firstOK);
+
+
+  /// returns true if the given two columns and dependent (used in special-case 1 detection)
+  bool dependency(const Matrix& A, const base::IVector& slRow, Int Nred, Int first, Int second) const;
+
+  /// returns true if the original b is in the range of A
+  bool checkRange(const Matrix& A, const Vector& b, const Matrix& g, const base::IVector& rowElim);
+
+
+  /// rebuilds the g Matrix
+  /** adds zeros in eliminated cols and tacks on the g vectors created
+   *  by special-case 1
+   */
+  void rebuildgs(Matrix& g,
+                 const Int M, const Int N, const Int Mred, const Int Nred,
+                 const base::IVector& colElim, const base::IVector& rowElim,
+                 const Matrix& specialg, const Int numSpecialgs);
+
+
+  bool systemComplete;
+
+  enum Status { Unknown=0, Restricted, Complete, NotComplete };
+  Status status;
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

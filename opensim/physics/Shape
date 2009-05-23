@@ -1,0 +1,109 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Shape 1145 2004-09-28 21:04:39Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-09-28 17:04:39 -0400 (Tue, 28 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _PHYSICS_SHAPE_
+#define _PHYSICS_SHAPE_
+
+#include <physics/physics>
+#include <physics/CollisionModelProvider>
+#include <gfx/Visual>
+#include <base/Serializable>
+#include <base/Externalizable>
+#include <physics/ShapeOSGVisualData>
+
+#include <base/Serializer>
+#include <base/Transform>
+#include <gfx/Segment3>
+#include <gfx/Quad3>
+#include <physics/BoundingBox>
+#include <physics/BoundingSphere>
+#include <physics/MassProperties>
+
+
+namespace physics {
+
+class Material;
+
+
+class Shape : public CollisionModelProvider,
+              public gfx::Visual, public base::Serializable, public base::Externalizable,
+              public base::ReferencedObject, public ShapeOSGVisualData
+{
+public:
+  Shape()
+    : shapeHasAppearance(false) {}
+  virtual ~Shape() {}
+  virtual BoundingBox    getBoundingBox() const = 0;
+  virtual BoundingSphere getBoundingSphere() const = 0;
+
+  virtual bool isConvex() const = 0;
+  virtual bool includesAppearance() const { return shapeHasAppearance; }
+  virtual void setIncludesAppearance(bool appearanceIncluded) { shapeHasAppearance=appearanceIncluded; }
+
+  virtual const MassProperties& getMassProperties(ref<const Material> material) const = 0;
+
+
+  // distance computation methods
+
+  /// return the shortest segment between this shape (in configuration t) and the point p (the returned segment will always end with p)
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const Point3& p) const = 0;
+
+  /// return the shortest segment between this shape (in configuration t) and the segment s
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Segment3& s) const = 0;
+
+  /// return the shortest segment between this shape (in configuration t) and the triangle t
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Triangle3& tri) const = 0;
+
+  /// return the shortest segment between this shape (in configuration t) and the quad q
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Quad3& q) const = 0;
+
+  /// return the shortest segment between this shape (in configuration t1) and the shape s (in configuration t2)
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t1, ref<const Shape> s, const base::Transform& t2) const = 0;
+
+
+  /// create a new concrete Shape (subclass) based on the next element that appears in the Input Externalizer stream
+  ref<Shape> createShapeFromInput(base::Externalizer& e, String format = "", Real version = 1.0);
+
+  /// deprecated.
+  base::ref<CollisionModel> getCollisionModel(CollisionModel::CollisionModelType modelType) const;
+
+protected:
+  Shape(const Shape& s)
+    : shapeHasAppearance(s.shapeHasAppearance) {}
+
+  // create a visual of the shape's axes for debugging etc.
+  static osg::Node* createOSGAxes(const base::Dimension3& dim);
+
+  bool shapeHasAppearance;
+
+  // convenience method to get a collision model from the triangles in a visual
+  //  (if specific model for the shape is available)
+  ref<CollisionModel> getCollisionModelFromVisual(CollisionModel::CollisionModelType modelType) const;
+
+};
+
+
+} // physics
+
+#endif

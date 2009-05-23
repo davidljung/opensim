@@ -1,0 +1,116 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2004 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedManipulatorDescription 1033 2004-02-11 20:47:52Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:47:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_SIMULATEDMANIPULATORDESCRIPTION_
+#define _ROBOT_SIMULATEDMANIPULATORDESCRIPTION_
+
+#include <robot/robot>
+
+#include <robot/ManipulatorDescription>
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * An description of a manipulator specific to simulations
+ * (includes information relevant to a simulation, such as the initial joint
+ *  configuration, link geometry & appearance etc.)
+ */
+class SimulatedManipulatorDescription : public ManipulatorDescription
+{
+public:
+  SimulatedManipulatorDescription() {}
+  
+  SimulatedManipulatorDescription(String name, Matrix4 baseTransform, KinematicChain kinematicChain)
+    : ManipulatorDescription(name, baseTransform, kinematicChain), 
+      q(zeroVector(kinematicChain.dof())), linkGeometrySpecified(false), 
+      hasProxSensors(false), proxSensorRange(1.0) {}
+      
+  SimulatedManipulatorDescription(const ManipulatorDescription& md) 
+    : ManipulatorDescription(md), q(zeroVector(md.getKinematicChain().dof())), 
+      linkGeometrySpecified(false), hasProxSensors(false), proxSensorRange(1.0) {}
+    
+  SimulatedManipulatorDescription(const SimulatedManipulatorDescription& md) 
+    : ManipulatorDescription(md), q(md.q), linkGeometrySpecified(md.linkGeometrySpecified), 
+      linkRadii(md.linkRadii), hasProxSensors(hasProxSensors), proxSensorRange(proxSensorRange) {}
+
+  SimulatedManipulatorDescription& operator=(const SimulatedManipulatorDescription& md)
+    {
+      ManipulatorDescription::operator=(md);
+      q = md.q;
+      linkGeometrySpecified = md.linkGeometrySpecified;
+      linkRadii = md.linkRadii;
+      hasProxSensors = md.hasProxSensors;
+      proxSensorRange = md.proxSensorRange;
+      return *this;
+    }
+
+  virtual String className() const { return String("SimulatedManipulatorDescription"); }
+
+
+  bool operator==(const SimulatedManipulatorDescription& md)
+    {
+      if (&md == this) return true;
+      return ManipulatorDescription::operator==(md);
+    }
+
+  bool operator!=(const SimulatedManipulatorDescription& md) { return !(*this == md); }
+
+  
+  // Simulation specific information
+  
+  Vector initialConfiguration() const { return q; }
+  bool   hasGeometry() const { return linkGeometrySpecified; }
+  array<Real> getLinkRadii() const { return linkRadii; }
+  bool   hasLinkProximitySensors() const { return hasProxSensors; }
+  Real   linkProximitySensorRange() const { return proxSensorRange; } 
+
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  SimulatedManipulatorDescription(String name) : ManipulatorDescription(name) {}
+  
+
+private:
+  Vector q; ///< initial joint configuration
+  bool linkGeometrySpecified;
+  array<Real> linkRadii;  ///< radius of links (assuming cylindrical)
+  bool hasProxSensors;
+  Real proxSensorRange;   ///< max range of link proximity sensors
+  
+//  friend class Robot;
+};
+
+
+}
+} // robot::sim
+
+#endif

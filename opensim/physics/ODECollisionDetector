@@ -1,0 +1,76 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODECollisionDetector 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODECOLLISIONDETECTOR_
+#define _PHYSICS_ODECOLLISIONDETECTOR_
+
+#include <physics/physics>
+
+#include <base/array>
+#include <physics/CollisionDetector>
+#include <physics/ODECollidableBody>
+
+
+namespace physics {
+
+/**
+ * Collision detector that wraps the ODE physics library collision functionality
+ */
+class ODECollisionDetector : public CollisionDetector
+{
+public:
+  ODECollisionDetector();
+  virtual ~ODECollisionDetector();
+
+  virtual String className() const { return String("ODECollisionDetector"); }
+
+  virtual ref<CollidableBody> createCollidableBody(ref<Shape> shape); ///< new CollidableBody with specified Shape
+  
+  virtual void collide(ref<const Collidable> collidable1, ref<const Collidable> collidable2);
+  
+  virtual void collide(ref<const Collidable> collidable) { Collider::collide(collidable); }
+
+  
+protected:
+  virtual ref<CollisionState> newCollisionState(ref<const CollidableBody> collidable1, ref<const CollidableBody> collidable2) const;
+
+  
+  class ODECollisionState : public CollisionState
+  {
+  public:
+    ODECollisionState(ref<const CollidableBody> collidable1, ref<const CollidableBody> collidable2);
+    virtual ~ODECollisionState();
+
+    //Vector3 v;
+    //ref<const Polyhedron::Vertex> lastSupport[2]; // remember the last support vertex
+
+    virtual String className() const { return String("ODECollisionState"); }
+  };
+
+};
+
+
+} // physics
+
+#endif

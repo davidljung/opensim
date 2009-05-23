@@ -1,0 +1,145 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Segment3 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_SEGMENT3_
+#define _GFX_SEGMENT3_
+
+#include <gfx/gfx>
+#include <base/Point3>
+#include <base/Vector3>
+#include <base/Transform>
+
+#include <iostream>
+
+
+namespace gfx {
+
+
+class Segment3
+{
+
+public:
+  Segment3() {}
+  Segment3(const Vector3& d) 
+    : s(Point3()), e(d) {}
+  Segment3(const Point3& s, const Point3& e)
+    : s(s), e(e) {}
+  Segment3(const Segment3& seg) 
+    : s(seg.s), e(seg.e) {}
+  ~Segment3() {}
+  
+  Segment3& operator=(const Segment3& seg)
+    {
+      if (&seg == this) return *this;
+      s=seg.s;
+      e=seg.e; 
+      return *this; 
+    }
+  
+  bool operator==(const Segment3& seg) const
+    {
+      if (&seg == this) return true;
+      return (s==seg.s) && (e==seg.e);
+    }
+    
+  bool operator!=(const Segment3& seg) const
+    { 
+      if (&seg == this) return false;
+      return (s!=seg.s) || (e!=seg.e);
+    }
+    
+  bool equals(const Segment3& seg, Real epsilon = consts::epsilon) const
+    { 
+      if (&seg == this) return true;
+      return (s.equals(seg.s,epsilon) && e.equals(seg.e,epsilon));
+    }
+  
+  
+  Point3& operator[](Int i) { return (i==0)?s:e; }
+  const Point3& operator[](Int i) const { return (i==0)?s:e; }
+  
+  Segment3& operator*=(Real s) { this->s*=s; e*=s; return *this; }
+  Segment3& operator/=(Real s) { this->s/=s; e/=s; return *this; }
+  
+  void transform(const base::Transform& t)
+  {
+    s = t*s;
+    e = t*e;
+  }
+
+  Real length() const { return (e-s).length(); }
+  
+  Real norm() const { return (e-s).norm(); }
+  
+  Real magnitude() const { return (e-s).magnitude(); }
+  
+  
+  /// is point p on the segment?
+  bool contains(const Point3& p) const;
+
+  /// shortest distance between segment and p
+  Real distanceTo(const Point3& p) const;
+  
+  /// shortest distance between this segment and segment g2
+  Real distanceTo(const Segment3& s2) const
+  { Real ds; shortestSegmentBetween(s2,ds); return Math::sqrt(ds); }
+  
+  /// find point on segment that is closest to p
+  Point3 pointClosestTo(const Point3& p) const;
+  
+  
+  /// return the shortest segment between this segment and segment s2
+  Segment3 shortestSegmentBetween(const Segment3& s2) const
+  { Real ds; return shortestSegmentBetween(s2,ds); }
+  
+  /// swap s & e
+  Segment3& swapEnds() { Point3 os(s); s=e; e=os; return *this; }
+
+  Point3 s, e;
+  
+protected:
+  Segment3 shortestSegmentBetween(const Segment3& s2, Real& ds) const;
+  
+  friend class Triangle3;
+};
+
+
+// Operations
+inline Segment3 operator*(const Segment3& seg, Real s)
+{ Segment3 r(seg); r*=s; return r; }
+
+inline Segment3 operator*(Real s, const Segment3& seg)
+{ Segment3 r(seg); r*=s; return r; }
+
+inline Segment3 operator/(const Segment3& seg, Real s)
+{ Segment3 r(seg); r/=s; return r; }
+
+
+inline std::ostream& operator<<(std::ostream& out, const Segment3& s) // Output
+{ return out << "[" << s.s << "-" << s.e << "]"; }
+
+
+} // gfx
+
+#endif

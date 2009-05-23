@@ -1,0 +1,94 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: KinematicEvaluator 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_KINEMATICEVALUATOR_
+#define _ROBOT_KINEMATICEVALUATOR_
+
+#include <robot/robot>
+
+#include <base/ReferencedObject>
+
+#include <base/array>
+#include <base/Vector>
+#include <base/Matrix>
+
+
+namespace robot {
+
+class KinematicChain;  
+  
+  
+
+/**
+ * An abstract interface for forward and inverse kinematic expression evaluation.
+ *  Typically, a single instance will be created per application, but the user is free
+ *  to create multiple instances
+ * Implementations may cache internal state to optimize evaluations.
+ */
+class KinematicEvaluator : public base::ReferencedObject
+{
+public:
+
+  /// get the forward kinematics transform for the given chain, with joint parameter values q
+  /**  
+   *   @param  chain       a description of a chain of links 
+   *   @param  q           array of Reals; q[0] is the value of the variable for the first dof
+   *   @return             a 4x4 homogeneous transform matrix from the first link to the end-effector
+   */
+  virtual Matrix getForwardKinematics(const KinematicChain& chain, const Vector& q) const = 0;
+  
+  
+  /// get the Jacobian matrix for the given chain, with joint parameter values q
+  /**  
+   *   @param  chain       a description of a chain of links 
+   *   @param  q           array of Reals; q[0] is the value of the variable for the first dof
+   *   @param  includeOrientation   include orientation components in the Jacobian if true
+   *   @return             a [6|3] x N  Jacobian matrix, where N=chain.dof and the number of rows
+   *                       will be 6 unless includeOrientation is false.
+   */
+  virtual Matrix getJacobian(const KinematicChain& chain, const Vector& q, bool includeOrientation = true) const = 0;
+  
+  
+
+  /// computes the forward kinematics to return the joint origin locations
+  /**  
+   *   @param  chain       a description of a chain of links 
+   *   @param  q           array of Reals; q[0] is the value of the variable for the first dof
+   *   @return             array of [x,y,z] Vectors that give the location of each joint's origin ( size()==chain.dof() )
+   */
+  virtual array<base::Vector> getJointOrigins(const KinematicChain& chain, const base::Vector& q ) const = 0;
+  
+  
+  /// computes the forward kinematics to return the link origin locations
+  /**
+   *   @param  chain       a description of a chain of links 
+   *   @param  q           array of Reals; q[0] is the value of the variable for the first dof
+   *   @return             array of [x,y,z] Vectors that give the location of each link's origin ( size()==chain.size() )
+   */
+  virtual array<base::Vector> getLinkOrigins(const KinematicChain& chain, const base::Vector& q ) const = 0;
+};
+
+} // namespace robot
+
+#endif

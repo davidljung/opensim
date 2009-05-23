@@ -1,0 +1,90 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Material 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.6 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_MATERIAL_
+#define _PHYSICS_MATERIAL_
+
+#include <base/base>
+#include <base/Externalizable>
+#include <base/Dimension3>
+#include <base/PathName>
+#include <gfx/Color4>
+#include <physics/Shape>
+
+#include <osg/StateSet>
+
+#include <string>
+
+
+namespace physics {
+
+
+class Material : public base::ReferencedObject, public base::Externalizable
+{
+public:
+  Material(const String& label="plastic", const gfx::Color4& color = gfx::Color4("green"));
+  Material(const Material& m);
+  virtual ~Material();
+  
+  virtual String className() const { return String("Material"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) Material(*this); }
+
+  virtual void setBaseColor(const gfx::Color4& color) { mBaseColor = color; stateSetCached=false; }
+  virtual void setBaseColor(const String& color) { mBaseColor = gfx::Color4(color); stateSetCached=false; }
+  virtual const gfx::Color4& baseColor() const { return mBaseColor; }
+  
+  virtual void setDensity(Real density) { mDensity=density; }
+  virtual Real density() const { return mDensity; }
+  
+  virtual void setSurfaceAppearance(const base::PathName& image);
+
+  virtual osg::ref_ptr<osg::StateSet> createState() const;
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+
+protected:
+  String label;
+
+  Real mDensity;
+
+  enum SurfaceAppearanceType { BaseColor, TextureImage };
+
+  SurfaceAppearanceType surfaceAppearanceType;
+
+  gfx::Color4 mBaseColor;
+  base::PathName surfaceTextureImage;
+
+  // cache osg::StateSet
+  mutable bool stateSetCached;
+  mutable osg::ref_ptr<osg::StateSet> stateSet;
+  
+};
+
+
+} // physics
+
+#endif

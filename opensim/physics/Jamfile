@@ -1,0 +1,64 @@
+project physics
+  : usage-requirements
+                <include>$(ext)/ode/include #ODE
+                <library>..//ode
+  : requirements
+                <include>$(ext)/ode/include #ODE
+                <library>..//ode
+  ;
+
+
+lib os_physics :  
+                /base//os_base /gfx//os_gfx
+                BoundingBox.cpp
+                VisualDebugUtil.cpp
+                Shape.cpp
+                Box.cpp
+                Sphere.cpp
+                Cylinder.cpp
+                Cone.cpp
+                Capsule.cpp
+#               Torus.cpp
+                Polyhedron.cpp
+#               CSGShape.cpp
+                HeightField.cpp
+                LODTerrain.cpp
+		CompositeShape.cpp
+                PositionableOrientable.cpp
+                SpatialGroup.cpp
+                SpatialTransform.cpp
+                Solid.cpp
+                SolidCollisionResponseHandler.cpp
+                CollidableGroup.cpp
+                Collider.cpp
+                SimpleCollisionCuller.cpp
+                ODESolid.cpp
+                ODEConstraint.cpp
+                ODEFixedConstraint.cpp
+                ODEContactConstraint.cpp
+                ODEJoint.cpp
+                ODEBallJoint.cpp
+                ODEHingeJoint.cpp
+                ODEDoubleHingeJoint.cpp
+                ODEUniversalJoint.cpp
+                ODESliderJoint.cpp
+                ODEMotor.cpp
+                ODEConstraintGroup.cpp
+                ODECollidableBody.cpp
+                ODESolidConnectedCollidableBody.cpp
+                ODECollidableGroup.cpp
+                ODECollisionCuller.cpp
+                CollisionModel.cpp
+                OBBCollisionModel.cpp
+#               OBBCollisionDetector.cpp
+                ODECollisionModel.cpp
+                ODECollisionDetector.cpp
+                GJKCollisionModel.cpp
+#               GJKCollisionDetector.cpp
+                MassProperties.cpp
+                Material.cpp
+                CollisionDetector.cpp
+                SolidSystem.cpp
+                ODESolidSystem.cpp
+        ;
+

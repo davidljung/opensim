@@ -1,0 +1,43 @@
+#ifndef _GFX_CLODTERRAINDRAWABLE_
+#define _GFX_CLODTERRAINDRAWABLE_
+
+#include <osg/BoundingBox>
+#include <osg/StateSet>
+#include <osg/State>
+#include <osg/Drawable>
+#include <gfx/CLODTerrainRenderer>
+
+
+namespace demeter {
+
+using gfx::CLODTerrainRenderer;
+
+class DemeterDrawable : public osg::Drawable
+{
+public:
+  DemeterDrawable();
+  DemeterDrawable(const DemeterDrawable&,const osg::CopyOp& copyop=osg::CopyOp::SHALLOW_COPY);
+  virtual ~DemeterDrawable();
+
+  META_Object(gfx,DemeterDrawable)
+
+  void SetTerrain(CLODTerrainRenderer* pTerrain);
+  DemeterDrawable& operator=(const DemeterDrawable&) ;
+  //  virtual const char* 		className() const;
+  /// Demeter does not currently support display lists - see Demeter source for discussion
+  void 	       setUseDisplayList(const bool flag);
+  virtual void drawImplementation(osg::State&) const;
+protected:
+  virtual bool computeBound() const;
+  mutable osg::ref_ptr<Terrain>			m_RefTerrain;
+};
+
+} 
+
+namespace gfx {
+
+  typedef demeter::DemeterDrawable CLODTerrainDrawable;
+
+}
+
+#endif

@@ -1,0 +1,86 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SVDFullSpaceSolver 1080 2004-07-28 19:51:26Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-07-28 15:51:26 -0400 (Wed, 28 Jul 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_SVDFULLSPACESOLVER_
+#define _ROBOT_CONTROL_KINEMATICS_SVDFULLSPACESOLVER_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <robot/control/kinematics/FullSpaceSolver>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+
+/// Solver that finds the set of vectors gi, such that dq = sum ti.gi s.t. sum tk=1
+///  is a solution to Jdq=dx, and dq = sum ti.gi s.t. sum tk=0 is a solution to
+///  Jdq=0 (null-space) using Singular Value Decomposition (SVD)
+class SVDFullSpaceSolver : public FullSpaceSolver
+{
+public:
+  SVDFullSpaceSolver();
+
+  virtual String className() const { return String("SVDFullSpaceSolver"); }
+  virtual Object& clone() const { return *NewObj SVDFullSpaceSolver(*this); }
+
+  /// Computes a set of vectors gi that can be used to find solutions to Ax=b for x
+  /**
+   *   @param A_in                     NxM Matrix
+   *   @param b_in                     N-dim Vector
+   *   @param dependentRowsEliminated  is filled out with the indices of rows of A_in
+   *                                   that are eliminated from the computation because they
+   *                                   are dependent (actually if Ai|bi is dependent.  If only
+   *                                   Ai is dependent but bi conflicts an exception is throw
+   *                                   because solution is impossible)
+   *   @return      returns the set of vector gis as columns of a Matrix
+   *   @exception   std::invalid_argument if gis can't be found for the provided A & b
+   */
+   virtual Matrix solve(const Matrix& A_in, const Vector& b_in,
+                        array<Int>& dependentRowsEliminated);
+
+
+  /// if true, if A is ill-conditioned (SVD gives large condition number), an exception is thrown in solve()
+  ///  otherwise, all 0 singular values are considered infinite (the corresponding elements of Sinv are set to 0)
+  ///  and a solution is returned (which should have least-norm error from requested b)
+   void setStopOnIllCondition(bool stopOnIllCondition) { this->stopOnIllCondition = stopOnIllCondition; }
+
+protected:
+  SVDFullSpaceSolver(const SVDFullSpaceSolver& fsp) : FullSpaceSolver(fsp) {}
+
+  /// if true, if A is ill-conditioned (SVD gives large condition number), an exception is thrown
+  bool stopOnIllCondition;
+
+  inline static bool isSmall(Real a) { return Math::abs(a) < 5.0e-05; /*(=def. SMALL)*/ }
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

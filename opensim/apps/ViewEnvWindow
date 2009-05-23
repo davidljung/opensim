@@ -1,0 +1,186 @@
+/****************************************************************************
+  Copyright (C)2004 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ViewEnvWindow 1059 2004-02-27 19:28:44Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-27 14:28:44 -0500 (Fri, 27 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _APPS_VIEWENVWINDOW_
+#define _APPS_VIEWENVWINDOW_
+
+#include <gtkmm.h>
+
+#include <base/base>
+#include <robot/robot>
+
+#include <robot/sim/BasicEnvironment>
+
+#include <apps/GUIControlWindow>
+#include <apps/ControlInterfaceWidget>
+
+
+namespace apps {
+
+// Environment View and control GUI Window
+class ViewEnvWindow : public GUIControlWindow
+{
+
+public:
+  ViewEnvWindow(Gtk::Main& kit);
+  void init(ref<robot::sim::BasicEnvironment> env);
+  
+    
+  virtual base::String className() const { return String("ViewEnvWindow"); }
+
+  
+  Real getSimStepSize() const { return simStepSize; }
+  
+  
+  void setFrameRate(Real rate);
+  Real getFrameRate() const { return aveFrameRate; }
+  
+  void setSimSpeed(Real speed);
+  Real getSimSpeed() const { return aveSimSpeed; }
+  
+  
+  void update(const base::Time& simTime);
+  
+  bool saveFrames() const { return saveFrame; }
+  
+  
+  virtual ~ViewEnvWindow() {}
+
+  bool quit; // once set true, the main event loop will exit
+
+  virtual void show();
+
+  virtual void pushStatusMessage(StatusType type, const String& message, int context_id = 0);
+  virtual void popStatusMessage(int context_id = 0);
+  
+protected:
+
+  // widgets
+  Gtk::HBox tophbox;
+  Gtk::VBox topvbox;
+  Gtk::Frame simFrame;
+  Gtk::VBox  simFrameVBox;
+  Gtk::HBox  frameRateHBox;
+  Gtk::Label frameRate;
+  Gtk::HBox  simSpeedHBox;
+  Gtk::Label simSpeed;
+  Gtk::Adjustment simStep;
+  Gtk::HScale simStepScale;
+  Gtk::HBox   simStepHBox;
+  
+  Gtk::Frame     envFrame;
+  Gtk::ScrolledWindow envWindow;
+  Glib::RefPtr<Gtk::TreeStore> envTree;
+  Gtk::TreeView  envTreeView;
+  Glib::RefPtr<Gtk::TreeSelection> envTreeViewSelection;
+
+  Gtk::Frame     interfaceFrame;
+  Gtk::VBox      interfaceFrameVBox;
+  Gtk::ScrolledWindow interfaceWindow;
+  Glib::RefPtr<Gtk::ListStore> interfaceList;
+  Gtk::TreeView  interfaceListView;
+  Glib::RefPtr<Gtk::TreeSelection> interfaceListViewSelection;
+  
+  Gtk::Button newPanelButton;
+  
+  Gtk::Frame    interfacesFrame;
+  Gtk::HBox     interfacesFrameHBox;
+
+  array<Gtk::Notebook*> interfacePanels;
+
+  Gtk::Statusbar  statusBar;
+  Gtk::Button quitButton;
+  Gtk::ToggleButton saveFramesButton;
+  
+  class EnvTreeColumns : public Gtk::TreeModel::ColumnRecord
+  {
+    public:
+      EnvTreeColumns()
+      { add(name); add(type); add(robot); add(index); }
+      
+      enum Type { RobotType, PlatformType, ManipulatorType, 
+                  ToolType, ObstacleType, LinkType };
+      
+      Gtk::TreeModelColumn<Glib::ustring> name;
+      Gtk::TreeModelColumn<Type> type;
+      Gtk::TreeModelColumn<ref<robot::Robot> > robot;
+      Gtk::TreeModelColumn<Int> index;
+  };
+  
+  EnvTreeColumns envTreeColumns;
+  
+  
+  class InterfaceListColumns : public Gtk::TreeModel::ColumnRecord
+  {
+    public:
+      InterfaceListColumns()
+      { add(name); add(type); }
+    
+      Gtk::TreeModelColumn<Glib::ustring> name;
+      Gtk::TreeModelColumn<Glib::ustring> type;
+  };
+  
+  InterfaceListColumns interfaceListColumns;
+
+
+  // fill in the columns of the envTree from information in the robot::sim::BasicEnvironment
+  void fillInEnvTree();
+  
+
+  void fillInInterfaceList(ref<robot::Robot> robot, EnvTreeColumns::Type type, Int index);
+
+  // Signal handlers
+  virtual void simStepSizeChanged() { simStepSize = simStep.get_value(); }
+  
+  virtual void envTreeSelectionChanged();
+  
+  virtual void quitClicked() { quit = true; }
+  virtual void saveFramesClicked();
+  virtual void newPanelClicked();
+
+  virtual void realizeClicked(Int p);
+  virtual void closeClicked(Int p);
+
+  Gtk::Main& kit;
+  ref<robot::sim::BasicEnvironment> env;
+
+  bool saveFrame;
+  
+  std::list<ControlInterfaceWidget*> controlInterfaceWidgets;
+  
+  Real simStepSize;
+  
+  std::list<Real> frameRates; // last n frameRate for averaging
+  Real aveFrameRate;
+  std::list<Real> simSpeeds;  // last n simSpeeds for averaging
+  Real aveSimSpeed;
+  
+  base::Time lastStatusbarChange;  
+};
+
+
+} // app
+
+#endif
+

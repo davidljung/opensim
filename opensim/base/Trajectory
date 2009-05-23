@@ -1,0 +1,149 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Trajectory 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_TRAJECTORY_
+#define _BASE_TRAJECTORY_
+
+#include <base/base>
+
+#include <base/Path>
+#include <base/Time>
+
+#include <base/TrajectoryTimeRep>
+#include <base/LineSegTrajectoryRep>
+#include <base/WaypointTrajectoryRep>
+#include <base/ParametricTrajectoryRep>
+
+
+namespace base {
+
+
+/**
+ *  A Trajectory specifies a space-time curve.  It is a Path
+ *   through 6-space (position & orientation) where each point
+ *   occurs at a specific time. @see base::Path.  Note that unlike
+ *   Path for which the parameter s varies over the path length, 
+ *   instead s:[0..1] varies proportionally over 
+ *   time t:[start-time, end-time]. 
+ */
+class Trajectory : public Path
+{
+public:
+  /// default trajectory - all points & times range over [0..1] secs.
+  Trajectory();
+
+  /// copy trajectory t
+  Trajectory(const Trajectory& t);
+
+  /// copy Path p (times will be in range [0..1] secs)
+  /// If p has >2 distinguished points, then the trajectory is created by sampling the path
+  ///  at those points, otherwise it is created by dividing the range s:[0..1] into the no. of
+  //// samples specified.
+  Trajectory(const Path& p, Int samples = 100);
+
+  /// simple line segment start[position|orientation|time] - end[position|orientation|time]
+  Trajectory(const Point3& sp, const Orient& so, const Time& st, 
+	     const Point3& ep, const Orient& eo, const Time& et);
+
+  /// a set of 'waypoints' - actually points and their corresponding orientations & times.
+  /// if deltas is true, the arrays are considered to specify the inter-waypoint deltas instead
+  ///  (with the first point/orient being 0)
+  Trajectory(const array<Point3>& points, const array<Orient>& orients = array<Orient>(), const array<Time>& times = array<Time>(), bool deltas=false);
+
+  /// a set of 'waypoints'.  If vector dim is 4, specifies position & time only; dim 7, specifies
+  ///  position and orientation using the EulerRPY (roll, pitch, yaw) convention & time; dim 8
+  ///  specifies position and orientation as a quaternion qx,qy,qz,qw & time (secs).
+  /// if deltas is true, the array is considered to specify the inter-waypoint deltas instead
+  ///  (with the first point/orient/time being 0)
+  Trajectory(const array<Vector>& points, bool deltas=false);
+
+  /// arbitrary path defined by symbolic expressions for x,y,z,qx,qy,qz,qw,t in terms of s
+  Trajectory(const ExpressionVector& p);
+
+
+  virtual String className() const { return String("Trajectory"); }
+
+  /// get cartesian position at time t
+  Point3 position(const Time& t) const { return Path::position(trep->gets(t)); }
+
+  /// get orientation at time t
+  Orient orientation(const Time& t) const { return Path::orientation(trep->gets(t)); }
+
+  /// get time at s:[0..1]
+  Time time(Real s) const { return trep->time(s); }
+
+  /// discard distinguished points and replace them by 'samples' distingushed points over s=[0..1]
+  void resample(Int samples=100);
+  
+  /// add distinguished points as necessary to ensure that distance between the positions of any pair of distinguished points is <= dxmax
+  void resample(const Real dxmax);
+
+  /// shift time by dt
+  void shiftTime(const Time& dt) { trep->shiftTime(dt); }
+
+  /// scale time by s
+  void scaleTime(Real s) { trep->scaleTime(s); }
+
+  /// convert to a Path by discarding time information
+  Path toPath() const;
+
+  virtual void serialize(Serializer& s); ///< read or write object state to Serializer
+
+  virtual bool formatSupported(String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(Externalizer& e, String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+
+protected:
+  // virtual initialization methods called by constructors
+  virtual void create();
+  virtual void create(const Trajectory& t);
+  virtual void create(const Point3& sp, const Orient& so, const Point3& ep, const Orient& eo);
+  virtual void create(const Point3& sp, const Orient& so, const Time& st, 
+		      const Point3& ep, const Orient& eo, const Time& et);
+  virtual void create(const array<Point3>& points, const array<Orient>& orients, bool deltas);
+  virtual void create(const array<Point3>& points, const array<Orient>& orients, const array<Time>& times, bool deltas);
+  virtual void create(const array<Vector>& points, bool deltas);
+  virtual void create(const ExpressionVector& p);
+
+
+  ref<TrajectoryTimeRep> trep; ///< representation
+
+  void init(const array<Point3>& points, const array<Orient>& orients, const array<Time>& times, bool deltas); // waypoints init
+
+  // Serialization helpers
+  Serializable::SerializableDerivedInstantiator<LineSegTrajectoryRep> lineSegTrajectoryRepInstantiator;
+  Serializable::SerializableDerivedInstantiator<WaypointTrajectoryRep> waypointTrajectoryRepInstantiator;
+  Serializable::SerializableDerivedInstantiator<ParametricTrajectoryRep> parametricTrajectoryRepInstantiator;
+
+};
+
+
+// Operations
+
+inline std::ostream& operator<<(std::ostream& out, const Trajectory& t) // Output
+{ return out; }
+
+
+} // base
+
+#endif

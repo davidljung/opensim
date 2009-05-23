@@ -1,0 +1,412 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: KinematicChain 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_KINEMATICCHAIN_
+#define _ROBOT_KINEMATICCHAIN_
+
+#include <robot/robot>
+
+#include <base/array>
+#include <base/Vector>
+#include <base/Matrix>
+#include <base/Serializer>
+#include <base/Externalizable>
+#include <base/Hashable>
+#include <robot/ManipulatorJointTrajectory>
+#include <robot/KinematicEvaluator>
+
+
+
+namespace robot {
+
+
+
+
+/// Describes a kinematic chain of links, each possibly with a joint
+class KinematicChain : public base::Serializable, public base::Externalizable, public base::Hashable
+{
+public:
+
+  /// unit type of parameters
+  enum UnitType { Distance, Angle };
+  
+  // consts used to indicate that joints have no limits
+  static const Real unboundedMinAngleLimit; // = -consts::Pi - consts::epsilon;
+  static const Real unboundedMaxAngleLimit; // = +consts::Pi + consts::epsilon;
+  static const Real unboundedMinDistLimit; //  = consts::maxReal;
+  static const Real unboundedMaxDistLimit; //  = -consts::maxReal;
+  
+
+  /// Parameters for a single joint
+  class Link : public base::Serializable, public base::Externalizable, public base::Hashable
+  {
+  public:
+    /// FixedTransform - link described by a 4x4 matrix transform, no joint
+    /// Prismatic - link with a 1-dof D-H type joint that transltes along the joint z-axis (varies the d parameter)
+    /// Revolute  - link with a 1-dof D-H type joint that rotates about the joint z-axis (varies the theta parameter)
+    /// Translating - link with a 1-dof joint that translates along the specified direction vector
+    enum LinkType {
+      FixedTransform,
+      Prismatic,      
+      Revolute,
+      Translating
+    };
+
+    Link() 
+      :  alpha(0), a(1), d(0), theta(0), 
+	 jminLimit(0), jmaxLimit(0), jminAccel(0), jmaxAccel(0), 
+	 linkType(Revolute), active(true), hashDirty(true)
+      {}
+    Link(const Link& j)
+      : alpha(j.alpha), a(j.a), d(j.d), theta(j.theta), direction(j.direction), t(j.t), transform(j.transform),
+	jminLimit(j.jminLimit), jmaxLimit(j.jmaxLimit), jminAccel(j.jminAccel), jmaxAccel(j.jmaxAccel),
+	linkType(j.linkType), active(j.active), hashDirty(true)
+      {}
+    Link(LinkType type, Real alpha, Real a, Real d, Real theta,
+	 Real minLimit=KinematicChain::unboundedMinAngleLimit, Real maxLimit=KinematicChain::unboundedMaxAngleLimit,
+         Real minAccel=0, Real maxAccel=0,
+	 bool active=true)
+      : alpha(alpha), a(a), d(d), theta(theta),
+	jminLimit(minLimit), jmaxLimit(maxLimit), jminAccel(minAccel), jmaxAccel(maxAccel),
+	linkType(type), active(active), hashDirty(true)
+      {
+        if (dofUnitType(0) == Distance) {
+          if (Math::equals(minLimit, KinematicChain::unboundedMinAngleLimit))
+            minLimit = KinematicChain::unboundedMinDistLimit;
+          if (Math::equals(maxLimit, KinematicChain::unboundedMaxAngleLimit))
+            maxLimit = KinematicChain::unboundedMaxDistLimit;
+        }
+      }
+      
+    Link(const Vector3& direction, Real t,
+	 Real minLimit=KinematicChain::unboundedMinDistLimit, Real maxLimit=KinematicChain::unboundedMaxDistLimit,
+         Real minAccel=0, Real maxAccel=0,
+	 bool active=true)
+      : direction(direction), t(t),
+	jminLimit(minLimit), jmaxLimit(maxLimit), jminAccel(minAccel), jmaxAccel(maxAccel),
+	linkType(Translating), active(active), hashDirty(true)
+      {}
+      
+    Link(const Matrix4& fixedTransform)
+      : transform(fixedTransform), linkType(FixedTransform), active(false), hashDirty(true)
+      {}
+
+    ~Link() {}
+
+    virtual String className() const { return String("Link"); }
+
+    Link& operator=(const Link& l);
+
+    LinkType type() const { return linkType; }
+    bool isActive() const { return active; }
+    bool isDHType() const { return (linkType==Prismatic)||(linkType==Revolute); }
+
+    /// the number of degrees-of-freedom present in this link's joint (0 if no joint)
+    Int dof() const { return active?(isDHType()?1:(linkType==Translating?1:0)):0; } 
+
+    UnitType dofUnitType(Int dof=0) const { return (isDHType() && (linkType==Revolute))?Angle:Distance; }
+
+    /// the forward kinematic transform for this link, with variable parameter values q (dim q must be link.dof())
+    Matrix kinematicTransform(const base::Vector& q) const;
+    
+    
+    // applicable to Denavit-Hartenberg type links only (Revolute, Prismatic)
+    Real getAlpha() const { return alpha; }  ///< get twist angle (const) (radians)
+    Real getA() const { return a; }          ///< get link length (const)
+    Real getD() const { return d; }          ///< get distance between links (home pos)
+    Real getTheta() const { return theta; }  ///< get angle between links (home pos) (radians)
+    
+    void setAlpha(Real alpha) { this->alpha=alpha; dirtyHash(); }
+    void setA(Real a) { this->a = a; dirtyHash(); }
+    void setD(Real d) { this->d = d; dirtyHash(); }
+    void setTheta(Real theta) { this->theta = theta; dirtyHash(); }
+    
+    // Translating links
+    Vector3 getDirection() const { return direction; }  ///< get direction along which the joint translates by the variable distance
+    Real getT() const { return t; }          ///< get distance to translate along direction (home pos)
+
+    void setDirection(const Vector3& dir) { direction = dir; dirtyHash(); }
+    void setT(Real t) { this->t = t; dirtyHash(); }
+    
+    /// FixedTransform links
+    Matrix4 getTransform() const { return transform; } 
+    void setTransform(const Matrix4& transform) { this->transform = transform; dirtyHash(); }
+    
+     
+    Real variable(Int dof=0) const {
+      Assert(dof < this->dof());
+      if (isDHType()) 
+        return (linkType==Revolute)?theta:d;
+      else if (linkType==Translating)
+        return t;
+      throw std::runtime_error(Exception("unhandled KinematicChain::Link type"));
+    }
+    
+    Real minLimit(Int dof=0) const { return jminLimit; }
+    Real maxLimit(Int dof=0) const { return jmaxLimit; }
+    Real minAccel(Int dof=0) const { return jminAccel; }
+    Real maxAccel(Int dof=0) const { return jmaxAccel; }
+
+    bool operator==(const Link& l) const;
+    bool operator!=(const Link& l) const { return !(*this == l); }
+
+    virtual void serialize(base::Serializer& s)
+      {
+        s(linkType,"type");
+	if (linkType==Translating)
+	  s(direction,"direction");
+	else {
+	  s(alpha,"alpha")(a,"a")(d,"d")(theta,"theta");
+	}
+	s(jminLimit,"minLimit")(jmaxLimit,"maxLimit"); 
+	s(jminAccel,"minAccel")(jmaxAccel,"maxAccel");
+	s(active,"active");
+        if (s.isInput()) dirtyHash(); 
+      }
+
+    // Externalizable
+    virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const ///< query if specific format is supported (for input, output or both)
+      { return ( (format=="xml") && (version==1.0) ); }
+    virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+    virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+      { Externalizable::externalize(e, format, version); }
+
+    // Hashable
+    virtual base::array<base::Byte> hashCode() const;
+    
+    
+  protected:
+    // Denavit-Hartenberg (Revolute, Prismatic)
+    Real alpha;  ///< twist angle (const) (radians)
+    Real a;      ///< link length (const)
+    Real d;      ///< distance between links (home pos)
+    Real theta;  ///< angle between links (home pos) (radians)
+
+    // Translating
+    Vector3 direction; ///< direction along which the joint translates by the variable distance
+    Real t;            ///< distance to translate along direction (home pos)
+    
+    /// FixedTransform
+    Matrix4 transform;
+
+    Real jminLimit, jmaxLimit; ///< joint limits
+    Real jminAccel, jmaxAccel; ///< joint acceleration limits
+
+    LinkType linkType;
+    bool active; ///< an inactive link's joints can't move
+    
+    String frameName; ///< reference frame name of this link, or "" if unknown/unnamed
+
+    mutable bool hashDirty;
+    mutable array<base::Byte> hash;
+    void dirtyHash() const { hashDirty=true; }
+    
+    friend class KinematicChain;
+  };
+
+
+
+  KinematicChain() ///< empty chain (no links)
+    : hashDirty(true) { initKinematicEvaluator(); }
+  KinematicChain(const Link& l) ///< 'chain' comprising a single link
+    : links(1), hashDirty(true) { initKinematicEvaluator(); links[0] = l; computeVariables(); }
+
+  KinematicChain(const KinematicChain& kc) 
+    : links(kc.links), variables(kc.variables), kinematicEvaluator(kc.kinematicEvaluator), hashDirty(true) {}
+
+
+  virtual String className() const { return String("KinematicChain"); }
+
+  KinematicChain& operator=(const KinematicChain& kc) 
+    { links=kc.links; variables=kc.variables; dirtyHash(); return *this; }
+
+
+
+  Int size() const { return links.size(); } ///< no. of links in the chain
+  Int dof() const { return variables.size(); } ///< no. of degrees-of-freedom (sum of joint variables for each link)
+
+  bool isDHType() const; ///< true if the chain is comprised only of links for which link.isDHType() is true
+  
+  const Link& operator[](Int i) const { return links[i]; }
+  void setLink(Int i, const Link& link) { links[i] = link; dirtyHash(); }
+
+  const Link& at(Int i) const { Assert(i < size()); return links[i]; }
+  void setLinkAt(Int i, const Link& link) { Assert(i < size()); links[i] = link; dirtyHash(); }
+
+  /// get link that described joint controlled by variable i (0 <= i < dof())
+  const Link& linkOfVariable(Int i) const { Assert(i < dof()); return links[variables[i].first]; }
+  //Link& linkOfVariable(Int i) { Assert(i < dof()); return links[variables[i].first]; }
+
+  Int linkIndexOfVariable(Int i) const { Assert(i < dof()); return variables[i].first; }
+
+  UnitType variableUnitType(Int i) const
+    { Assert(i < dof()); return linkOfVariable(i).dofUnitType( variables[i].second ); }
+
+  Real variableMinLimit(Int i) const { return linkOfVariable(i).minLimit(variables[i].second); }
+  Real variableMaxLimit(Int i) const { return linkOfVariable(i).maxLimit(variables[i].second); }
+  Real variableMinAccel(Int i) const { return linkOfVariable(i).minAccel(variables[i].second); }
+  Real variableMaxAccel(Int i) const { return linkOfVariable(i).maxAccel(variables[i].second); }
+
+
+  void activateLink(Int i, bool active=true)
+    { Assert(i < size()); links[i].active=active; computeVariables(); dirtyHash(); }
+  bool linkIsActive(Int i) const { Assert(i < size()); return links[i].isActive(); }
+
+
+  Link front() const { Assert(size()>0); return links[0]; }
+  Link back() const  { Assert(size()>0); return links[size()-1]; }
+
+  void push_back(const Link& l)
+    { links.at(size())=l; computeVariables(); dirtyHash(); }
+
+  void pop_back() 
+    { links.resize( size()-1 ); computeVariables(); dirtyHash(); }
+  
+  void resize(Int newsize)
+    { links.resize(newsize); computeVariables(); dirtyHash(); }
+
+  
+  KinematicChain subChain(Int first, Int count) const;
+
+  bool operator==(const KinematicChain& kc) const { return links==kc.links; }
+  bool operator!=(const KinematicChain& kc) const { return links!=kc.links; }
+
+  KinematicChain& operator+=(const KinematicChain& kc);
+  
+  KinematicChain& insert(Int pos, const KinematicChain& kc);
+  KinematicChain& insert(Int pos, const Link& l);
+  KinematicChain& erase(Int pos);
+  KinematicChain& erase(Int first, Int last);
+
+
+  // coordinate transform support
+  void setInitialFrame(const String& name) { initialFrame = name; dirtyHash(); }
+  const String& getInitialFrame() const { return initialFrame; }
+  
+  void setLinkFrame(Int i, const String& name) { Assert(i < size()); links[i].frameName = name; dirtyHash(); }
+  const String& getLinkFrame(Int i) const { Assert(i < size()); return links[i].frameName; }
+  
+  /// transform point v from the reference frame of link i to the frame of link j, when chain is in configuration q
+  Vector transform(Int fromLink, Int toLink, const Vector& v, const Vector& q) const;
+
+  /// transform point v from reference frame 'fromFrame' to 'toFrame' when chain is in cofiguration q
+  ///  e.g. if from=='ee' and to=='world', passing v=0 will give the ee coords. in the world frame
+  ///    (if 'ee' and 'world' are appropriately defined frame names)
+  ///  throws invalid_argument exception if either link frame names are unknown
+  Vector transform(const String& fromFrame, const String& toFrame, const Vector& v, const Vector& q) const;
+  
+  
+  /// get the forward kinematics transform for joint parameters q
+  Matrix getForwardKinematics(const Vector& q) const;
+  
+  /// get the Jacobian matrix for joint parameters q
+  Matrix getJacobian(const Vector& q, bool includeOrientation = true) const;
+
+  /// get an array of the joint origin locations for parameters q
+  array<Vector> getJointOrigins(const Vector& q) const;
+
+    /// get an array of the link origin locations for parameters q
+  array<Vector> getLinkOrigins(const Vector& q) const;
+
+
+  void setKinematicEvaluator(ref<KinematicEvaluator> evaluator)
+    { kinematicEvaluator = evaluator; }
+  
+
+  /// convert the components of the joint vectors in jointTrajectory corresponding to Revolute joints of the chain to
+  ///  the specified units
+  void convertJointTrajectory(ManipulatorJointTrajectory& jointTrajectory, 
+			      ManipulatorJointTrajectory::AngularUnits units = ManipulatorJointTrajectory::Radians) const
+  {
+    array<Int> components;
+    for(Int v=0; v<dof(); v++)
+      if (variableUnitType(v) == Angle)
+	components.push_back(v);
+    jointTrajectory.convertComponentUnits(components, units);
+  }
+
+
+  virtual void serialize(base::Serializer& s)
+    { s(links,"links"); computeVariables(); if (s.isInput()) dirtyHash(); }
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const ///< query if specific format is supported (for input, output or both)
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e, format, version); }
+
+  // Hashable
+  virtual base::array<base::Byte> hashCode() const;
+  
+protected:
+  typedef base::array<Link> LinkArray;
+
+  /// index is the variable no. for this chain, elements are a pair of Ints (link index, dof-index), where
+  ///  link index is link correpsonding to this joint variable (index into LinkArray), and dof-index is the degree of freedom
+  ///  for the link (for links representing joints with multiple dofs)
+  typedef base::array<std::pair<Int,Int> > VariableIndexArray;
+
+  KinematicChain(const LinkArray& la)
+    : links(la), hashDirty(true) { computeVariables(); }
+
+  void computeVariables(); ///< updates variables based on link joint dofs
+
+  LinkArray links;
+  VariableIndexArray variables;
+
+  // class wide default evaluator
+  static bool KinematicEvaluatorInitialized;
+  static ref<KinematicEvaluator> defaultKinematicEvaluator;
+
+  ref<KinematicEvaluator> kinematicEvaluator; ///< KinematicEvaluator instance to use for this chain
+  
+  String initialFrame;
+  
+  mutable bool hashDirty;
+  mutable array<base::Byte> hash;
+  void dirtyHash() const { hashDirty=true; }
+  
+  void initKinematicEvaluator(); 
+
+};
+
+
+
+std::ostream& operator<<(std::ostream& out, const robot::KinematicChain::Link& l); // Output
+
+inline std::ostream& operator<<(std::ostream& out, const robot::KinematicChain& c) // Output
+{
+  out << "KinematicChain link parameters: ({} marks variable) - " << c.dof() << "-dof" << std::endl;
+  for(Int i=0; i<c.size(); i++) 
+    out << i << " - " << c[i];
+  return out;
+}
+
+
+
+
+} // robot
+
+#endif

@@ -1,0 +1,69 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: File 1083 2004-09-13 17:17:01Z jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_FILE_
+#define _BASE_FILE_
+
+#include <base/base>
+#include <base/VFile>
+#include <base/path_not_found>
+#include <base/io_error>
+
+
+#include <string>
+
+namespace base {
+
+
+class File : public VFile
+{
+public:
+  virtual ~File();
+
+  virtual String className() const { return String("File"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) File(*this); }
+
+  virtual String extension() const { return pathname.extension(); }  // the file's extension (e.g. .png)
+
+  virtual std::istream&  istream() const throw(io_error);
+  virtual std::ostream&  ostream() const throw(io_error);
+  virtual std::iostream& iostream(std::iostream::openmode mode = (std::iostream::in | std::iostream::out) ) const throw(io_error);
+
+  virtual void close() const throw(io_error); // close the file (can be re-opened again via istream/ostream/iostream() )
+
+protected:
+  void open(std::iostream::openmode mode) const throw(path_not_found, io_error);
+
+  mutable bool opened;
+  mutable std::iostream::openmode mode;
+  mutable std::fstream* fileStream;
+
+  File(const File& f) : VFile(f), opened(f.opened), fileStream(f.fileStream) {}
+  explicit File(const PathName& pathname) throw(path_not_found, io_error);
+  File(const String& pathname) throw(path_not_found, io_error, std::invalid_argument);
+
+  friend class Directory;
+  friend class StdFileSystem;
+};
+
+} // base
+
+#endif

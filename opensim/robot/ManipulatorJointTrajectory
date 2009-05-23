@@ -1,0 +1,152 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ManipulatorJointTrajectory 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_MANIPULATORJOINTTRAJECTORY_
+#define _ROBOT_MANIPULATORJOINTTRAJECTORY_
+
+#include <robot/robot>
+
+#include <base/Serializable>
+#include <base/Externalizable>
+#include <base/Vector>
+#include <base/Time>
+
+
+namespace robot {
+
+
+/**
+ * Specifies a trajectory through a manipulator's joint-space.
+ *  Each joint-position vector occurs at a specific time.
+ *  The parameter s varies over time t:[start-time, end-time].
+ *  @see base::Trajectory for the equivelent trajectory in 6-space.
+ */
+class ManipulatorJointTrajectory : public base::Serializable, public base::Externalizable
+{
+public:
+  enum AngularUnits { Degrees, Radians };
+
+  /// default trajectory - all points & times range over [0..1] secs.
+  ManipulatorJointTrajectory(Int numJoints=6, AngularUnits units = Radians);
+
+  /// copy trajectory t
+  ManipulatorJointTrajectory(const ManipulatorJointTrajectory& t);
+
+  /// simple line segment start[joint configuration|time] - end[joint configuration|time]
+  ManipulatorJointTrajectory(const base::Vector& sq, const base::Time& st, 
+			     const base::Vector& eq, const base::Time& et,
+			     AngularUnits units = Radians);
+
+  /// a set of joint configuration 'waypoints' - and their corresponding times.
+  /// if deltas is true, the arrays are considered to specify the inter-waypoint deltas instead
+  ///  (with the first point/orient being 0)
+  ManipulatorJointTrajectory(const array<base::Vector>& qs, 
+			     const array<base::Time>& times = array<base::Time>(),
+			     bool deltas=false,
+			     AngularUnits units = Radians);
+
+
+  virtual String className() const { return String("ManipulatorJointTrajectory"); }
+
+  /// get the number of joints for each trajectory point (dim of qi's)
+  Int getNumJoints() const { return qs[0].size(); }
+
+  /// change the number of joints in the trajectory points.  
+  ///  If numJoints is larger than the current dimension, the extra dimensions will have
+  ///  their elements set to 0.  If numJoints is smaller than the current, the extra dimension
+  ///  are discarded (additionally if truncateInitial is true, the initial elements are
+  //    discarded instead of the end elements)
+  void setNumJoints(Int numJoints, bool truncateInitial=false);
+
+  /// even though this class doesn't interpret the values of the joint configuration vectors,
+  ///  it can be specified if the angular components are in degrees or radians
+  /// (although which are angular is unknown to this class).
+  /// This can be used to convert the appropriate elements when necessary
+  AngularUnits getAngularUnits() const { return angUnits; }
+  void setAngularUnits(AngularUnits units) { angUnits = units; }
+
+  /// given a set of component indices, this will convert the components of all trajectory
+  /// points to the specified units if they are not already expressed in those units as
+  /// indicated by getAngularUnits()
+  void convertComponentUnits(array<Int> components, AngularUnits units = Radians);
+
+  /// get joint-configuration at time t
+  base::Vector q(const base::Time& t) const;
+
+  /// get time at s:[0..1]
+  base::Time time(Real s) const;
+
+  /// some values of s correspond to distinguished points along a trajectory.
+  ///  the values s=0 and s=1 are always distinguished values. 
+  ///  There will be a distinguished value of s for each waypoint.  0 <= i < numDistinguishedValues()
+  Real distinguishedValue(Int i) const { return si[i]; }
+
+  Int numDistinguishedValues() const ///< number of distinguished s values
+    { return si.size(); }
+
+  /// shift time by dt
+  void shiftTime(const base::Time& dt);
+
+  /// scale time by s
+  void scaleTime(Real s);
+
+  /// get parameter s value at time t
+  virtual Real gets(const base::Time& t) const;
+
+  virtual void serialize(base::Serializer& s); ///< read or write object state to Serializer
+
+  virtual bool formatSupported(String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+
+protected:
+  void init(const array<base::Vector>& qs, const array<base::Time>& times, bool deltas); // waypoints init
+
+  Int findIndex(Real s) const;
+
+  array<base::Vector> qs;   ///< joint-configuration 'waypoints'
+  array<base::Time> times;  ///< corresponding times
+  array<Real> si;           ///< value of s:[0..1] corresponding to each waypoint.
+
+  AngularUnits angUnits; ///< are the angular elements to be considered as degrees or radians? (NB: there is no interpretation by this class)
+
+  /// compute si's s.t. s:[0..1] maps to t:[start-time..end-time]
+  virtual void computeSis(Int dof);
+
+  friend std::ostream& operator<<(std::ostream& out, const ManipulatorJointTrajectory& t);
+};
+
+
+// Operations
+
+inline std::ostream& operator<<(std::ostream& out, const ManipulatorJointTrajectory& t) // Output
+{
+  for(Int i=0; i<t.si.size(); i++) 
+    out << "s:" << t.si[i] << " q:" << t.qs[i] << " t:" << t.times[i].seconds() << std::endl;
+  return out; 
+}
+
+
+} // robot
+
+#endif

@@ -1,0 +1,108 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SolidSystem 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+  
+****************************************************************************/
+
+#ifndef _PHYSICS_SOLIDSYSTEM_
+#define _PHYSICS_SOLIDSYSTEM_
+
+#include <physics/physics>
+
+#include <base/Simulatable>
+
+#include <physics/Solid>
+#include <physics/CollidableProvider>
+#include <physics/CollisionCuller>
+#include <physics/CollisionDetector>
+#include <physics/CollisionResponseHandler>
+#include <physics/ConstraintGroup>
+#include <physics/FixedConstraint>
+#include <physics/ContactConstraint>
+
+#include <physics/BallJoint>
+#include <physics/HingeJoint>
+#include <physics/DoubleHingeJoint>
+#include <physics/SliderJoint>
+#include <physics/UniversalJoint>
+#include <physics/Motor>
+
+#include <gfx/Visual>
+
+#include <map>
+#include <list>
+
+
+namespace physics {
+
+
+class SolidSystem : virtual public base::Simulatable, public gfx::Visual, public physics::CollidableProvider
+{
+public:
+  SolidSystem();
+  SolidSystem(const SolidSystem& ss);
+  virtual ~SolidSystem();
+
+  // factory methods
+  virtual ref<Solid>             createSolid(ref<const Shape> shape, ref<const Material> material) = 0;  ///< create a new Solid 
+  virtual ref<ConstraintGroup>   createConstraintGroup() = 0;  ///< new ConstraintGroup
+
+  virtual ref<BallJoint>         createBallJoint() = 0;        ///< new Ball & Socket joint constraint
+  virtual ref<HingeJoint>        createHingeJoint() = 0;       ///< new Hinge joint constraint
+  virtual ref<DoubleHingeJoint>  createDoubleHingeJoint() = 0; ///< new Double Hinge joint constraint
+  virtual ref<SliderJoint>       createSliderJoint() = 0;      ///< new Slider joint constraint
+  virtual ref<UniversalJoint>    createUniversalJoint() = 0;   ///< new Universal joint constraint
+
+  virtual ref<FixedConstraint>   createFixedConstraint() = 0;  ///< new FixedConstraint
+  virtual ref<ContactConstraint> createContactConstraint() = 0;///< new ContactConstraint
+
+  virtual ref<Motor>             createMotor() = 0;            ///< new Joint Motor
+
+  virtual void setGround(ref<Solid> ground, const Point3& position) = 0; ///< Set the ground Solid (which is fixed to the world frame and doesn't move from position)
+  virtual ref<Solid> getGround() const = 0;      ///< Get the ground Solid
+  virtual void setGravity(const Vector3& v) = 0; ///< set acceleration due to gravity (e.g. Vector3(0,0,-9.8))
+  
+  virtual void addSolid(ref<Solid> solid) = 0; ///< add solid to the system (Solid must be from createSolid()
+  virtual void removeSolid(ref<const Solid> solid) = 0; ///< remove solid from the system
+
+  virtual void addConstraintGroup(ref<ConstraintGroup> group) = 0; ///< add a constraint group to the system
+  virtual void removeConstraintGroup(ref<const ConstraintGroup> group) = 0; ///< remove constraint group from the system
+
+  virtual void setCollidable(ref<Collidable> collidable) = 0;
+  
+  virtual void setCollisionCuller(ref<CollisionCuller> collisionCuller) = 0;       ///< called to cull Collidables from collision detection
+  virtual ref<CollisionCuller>   getCollisionCuller() const = 0;   ///< get the current CollisionCuller
+  
+  virtual void setCollisionDetector(ref<CollisionDetector> collisionDetector) = 0; ///< called to detect collisions
+  virtual ref<CollisionDetector> getCollisionDetector() const = 0; ///< get the current CollisionDetector (or null if none)
+  
+  virtual void setCollisionResponseHandler(ref<CollisionResponseHandler> collisionResponseHandler) = 0; ///< called to handle collisions
+  virtual ref<CollisionResponseHandler> getCollisionResponseHandler() const = 0; 
+
+  /// Set implementation specific parameters.  Unknown names will throw a std::invald_argument exception
+  virtual void setParameter(const String& name, Real value) 
+    { throw std::invalid_argument(Exception("unknown parameter name")); }
+
+};
+
+} // physics
+
+#endif
