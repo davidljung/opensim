@@ -1,0 +1,77 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SolidConnectedCollidableBody 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_SOLIDCONNECTEDCOLLIDABLEBODY_
+#define _PHYSICS_SOLIDCONNECTEDCOLLIDABLEBODY_
+
+#include <physics/physics>
+
+#include <physics/CollidableBody>
+#include <physics/Solid>
+
+
+namespace physics {
+
+/// a CollidableBody whos configuration/state is linked to a Solid
+///  (provides a convenient way to use the collision system and SolidSystem together)
+class SolidConnectedCollidableBody : virtual public CollidableBody
+{
+public:
+  SolidConnectedCollidableBody(ref<Solid> solid, ref<const Shape> shape) 
+    : CollidableBody(shape), solid(solid) {}
+
+  // DynamicSpatial
+  virtual void setPosition(const Point3& x) { solid->setPosition(x); }
+  virtual void setOrientation(const Orient& orient) { solid->setOrientation(orient); }
+  virtual void setVelocity(const Vector3& v) { solid->setVelocity(v); }
+  virtual void setAngVelocity(const Vector3& w) { solid->setAngVelocity(w); }
+
+  virtual Point3  getPosition() const { return solid->getPosition(); }
+  virtual Orient  getOrientation() const { return solid->getOrientation(); }
+  virtual Vector3 getVelocity() const { return solid->getVelocity(); }
+  virtual Vector3 getAngVelocity() const { return solid->getAngVelocity(); }
+  
+  virtual void saveState() { solid->saveState(); }
+  virtual void restoreState() { solid->restoreState(); }
+
+  virtual Point3  getSavedPosition() const { return solid->getSavedPosition(); }
+  virtual Orient  getSavedOrientation() const { return solid->getSavedOrientation(); }
+  virtual Vector3 getSavedVelocity() const { return solid->getSavedVelocity(); }
+  virtual Vector3 getSavedAngVelocity() const { return solid->getSavedAngVelocity(); }
+ 
+ virtual ref<Solid> getSolid() const { return solid; } ///< get Solid to which this CollidableBody is connected
+
+  
+protected:
+  SolidConnectedCollidableBody() {}
+  SolidConnectedCollidableBody(const SolidConnectedCollidableBody& cb) : CollidableBody(cb), solid(cb.solid) {}
+  
+  ref<Solid> solid; ///< Solid to which this CollidableBody is connected
+};
+  
+  
+
+} // physics
+
+#endif

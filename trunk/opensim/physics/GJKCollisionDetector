@@ -1,0 +1,122 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: GJKCollisionDetector 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.6 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_GJKCOLLISIONDETECTOR_
+#define _PHYSICS_GJKCOLLISIONDETECTOR_
+
+#include <physics/physics>
+#include <base/array>
+#include <physics/CollisionDetector>
+#include <physics/GJKCollisionModel>
+#include <base/Transform>
+
+#include <osg/Array>
+
+
+namespace physics {
+
+
+class GJKCollisionDetector : public CollisionDetector
+{
+public:
+  GJKCollisionDetector();
+  virtual ~GJKCollisionDetector();
+
+  virtual String className() const { return String("GJKCollisionDetector"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) GJKCollisionDetector(); }
+
+  virtual CollisionModel::CollisionModelType getType() const
+    { return CollisionModel::GJKModel; }
+
+  virtual bool collision(ref<const Solid> solid1, ref<const Solid> solid2, CollisionQueryType queryType);
+  
+  
+  virtual bool collisionEnable(bool enabled) 
+    {
+      bool oldEnable = collisionDetectionEnabled;
+      collisionDetectionEnabled=enabled; 
+      return oldEnable;
+    }
+  
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==Visual::OSGVisual); }
+
+  virtual osg::Node* createOSGVisual(Visual::Attributes visualAttributes=0) const;
+
+  
+protected:
+  bool collisionDetectionEnabled;
+  
+  virtual ref<CollisionState> newCollisionState(ref<const Solid> solid1, ref<const Solid> solid2) const;
+
+  
+  class GJKCollisionState : public CollisionState
+  {
+  public:
+    GJKCollisionState(ref<const Solid> solid1, ref<const Solid> solid2, CollisionModel::CollisionModelType modelType);
+    virtual ~GJKCollisionState();
+
+    Vector3 v;
+    ref<const Polyhedron::Vertex> lastSupport[2]; /// remember the last support vertices
+    Point3 lastSupportPoint[2];                   /// and their local coords.
+
+    virtual String className() const { return String("GJKCollisionState"); }
+  };
+
+
+  // GJK algorithm proper
+  bool intersect(ref<const GJKCollisionModel> model1, ref<const GJKCollisionModel> model2,
+		 const base::Transform& t1, const base::Transform& t2, 
+		 ref<GJKCollisionModel::GJKModelState> modelState1,
+		 ref<GJKCollisionModel::GJKModelState> modelState2,
+		 ref<GJKCollisionState> collisionState);
+
+  bool closest(Vector3& v);
+  void compute_vector(Int bits, Vector3& v);
+  void compute_points(int bits, Point3& p1, Point3& p2);
+  bool valid(Int s);
+  void compute_det();
+
+
+  Point3  p[4];    // support points of object A in local coordinates 
+  Point3  q[4];    // support points of object B in local coordinates 
+  Vector3 y[4];    // support points of A - B in world coordinates
+  
+  Int bits;      // identifies current simplex
+  Int last;      // identifies last found support point
+  Int last_bit;  // last_bit = 1<<last
+  Int all_bits;  // all_bits = bits|last_bit 
+  
+  Real det[16][4]; // cached sub-determinants
+
+  mutable Visual::Attributes attributes;
+  mutable ref_ptr<osg::Node> node;
+  mutable osg::Vec3Array* verts;
+  mutable osg::ref_ptr<osg::Geometry> geom;
+};
+
+
+} // physics
+
+#endif

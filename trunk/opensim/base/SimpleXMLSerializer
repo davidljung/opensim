@@ -1,0 +1,119 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SimpleXMLSerializer 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.6 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_SIMPLEXMLSERIALIZER_
+#define _BASE_SIMPLEXMLSERIALIZER_
+
+#include <base/base>
+#include <base/array>
+#include <base/Serializer>
+
+
+namespace base {
+
+
+class SimpleXMLSerializer : public Serializer
+{
+public:
+  SimpleXMLSerializer(SerializerType type, ref<VFile> archive);
+  SimpleXMLSerializer(SerializerType type, std::ios& stream);
+  virtual ~SimpleXMLSerializer();
+
+  virtual String className() const { return String("SimpleXMLSerializer"); }
+
+  virtual bool followReferences(bool follow);
+  virtual void flush(); ///< flush output stream (no-op on input).  Should use this before closing an output file before Serializer goes out-of-scope.
+
+  virtual Serializer& hint(Int h);
+
+protected:
+  SimpleXMLSerializer(const SimpleXMLSerializer& a) 
+    : Serializer(a), istream(a.istream), ostream(a.ostream), indent(indent) {}
+
+  virtual Serializer& serialize(char& c, const String& memberName);
+  virtual Serializer& serialize(Byte& b, const String& memberName);
+  virtual Serializer& serialize(bool& b, const String& memberName);
+  virtual Serializer& serialize(SInt& i, const String& memberName);
+  virtual Serializer& serialize(Int& i, const String& memberName);
+  virtual Serializer& serialize(LInt& i, const String& memberName);
+  virtual Serializer& serialize(String& s, const String& memberName);
+  virtual Serializer& serialize(Real& r, const String& memberName);
+
+  virtual TypeModifier preSerializeObject(String& typeName, TypeModifier typeModifier, const String& memberName, bool forceTypeSerialization = false);
+  virtual void         postSerializeObject(const String& memberName);
+
+  virtual void serializeComment(const String& comment);
+
+  
+  struct TagData {
+    String name;
+    array<String> attributeNames;
+    array<String> attributeValues;
+
+    String attribute(const String& name)
+    {
+      for(Int i=0; i<attributeNames.size(); i++)
+	if (attributeNames[i] == name)
+	  return attributeValues[i];
+      return "";
+    }
+  };
+
+  bool serializeHeader(const String& target);
+
+  char nextChar()
+  {
+    char c;
+    try {
+      (*istream) >> c;
+    } catch (std::exception& e) {
+      abort(e.what());
+    }
+    return c;
+  }
+
+  char nextNWSChar() 
+  {
+    char c; 
+    try {
+      do {
+	(*istream) >> c; 
+      } while ((c==' ') || (c=='\n') || (c=='\011'));
+    } catch (std::exception& e) {
+      abort(e.what());
+    }
+    return c;
+  }
+
+  bool readStartTag(TagData& tag);
+  bool readEndTag(const String& tagName);
+
+  std::istream* istream;
+  std::ostream* ostream;
+  Int indent;
+};
+
+} // base
+
+#endif

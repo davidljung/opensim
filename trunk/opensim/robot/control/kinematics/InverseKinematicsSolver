@@ -1,0 +1,138 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: InverseKinematicsSolver 1124 2004-09-28 20:43:15Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-09-28 16:43:15 -0400 (Tue, 28 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_INVERSEKINEMATICSSOLVER_
+#define _ROBOT_CONTROL_KINEMATICS_INVERSEKINEMATICSSOLVER_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <base/ReferencedObject>
+#include <base/Matrix>
+#include <base/Orient>
+
+#include <bitset>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// Abstract Inverse Kinematics Solver
+/**
+ * Abstract base class for concrete classes that implement specific
+ * method for solving the inverse kinematics problem (required joint
+ * parameter changes (dq) to achieve end-effector motions specificed in
+ * task space (dx) )
+ */
+class InverseKinematicsSolver : public base::ReferencedObject
+{
+public:
+
+  enum OptimizationMethod { DefaultMethod, PseudoInv, Lagrangian, BangBang, Simplex };
+  enum OptimizationCriterion { DefaultCriterion, LeastNorm, LeastFlow  };
+  enum OptimizationConstraint { DefaultConstraints, JointLimits, ObstacleAvoidance,
+                                Acceleration, EndEffectorImpact  };
+
+  typedef std::bitset<sizeof(Int)*8> OptimizationConstraints;
+
+  /// Solve inverse kinematics.
+  /**
+   *  Takes current the joint parameters (q), end-effector position (x), and the required change in
+   *  end-effector position (dx) and returns the changes in joint parameters (dq) that will achieve
+   *  the requested dx.
+   *
+   *   @param dx                        An vector specifiying the required change in end-effector
+   *                                    position (in N-dim task space).
+   *                                    Note that orientation components are delta angular velocities dw  (i.e. dw . 1/dt = w)
+   *
+   *   @param dt                        The time interval over which the change will occur
+   *
+   *   @param x                         An vector specifiying the current end-effector position (in N-dim task space)
+   *
+   *   @param q                         An M-dim vector representing the current joint parameters.
+   *
+   *   @param J                         An NxM Jacobian expression for the system, evaluated at q.
+   *
+   *   @param optMethod                 Optimization method employed to narrow the solution space to a single
+   *                                    vector (if necessary).  Values are specific to concrete subclasses.
+   *
+   *   @param optCriterion              Optimization criteria for the optimization method. Values are specific
+   *                                    to concrete subclasses.
+   *
+   *   @param optConstraints            Optimization constraints (if any). Values are specific to concrete
+   *                                    subclasses.
+   *
+   *   @return                          An M-dim Vector dq which represents the joint parameters changes that
+   *                                    will result in the specific dx changes in the end-effector (i.e. a
+   *                                    solution dq to dx = J(q)dq )
+   *
+   *   @exception                       Specific to concrete subclasses.
+   * \todo why is x necessary?
+   */
+  virtual Vector solve(const Vector& dx, Real dt, const Vector& x, const Vector& q,
+                       const base::Matrix& J,
+                       OptimizationMethod      optMethod      = DefaultMethod,
+                       OptimizationCriterion   optCriterion   = DefaultCriterion,
+                       OptimizationConstraints optConstraints = OptimizationConstraints(DefaultConstraints)) = 0;
+
+  /// query if a particular constraint type is supported by this solver for a specific method & criterion
+  virtual bool isConstraintTypeSupported(OptimizationConstraint  optConstraint,
+                                         OptimizationMethod      optMethod      = DefaultMethod,
+                                         OptimizationCriterion   optCriterion   = DefaultCriterion)
+                 { return false; }
+
+
+  // Set constraint specific data for solver (these are typically called before solve() as appropriate)
+  //  Not all solvers support all constraint types, in which case the data will just be ignored
+
+  /// Data for proximity sensors (used to generate obstacle collision avoidance constraints)
+  struct LinkProximityData {
+    LinkProximityData() : distance(consts::maxInt+1) {}
+
+    Real    distance;   ///< distance to detected obstacle (or > maxInt if none or no sensor corresponding to this parameter)
+    Vector  direction;  ///< direction to detected obstacle
+    Real    intercept;  ///< sensor distance from link origin
+  };
+
+  /// set proximity sensor data (array indices correspond to parameter elements of q)
+  ///  d - is 'danger distance' within which a constraint becomes active
+  virtual void setProximitySensorData(const array<LinkProximityData>& proximityData, Real d) {}
+
+
+
+
+
+  /// Set implementation specific parameters.  Unknown names will throw a std::invald_argument exception
+  virtual void setParameter(const String& name, Real value)
+    { throw std::invalid_argument(Exception("unknown parameter name")); }
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

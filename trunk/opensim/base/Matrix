@@ -1,0 +1,951 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Matrix 1087 2004-09-13 17:28:07Z jungd $
+  $Revision: 1.22 $
+  $Date: 2004-09-13 13:28:07 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_MATRIX_
+#define _BASE_MATRIX_
+
+#include <base/base>
+
+#include <iomanip>
+
+#include <base/Vector>
+#include <base/Matrix3>
+#include <base/Matrix4>
+
+#ifdef USE_OSG
+// for conversion
+#include <osg/Matrix>
+#endif
+
+#ifndef USE_BOOST_UBLAS
+
+//
+// array wrapper implementation
+//
+
+namespace base {
+
+
+#include <base/array>
+
+
+template<typename T>
+class matrix
+{
+public:
+  typedef T                 value_type;
+  typedef value_type&       reference;
+  typedef value_type*       pointer;
+  typedef const value_type& const_reference;
+  typedef const value_type* const_pointer;
+  typedef SInt              difference_type;
+  typedef Int               size_type;
+
+  matrix() : _rows(0), _cols(0) {}
+  matrix(size_type rows, size_type cols) : _rows(rows), _cols(cols), a(rows*cols) {}
+  matrix(const matrix& m) : _rows(m._rows), _cols(m._cols), a(m.a) {}
+  explicit matrix(const vector<value_type>& v) : _rows(v.size()), _cols(1), a(v.size())
+  { for(size_type i=0; i<a.size(); i++) a[i]=v[i]; }
+  matrix(size_type rows, size_type cols, const_reference p)
+    : _rows(rows), _cols(cols), a(rows*cols)
+  {
+    for(size_type r=0; r<rows; r++)
+      for(size_type c=0; c<cols; c++)
+        _m(r,c) = (r!=c)?value_type(0):p;
+  }
+  ~matrix() {}
+
+  size_type rows() const { return _rows; }
+  size_type cols() const { return _cols; }
+  size_type size1() const { return _rows; }
+  size_type size2() const { return _cols; }
+
+  bool operator==(const matrix& m) const
+    { Assert(_rows == m._rows); Assert(_cols == m._cols); return (a == m.a); }
+  bool operator!=(const matrix& m) const
+    { Assert(_rows == m._rows); Assert(cols == m._cols); return (a != m.a); }
+
+  bool equals(const matrix& m, value_type eps = value_type(consts::epsilon) ) const
+  {
+    if (&m != this) {
+      Assert(_rows == m._rows);
+      Assert(_cols == m._cols);
+      for(Int i=0; i<a.size(); i++)
+        if (!base::equals(a[i],m.a[i],eps)) return false;
+    }
+    return true;
+  }
+
+  reference operator()(size_type r, size_type c)
+  { Assert(r<_rows); Assert(c<_cols); return _m(r,c); }
+
+  const_reference operator()(size_type r, size_type c) const
+  { Assert(r<_rows); Assert(c<_cols); return _m(r,c); }
+
+  void resize(size_type rows, size_type cols)
+  {
+    a.resize(rows*cols);
+    _rows = rows; _cols = cols;
+  }
+
+
+  matrix& operator=(const matrix& m)
+  {
+    if (&m != this) { _rows=m._rows; _cols=m._cols; a=m.a; }
+    return *this;
+  }
+
+  void reset(const matrix& m) { *this = m; }
+
+  matrix& operator+=(const matrix& m)
+  {
+    Assert(_rows == m._rows);
+    Assert(_cols == m._cols);
+    for(size_type i=0; i<a.size(); i++) a[i]+= m.a[i];
+    return *this;
+  }
+
+  matrix& operator-=(const matrix& m)
+  {
+    Assert(_rows == m._rows);
+    Assert(_cols == m._cols);
+    for(size_type i=0; i<a.size(); i++) a[i]-= m.a[i];
+    return *this;
+  }
+
+
+  matrix& negate()
+  {
+    for(size_type i=0; i<a.size(); i++) a[i] = -a[i];
+    return *this;
+  }
+
+
+  matrix& operator*=(const matrix& m2)
+  {
+    Assert(_cols == m2._rows);
+
+    matrix r(_rows, m2._cols);
+
+    for(size_type i=0; i<_rows; i++)
+      for(size_type j=0; j<m2._cols; j++) {
+        r._m(i,j) = value_type(0);
+        for(size_type k=0; k<_cols; k++)
+          r._m(i,j) += _m(i,k) * m2._m(k,j);
+      }
+
+    return (*this = r);
+  }
+
+
+  matrix& operator*=(const_reference s)
+  { for(size_type i=0; i<a.size(); i++) a[i]*=s; return *this; }
+
+  matrix& operator/=(const_reference s)
+  { for(size_type i=0; i<a.size(); i++) a[i]/=s; return *this; }
+
+
+  matrix& transpose()
+  {
+    matrix rm(_cols,_rows);
+    for(size_type r=0; r<_rows; r++)
+      for(size_type c=0; c<_cols; c++)
+        rm(c,r) = _m(r,c);
+    *this = rm;
+    return *this;
+  }
+
+
+  pointer c_array() { return a.c_array(); }
+  const_pointer c_array() const { return a.c_array(); }
+
+
+
+protected:
+  size_type _rows, _cols;
+  array<value_type> a;
+
+  reference _m(size_type r, size_type c) { return a[(r*_cols)+c]; }
+  const_reference _m(size_type r, size_type c) const { return a[(r*_cols)+c]; }
+};
+
+
+
+
+
+
+
+
+template<typename T>
+class const_matrixrow
+{
+public:
+  typedef T                             value_type;
+  typedef typename matrix<T>::size_type size_type;
+
+  const_matrixrow(const matrix<T>& m, size_type r) : m(m), r(r) {}
+  const_matrixrow(const const_matrixrow& mr) : m(mr.m), r(mr.r) {}
+  ~const_matrixrow() {}
+
+  const value_type& operator[](size_type c) const { return m(r,c); }
+
+  size_type size() const { return m.cols(); }
+
+  operator vector<T>() const {
+    vector<T> v(m.cols());
+    for(size_type c=0; c<m.cols(); c++) v[c] = m(r,c);
+    return v;
+  }
+
+protected:
+  const_matrixrow& operator=(const vector<T>& v) {}
+  const_matrixrow() {}
+
+  const matrix<T>& m;
+  size_type r;
+};
+
+
+
+
+
+
+template<typename T>
+class matrixrow
+{
+public:
+  typedef T                             value_type;
+  typedef typename matrix<T>::size_type size_type;
+
+  matrixrow(matrix<T>& m, size_type r) : m(m), r(r) {}
+  matrixrow(const matrixrow& mr) : m(mr.m), r(mr.r) {}
+  ~matrixrow() {}
+
+  value_type& operator[](size_type c) { return m(r,c); }
+  const value_type& operator[](size_type c) const { return m(r,c); }
+
+  matrixrow& operator=(const matrixrow& mr)
+  {
+    Assert(m.cols() == mr.m.cols());
+    for(size_type c=0; c<m.cols(); c++) m(r,c) = mr.m(mr.r,c);
+    return *this;
+  }
+
+  matrixrow& operator=(const vector<T>& v) {
+    Assert(v.size() == m.cols());
+    for(size_type c=0; c<m.cols(); c++) m(r,c) = v[c];
+    return *this;
+  }
+
+
+  matrixrow& operator*=(const value_type& s)
+  { for(size_type c=0; c<m.cols(); c++) m(r,c) *= s; return *this; }
+
+  matrixrow& operator/=(const value_type& s)
+  { for(size_type c=0; c<m.cols(); c++) m(r,c) /= s; return *this; }
+
+
+  size_type size() const { return m.cols(); }
+
+  operator const_matrixrow<T>() const { return const_matrixrow<T>(m,r); }
+
+  operator vector<T>() const {
+    vector<T> v(m.cols());
+    for(size_type c=0; c<m.cols(); c++) v[c] = m(r,c);
+    return v;
+  }
+
+protected:
+  matrixrow() {}
+
+  matrix<T>& m;
+  size_type r;
+};
+
+
+
+template<typename T>
+class const_matrixcolumn
+{
+public:
+  typedef T                             value_type;
+  typedef typename matrix<T>::size_type size_type;
+
+  const_matrixcolumn(const matrix<T>& m, size_type c) : m(m), c(c) {}
+  const_matrixcolumn(const const_matrixcolumn& mc) : m(mc.m), c(mc.c) {}
+  ~const_matrixcolumn() {}
+
+  const value_type& operator[](size_type r) const { return m(r,c); }
+
+  size_type size() const { return m.rows(); }
+
+  operator vector<T>() const {
+    vector<T> v(m.rows());
+    for(size_type r=0; r<m.rows(); r++) v[r] = m(r,c);
+    return v;
+  }
+
+protected:
+  const_matrixcolumn() {}
+
+  const matrix<T>& m;
+  size_type c;
+};
+
+
+
+
+template<typename T>
+class matrixcolumn
+{
+public:
+  typedef T                             value_type;
+  typedef typename matrix<T>::size_type size_type;
+
+  matrixcolumn(matrix<T>& m, size_type c) : m(m), c(c) {}
+  matrixcolumn(const matrixcolumn& mc) : m(mc.m), c(mc.c) {}
+  ~matrixcolumn() {}
+
+  value_type& operator[](size_type r) { return m(r,c); }
+  const value_type& operator[](size_type r) const { return m(r,c); }
+
+  matrixcolumn& operator=(const matrixcolumn& mc)
+  {
+    Assert(m.rows() == mc.m.rows());
+    for(size_type r=0; r<m.rows(); r++) m(r,c) = mc.m(r,mc.c);
+    return *this;
+  }
+
+  matrixcolumn& operator=(const vector<T>& v) {
+    Assert(v.size() == m.rows());
+    for(size_type r=0; r<m.rows(); r++) m(r,c) = v[r];
+    return *this;
+  }
+
+  matrixcolumn& operator*=(const value_type& s)
+  { for(size_type r=0; r<m.rows(); r++) m(r,c) *= s; return *this; }
+
+  matrixcolumn& operator/=(const value_type& s)
+  { for(size_type r=0; r<m.rows(); r++) m(r,c) /= s; return *this; }
+
+
+  operator const_matrixcolumn<T>() const { return const_matrixcolumn<T>(m,c); }
+
+  size_type size() const { return m.rows(); }
+
+  operator vector<T>() const {
+    vector<T> v(m.rows());
+    for(size_type r=0; r<m.rows(); r++) v[r] = m(r,c);
+    return v;
+  }
+
+protected:
+  matrixcolumn() {}
+
+  matrix<T>& m;
+  size_type c;
+};
+
+
+
+template<typename T>
+class const_matrixrange
+{
+public:
+  typedef T                             value_type;
+  typedef value_type&                   reference;
+  typedef const value_type&             const_reference;
+  typedef typename matrix<T>::size_type size_type;
+
+  const_matrixrange(const matrix<T>& m, const range<size_type>& rr, const range<size_type>& cr) : m(m), rr(rr), cr(cr)
+  {
+    Assert((rr.b >= 0) && (rr.b <  m.rows()));
+    Assert((rr.e >= 0) && (rr.e <= m.rows()));
+    Assert((cr.b >= 0) && (cr.b <  m.cols()));
+    Assert((cr.e >= 0) && (cr.e <= m.cols()));
+  }
+  const_matrixrange(const const_matrixrange<T>& mr) : m(mr.m), rr(mr.rr), cr(mr.cr) {}
+  ~const_matrixrange() {}
+
+  size_type rows() const { return rr.e - rr.b; }
+  size_type cols() const { return cr.e - cr.b; }
+  size_type size1() const { return rows(); }
+  size_type size2() const { return cols(); }
+
+  bool operator==(const const_matrixrange& mr) const { return (rr==mr.rr)&&(cr==mr.cr)&&(m==mr.m); }
+  bool operator!=(const const_matrixrange& mr) const { return (rr!=mr.rr)||(cr!=mr.cr)||(m!=mr.m); }
+
+  bool equals(const const_matrixrange& mr, value_type eps = value_type(consts::epsilon) ) const
+  { return (rr==mr.rr)&&(cr==mr.cr)&&m.equals(mr.m,eps); }
+
+  const_reference operator()(size_type r, size_type c) const
+  { Assert(r<rows()); Assert(c<cols()); return _m(r, c); }
+
+  operator matrix<T>() const
+  {
+    matrix<T> rm(rows(), cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        rm(r,c) = _m(r,c);
+    return rm;
+  }
+
+protected:
+  const_matrixrange() {}
+
+  const matrix<T>& m;
+  range<size_type> rr;
+  range<size_type> cr;
+
+  const_reference _m(size_type r, size_type c) const { return m(rr.b+r, cr.b+c); }
+};
+
+
+
+template<typename T>
+class matrixrange
+{
+public:
+  typedef T                             value_type;
+  typedef value_type&                   reference;
+  typedef const value_type&             const_reference;
+  typedef typename matrix<T>::size_type size_type;
+
+  matrixrange(matrix<T>& m, const range<size_type>& rr, const range<size_type>& cr) : m(m), rr(rr), cr(cr)
+  {
+    Assert((rr.b >= 0) && (rr.b <  m.rows()));
+    Assert((rr.e >= 0) && (rr.e <= m.rows()));
+    Assert((cr.b >= 0) && (cr.b <  m.cols()));
+    Assert((cr.e >= 0) && (cr.e <= m.cols()));
+  }
+  matrixrange(const matrixrange<T>& mr) : m(mr.m), rr(mr.rr), cr(mr.cr) {}
+  ~matrixrange() {}
+
+  size_type rows() const { return rr.e - rr.b; }
+  size_type cols() const { return cr.e - cr.b; }
+  size_type size1() const { return rows(); }
+  size_type size2() const { return cols(); }
+
+  bool operator==(const matrixrange& mr) const { return (rr==mr.rr)&&(cr==mr.cr)&&(m==mr.m); }
+  bool operator!=(const matrixrange& mr) const { return (rr!=mr.rr)||(cr!=mr.cr)||(m!=mr.m); }
+
+  bool equals(const matrixrange& mr, value_type eps = value_type(consts::epsilon) ) const
+  { return (rr==mr.rr)&&(cr==mr.cr)&&m.equals(mr.m,eps); }
+
+  const_reference operator()(size_type r, size_type c) const
+  { Assert(r<rows()); Assert(c<cols()); return _m(r, c); }
+
+  reference operator()(size_type r, size_type c)
+  { Assert(r<rows()); Assert(c<cols()); return _m(r, c); }
+
+
+  matrixrange& operator=(const matrixrange& mr)
+  {
+    Assert(rows() == mr.rows()); Assert(cols() == mr.cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r, c) = mr(r,c);
+    return *this;
+  }
+
+
+  matrixrange& operator=(const matrix<T>& sm)
+  {
+    Assert(rows() == sm.rows()); Assert(cols() == sm.cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r, c) = sm(r,c);
+    return *this;
+  }
+
+
+  void reset(const matrixrange& mr) { *this = mr; }
+  void reset(const matrix<T>& m) { *this = m; }
+
+  matrixrange& operator+=(const matrixrange& mr)
+  {
+    Assert(rows() == mr.rows()); Assert(cols() == mr.cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r,c) += mr(r,c);
+    return *this;
+  }
+
+  matrixrange& operator+=(const matrix<T>& sm)
+  {
+    Assert(rows() == sm.rows()); Assert(cols() == sm.cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r,c) += sm(r,c);
+    return *this;
+  }
+
+  matrixrange& operator-=(const matrixrange& mr)
+  {
+    Assert(rows() == mr.rows()); Assert(cols() == mr.cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r,c) -= mr(r,c);
+    return *this;
+  }
+
+  matrixrange& operator-=(const matrix<T>& sm)
+  {
+    Assert(rows() == sm.rows()); Assert(cols() == sm.cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r,c) -= sm(r,c);
+    return *this;
+  }
+
+
+  matrixrange& negate()
+  {
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        _m(r,c) = -_m(r,c);
+    return *this;
+  }
+
+
+  matrixrange& transpose()
+  {
+    Assert(rows() == cols());
+    matrix<T> rm(cols(), rows());
+    for(size_type r=0; r<_rows; r++)
+      for(size_type c=0; c<_cols; c++)
+        rm(c,r) = _m(r,c);
+    *this = rm;
+    return *this;
+  }
+
+  operator const_matrixrange<T>() const { return const_matrixrange<T>(m,rr,cr); }
+
+  operator matrix<T>() const
+  {
+    matrix<T> rm(rows(), cols());
+    for(size_type r=0; r<rows(); r++)
+      for(size_type c=0; c<cols(); c++)
+        rm(r,c) = _m(r,c);
+    return rm;
+  }
+
+protected:
+  matrixrange() {}
+
+  matrix<T>& m;
+  range<size_type> rr;
+  range<size_type> cr;
+
+  reference _m(size_type r, size_type c) { return m(rr.b+r, cr.b+c); }
+  const_reference _m(size_type r, size_type c) const { return m(rr.b+r, cr.b+c); }
+};
+
+
+
+typedef matrix<Real>             Matrix;
+typedef matrixrow<Real>          MatrixRow;
+typedef matrixcolumn<Real>       MatrixColumn;
+typedef matrixrange<Real>        MatrixRange;
+typedef const_matrixrow<Real>    ConstMatrixRow;
+typedef const_matrixcolumn<Real> ConstMatrixColumn;
+typedef const_matrixrange<Real>  ConstMatrixRange;
+
+
+
+
+inline MatrixRow matrixRow(Matrix& m, const Int r)
+{
+  return MatrixRow(m,r);
+}
+
+inline ConstMatrixRow matrixRow(const Matrix& m, const Int r)
+{
+  return ConstMatrixRow(m,r);
+}
+
+
+inline MatrixColumn matrixColumn(Matrix& m, const Int c)
+{
+  return MatrixColumn(m,c);
+}
+
+inline ConstMatrixColumn matrixColumn(const Matrix& m, const Int c)
+{
+  return ConstMatrixColumn(m,c);
+}
+
+
+inline MatrixRange matrixRange(Matrix& m, const Range& rr, const Range& cr)
+{
+  return MatrixRange(m,rr,cr);
+}
+
+inline ConstMatrixRange matrixRange(const Matrix& m, const Range& rr, const Range& cr)
+{
+  return ConstMatrixRange(m,rr,cr);
+}
+
+
+inline Matrix operator+(const Matrix& m1, const Matrix& m2)
+{ Matrix r(m1); r+=m2; return r; }
+
+inline Matrix operator-(const Matrix& m1, const Matrix& m2)
+{ Matrix r(m1); r-=m2; return r; }
+
+inline Matrix operator-(const Matrix& m1)
+{ Matrix r(m1); r.negate(); return r; }
+
+inline Matrix operator*(const Matrix& m1, const Matrix& m2)
+{ Matrix r(m1); r*=m2; return r; }
+
+inline Vector operator*(const Matrix& m, const Vector& v)
+{
+  Assert(m.cols() == v.size());
+
+  Vector r(m.rows());
+
+  for(Int i=0; i<m.rows(); i++) {
+    r(i) = 0;
+    for(Int k=0; k<m.cols(); k++)
+      r(i) += m(i,k) * v(k);
+  }
+
+  return r;
+}
+
+
+inline Vector operator*(const Vector& v, const Matrix& m) { return m*v; }
+
+
+inline Matrix operator*(const Matrix& m1, const Real& s)
+{ Matrix r(m1); r*=s; return r; }
+
+inline Matrix operator*(const Real& s, const Matrix& m1)
+{ Matrix r(m1); r*=s; return r; }
+
+inline Matrix operator/(const Matrix& m1, const Real& s)
+{ Matrix r(m1); r/=s; return r; }
+
+inline bool equals(const Matrix& m1, const Matrix& m2, Real eps = consts::epsilon)
+{ return m1.equals(m2,eps); }
+
+
+inline Matrix transpose(const Matrix& m)
+{ Matrix r(m); r.transpose(); return r; }
+
+inline Matrix transpose(const Vector& v)
+{ Matrix r(v); r.transpose(); return r; }
+
+
+
+inline Matrix zeroMatrix(const Int M, const Int N)
+{ return Matrix(M,N,0); }
+
+inline Matrix identityMatrix(const Int M, const Int N)
+{ return Matrix(M,N,1); }
+
+
+
+
+
+
+
+inline base::Matrix4 toMatrix4(const Matrix& T)
+{
+  Assert((T.size1() == 4) && (T.size2() == 4));
+  return base::Matrix4(T(0,0),T(0,1),T(0,2),T(0,3),
+                       T(1,0),T(1,1),T(1,2),T(1,3),
+                       T(2,0),T(2,1),T(2,2),T(2,3),
+                       T(3,0),T(3,1),T(3,2),T(3,3));
+}
+
+
+inline Matrix fromMatrix4(const Matrix4& T4)
+{
+  Matrix T(4,4);
+  T(0,0)=T4(1,1); T(0,1)=T4(1,2); T(0,2)=T4(1,3); T(0,3)=T4(1,4);
+  T(1,0)=T4(2,1); T(1,1)=T4(2,2); T(1,2)=T4(2,3); T(1,3)=T4(2,4);
+  T(2,0)=T4(3,1); T(2,1)=T4(3,2); T(2,2)=T4(3,3); T(2,3)=T4(3,4);
+  T(3,0)=T4(4,1); T(3,1)=T4(4,2); T(3,2)=T4(4,3); T(3,3)=T4(4,4);
+  return T;
+}
+
+
+inline base::Matrix3 toMatrix3(const Matrix& T)
+{
+  Assert((T.size1() == 3) && (T.size2() == 3));
+  return base::Matrix3(T(0,0),T(0,1),T(0,2),
+                       T(1,0),T(1,1),T(1,2),
+                       T(2,0),T(2,1),T(2,2));
+}
+
+
+inline Matrix fromMatrix3(const Matrix3& T3)
+{
+  Matrix T(3,3);
+  T(0,0)=T3(1,1); T(0,1)=T3(1,2); T(0,2)=T3(1,3);
+  T(1,0)=T3(2,1); T(1,1)=T3(2,2); T(1,2)=T3(2,3);
+  T(2,0)=T3(3,1); T(2,1)=T3(3,2); T(2,2)=T3(3,3);
+  return T;
+}
+
+
+inline std::ostream& operator<<(std::ostream& out, const Matrix& m) // Output
+{
+  out << std::setiosflags (std::ios_base::fixed) << std::setprecision(6) << std::setw(8);
+  for(Int r=0; r<m.size1(); r++) {
+    for(Int c=0; c<m.size2(); c++) {
+      out << m(r,c) << " ";
+    }
+    out << "\n";
+  }
+  return out;
+}
+
+
+} // base
+
+
+#else
+
+//
+// uBlas wrapper implementation
+//
+
+#include <boost/numeric/ublas/matrix.hpp>
+
+#include <base/Vector>
+#include <base/Matrix4>
+
+namespace base {
+
+namespace ublas = boost::numeric::ublas; // alias
+
+/// Matrix(rows==size1(),cols==size2())
+typedef ublas::matrix<base::Real, ublas::row_major> Matrix;
+
+typedef ublas::matrix_range<Matrix>        MatrixRange;
+typedef ublas::matrix_range<const Matrix>  ConstMatrixRange;
+typedef ublas::matrix_row<Matrix>          MatrixRow;
+typedef ublas::matrix_row<const Matrix>    ConstMatrixRow;
+typedef ublas::matrix_column<Matrix>       MatrixColumn;
+typedef ublas::matrix_column<const Matrix> ConstMatrixColumn;
+
+
+/// extract a submatrix
+inline MatrixRange matrixRange(Matrix& m, const Range& rr, const Range& cr)
+{ return MatrixRange(m,rr,cr); }
+
+inline ConstMatrixRange matrixRange(const Matrix& m, const Range& rr, const Range& cr)
+{ return ConstMatrixRange(m,rr,cr); }
+
+/// extract a Matrix row
+inline MatrixRow matrixRow(Matrix& m, const Int r)
+{ return MatrixRow(m,r); }
+
+inline ConstMatrixRow matrixRow(const Matrix& m, const Int r)
+{ return ConstMatrixRow(m,r); }
+
+/// extract a Matrix column
+inline MatrixColumn matrixColumn(Matrix& m, const Int c)
+{ return MatrixColumn(m,c); }
+
+inline ConstMatrixColumn matrixColumn(const Matrix& m, const Int c)
+{ return ConstMatrixColumn(m,c); }
+
+
+typedef ublas::identity_matrix<base::Real> IdentityMatrix;
+typedef ublas::zero_matrix<base::Real>     ZeroMatrix;
+
+// MxN identity Matrix
+inline IdentityMatrix identityMatrix(const Int M, const Int N)
+{ return IdentityMatrix(M,N); }
+
+/// MxN zero Matrix
+inline ZeroMatrix zeroMatrix(const Int M, const Int N)
+{ return ZeroMatrix(M,N); }
+
+
+
+inline base::Matrix4 toMatrix4(const Matrix& T)
+{
+  Assert((T.size1() == 4) && (T.size2() == 4));
+  return base::Matrix4(T(0,0),T(0,1),T(0,2),T(0,3),
+                       T(1,0),T(1,1),T(1,2),T(1,3),
+                       T(2,0),T(2,1),T(2,2),T(2,3),
+                       T(3,0),T(3,1),T(3,2),T(3,3));
+}
+
+
+inline base::Matrix fromMatrix4(const Matrix4& T4)
+{
+  Matrix T(4,4);
+  T(0,0)=T4(1,1); T(0,1)=T4(1,2); T(0,2)=T4(1,3); T(0,3)=T4(1,4);
+  T(1,0)=T4(2,1); T(1,1)=T4(2,2); T(1,2)=T4(2,3); T(1,3)=T4(2,4);
+  T(2,0)=T4(3,1); T(2,1)=T4(3,2); T(2,2)=T4(3,3); T(2,3)=T4(3,4);
+  T(3,0)=T4(4,1); T(3,1)=T4(4,2); T(3,2)=T4(4,3); T(3,3)=T4(4,4);
+  return T;
+}
+
+
+inline base::Matrix3 toMatrix3(const Matrix& T)
+{
+  Assert((T.size1() == 3) && (T.size2() == 3));
+  return base::Matrix3(T(0,0),T(0,1),T(0,2),
+                       T(1,0),T(1,1),T(1,2),
+                       T(2,0),T(2,1),T(2,2));
+}
+
+
+inline base::Matrix fromMatrix3(const Matrix3& T3)
+{
+  Matrix T(3,3);
+  T(0,0)=T3(1,1); T(0,1)=T3(1,2); T(0,2)=T3(1,3);
+  T(1,0)=T3(2,1); T(1,1)=T3(2,2); T(1,2)=T3(2,3);
+  T(2,0)=T3(3,1); T(2,1)=T3(3,2); T(2,2)=T3(3,3);
+  return T;
+}
+
+
+
+
+// ublas doesn't overload operators for matrix*vector & matrix*matrix
+
+/// \todo we're possibly short-circuiting the expression templates here!
+///       (need to redefine the operator*()'s to return something else
+///       appropriate (matrix_expression?).  For now, we expose prod().
+inline Vector operator*(const Matrix& A, const Vector& x)
+{ return ublas::prod(A,x); }
+
+// this premult of Vector by Matrix behaves as if the Vector were
+//  a single row Matrix
+inline Vector operator*(const Vector& x, const Matrix& A)
+{
+  Assert(x.size() == A.size1());
+  Matrix xm(1,x.size());
+  matrixRow(xm,0) = x;
+  return Vector( matrixRow( ublas::prod(xm,A),0) );
+}
+
+inline Vector operator*(const Matrix& A, const ublas::vector_range<Vector>& x)
+{ return ublas::prod(A,x); }
+
+inline Vector operator*(const ublas::matrix_range<Matrix>& A, const Vector& x)
+{ return ublas::prod(A,x); }
+
+inline Vector operator*(const ublas::matrix_range<Matrix>& A, const ublas::vector_range<Vector>& x)
+{ return ublas::prod(A,x); }
+
+
+inline Matrix operator*(const Matrix& A, const Matrix& B)
+{ return ublas::prod(A,B); }
+
+inline Matrix operator*(const ublas::matrix_range<Matrix>& A, const Matrix& B)
+{ return ublas::prod(A,B); }
+
+inline Matrix operator*(const Matrix& A, const ublas::matrix_range<Matrix>& B)
+{ return ublas::prod(A,B); }
+
+inline Matrix operator*(const ublas::matrix_range<Matrix>& A, const ublas::matrix_range<Matrix>& B)
+{ return ublas::prod(A,B); }
+
+//using ublas::prod;
+
+inline Matrix transpose(const Matrix& m)
+{ return ublas::trans(m); }
+
+
+inline bool operator==(const Matrix& m1, const Matrix& m2)
+{
+  if (&m1 == &m2) return true;
+
+  Assert(m1.size1() == m2.size1());
+  Assert(m1.size2() == m2.size2());
+
+  for(Int r=0; r<m1.size1(); r++)
+    for(Int c=0; c<m1.size2(); c++)
+      if (m1(r,c) != m2(r,c))
+        return false;
+  return true;
+}
+
+
+inline bool equals(const Matrix& m1, const Matrix& m2, Real epsilon = consts::epsilon)
+{
+  if (&m1 == &m2) return true;
+
+  Assert(m1.size1() == m2.size1());
+  Assert(m1.size2() == m2.size2());
+
+  for(Int r=0; r<m1.size1(); r++)
+    for(Int c=0; c<m1.size2(); c++)
+      if (!equals(m1(r,c),m2(r,c),epsilon))
+        return false;
+  return true;
+}
+
+
+inline std::ostream& operator<<(std::ostream& out, const Matrix& m) // Output
+{
+  out << std::setiosflags (std::ios_base::fixed) << std::setprecision(6) << std::setw(8);
+  for(Int r=0; r<m.size1(); r++) {
+    for(Int c=0; c<m.size2(); c++) {
+      out << m(r,c) << " ";
+    }
+    out << "\n";
+  }
+  return out;
+}
+
+
+
+} // base
+
+#endif
+
+
+// common utilities
+
+namespace base {
+
+#ifdef USE_OSG
+
+inline osg::Matrix toOSGMatrix(const Matrix& m)
+{
+  return osg::Matrix( m(0,0), m(0,1), m(0,2), m(0,3),
+                      m(1,0), m(1,1), m(1,2), m(1,3),
+                      m(2,0), m(2,1), m(2,2), m(2,3),
+                      m(3,0), m(3,1), m(3,2), m(3,3) );
+}
+
+#endif
+
+
+} // base
+
+
+
+#endif
+

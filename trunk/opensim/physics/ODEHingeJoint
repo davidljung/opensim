@@ -1,0 +1,71 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODEHingeJoint 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODEHINGEJOINT_
+#define _PHYSICS_ODEHINGEJOINT_
+
+#include <physics/physics>
+#include <physics/HingeJoint>
+#include <physics/ODEJoint>
+
+
+namespace physics {
+
+
+class ODEHingeJoint : public HingeJoint, public ODEJoint
+{
+public:
+  ODEHingeJoint();
+  virtual ~ODEHingeJoint();
+
+  virtual String className() const { return String("ODEHingeJoint"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) ODEHingeJoint(); }
+
+  virtual void   setAnchor(const Point3& p); ///< body1 relative
+  virtual Point3 getAnchor() const;
+
+  virtual void   setAxis(const Vector3& v); ///< body1 relative
+  virtual Vector3 getAxis() const;
+  
+  virtual Real   getAngle() const;
+  virtual Real   getAngleRate() const;
+
+  virtual void   setHighStop(Real angle); ///< upper joint stop (-pi..+pi)
+  virtual void   setLowStop(Real angle);  ///< lower joint stop (-pi..+pi)
+  virtual void   setStopRestitution(Real r); ///< 'bouncyness' of the stops (0..1)
+
+  virtual void   setParameter(const String& name, Real value, Int dof=1); ///< "CFM","StopERP", "StopCFM" & "FudgeFactor"
+
+protected:
+  virtual void onConstraintGroupAdd(ref<ConstraintGroup> g); ///< called by ConstraintGroup::addConstraint()
+
+  virtual bool hasMotor(Int dof) const; ///< implemented by concrete ODEJoint classes to indicate which DOF's can have a Motor attached
+  virtual void setMotorTargetVel(Int dof, Real vel); ///< implemented by concrete ODEJoint classes
+  virtual void setMotorMaxForce(Int dof, Real force);///< implemented by concrete ODEJoint classes
+};
+
+
+} // physics
+
+#endif

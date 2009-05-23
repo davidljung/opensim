@@ -1,0 +1,139 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: VisualTriangles 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_VISUALTRIANGLES_
+#define _GFX_VISUALTRIANGLES_
+
+#include <base/Matrix4>
+#include <gfx/gfx>
+#include <gfx/Visual>
+#include <gfx/TriangleContainer>
+#include <gfx/TriangleIteratorState>
+
+#include <osg/NodeVisitor>
+
+#include <stack>
+
+
+namespace gfx {
+
+class TriangleIterator;
+class TriangleIteratorState;
+
+
+class VisualTriangles : public TriangleContainer,
+			public base::Object
+{
+public:
+  VisualTriangles(const Visual& visual);
+  VisualTriangles(const Visual& visual, Int LODChild);
+    
+  virtual ~VisualTriangles() {}
+
+  virtual String className() const { return String("VisualTriangles"); }
+
+  typedef array<Triangle3> TriangleArray;
+
+  virtual const TriangleArray& getTriangleArray() const
+    { return triangles; }
+
+protected:
+  TriangleArray triangles;
+  Int LODChild;
+
+  class TriangleArrayIteratorState : public TriangleIteratorState
+  {
+  public:
+    TriangleArrayIteratorState(const TriangleArrayIteratorState& i)
+      : triangles(i.triangles), index(i.index) {}
+    TriangleArrayIteratorState(const TriangleArray& triangles, Int index=0)
+      : triangles(triangles), index(index) {}
+    virtual ~TriangleArrayIteratorState() {}
+
+    virtual String className() const { return String("TriangleArrayIteratorState"); }
+
+    virtual Object& clone() const { return *new TriangleArrayIteratorState(*this); }
+
+    virtual const Triangle3& operator*() { return triangles[index]; }
+
+    friend class VisualTriangles;
+  protected:
+    const TriangleArray& triangles;
+    Int index;
+  };
+
+
+  virtual TriangleIteratorState* newTriangleIteratorState(bool begin=true) const 
+  { 
+    if (begin)
+      return new TriangleArrayIteratorState(triangles,0);
+    else
+      return new TriangleArrayIteratorState(triangles,triangles.size());
+  }
+  virtual void nextTriangle(TriangleIteratorState* iteratorState) const 
+  { 
+    TriangleArrayIteratorState* state = static_cast<TriangleArrayIteratorState*>(iteratorState);
+    if (state->index < triangles.size()) state->index++;
+  }
+  virtual void deleteTriangleIteratorState(TriangleIteratorState* state) const 
+    { delete state; }
+  virtual bool equalStates(TriangleIteratorState* state1, TriangleIteratorState* state2) const 
+  {
+    TriangleArrayIteratorState* tastate1 = dynamic_cast<TriangleArrayIteratorState*>(state1);
+    TriangleArrayIteratorState* tastate2 = dynamic_cast<TriangleArrayIteratorState*>(state2);
+    return (tastate1->index == tastate2->index); 
+  }
+
+
+  // OSGVisuals
+  virtual void extractTriangles(osg::Node* node);
+  
+  class TriangleExtractor : public osg::NodeVisitor
+  {
+    TriangleExtractor(TriangleArray& triangles, Int LODChild)
+      : NodeVisitor(TRAVERSE_ALL_CHILDREN), LODChild(LODChild), triangles(triangles)
+    { transform.push(Matrix4()); }
+
+    virtual void apply(osg::Transform& node);
+    virtual void apply(osg::Switch& node);
+    virtual void apply(osg::Group& node);
+    virtual void apply(osg::LOD& node);
+    virtual void apply(osg::Geode &node);
+
+  protected:
+    Int LODChild;
+    std::stack<Matrix4> transform;
+    TriangleArray& triangles;
+
+    friend class VisualTriangles;
+  };
+
+
+  friend class TriangleIterator;
+};
+
+
+} // gfx
+
+#endif

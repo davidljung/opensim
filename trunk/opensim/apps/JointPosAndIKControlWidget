@@ -1,0 +1,78 @@
+/****************************************************************************
+  Copyright (C)2004 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: JointPosAndIKControlWidget 1059 2004-02-27 19:28:44Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-27 14:28:44 -0500 (Fri, 27 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _APPS_JOINTPOSANDIKCONTROLWIDGET_
+#define _APPS_JOINTPOSANDIKCONTROLWIDGET_
+
+#include <gtkmm.h>
+
+#include <base/base>
+#include <robot/robot>
+
+#include <robot/sim/BasicEnvironment>
+
+#include <apps/ControlInterfaceWidget>
+#include <apps/JointPositionControlWidget>
+#include <apps/JointPosVelControllerWidget>
+#include <apps/InverseKinematicsControlWidget>
+
+
+namespace apps {
+
+// GUI Widget for ControlInterface of type JointPositionControl (includes end-effector IK control)
+class JointPosAndIKControlWidget : public ControlInterfaceWidget
+{
+
+public:
+  JointPosAndIKControlWidget(GUIControlWindow& parentWindow);
+  virtual base::String className() const { return String("JointPosAndIKControlWidget"); }
+
+  virtual void init(ref<robot::sim::BasicEnvironment> env, ref<robot::Robot> robot, Int index, ref<robot::ControlInterface> interface);
+  virtual void finalize();  
+
+  virtual void iterate(const base::Time& simTime);
+  
+protected:
+  base::Time lastSimTime;
+  
+  Gtk::Notebook notebook;
+  
+  bool posInterfaceSupplied; // true if interface is JointPositionControl, rather than JointVelocityControl
+  
+  bool eeControl; // controlling ee or joints?
+  JointPositionControlWidget          jointPositionControlWidget;  // if posInterfaceSupplied
+  JointPosVelControllerWidget         jointPosVelControllerWidget; // if !posInterfaceSupplied
+
+  ref<robot::ControlInterface> posInterface;
+  InverseKinematicsControlWidget      inverseKinematicsControlWidget;
+  // signal handlers
+  void tabChanged(GtkNotebookPage* page, guint page_num);
+  
+};
+
+
+} // app
+
+#endif
+

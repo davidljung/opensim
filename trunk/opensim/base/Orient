@@ -1,0 +1,371 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Orient 1089 2004-09-13 17:34:40Z jungd $
+  $Revision: 1.21 $
+  $Date: 2004-09-13 13:34:40 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_ORIENT_HPP_
+#define _BASE_ORIENT_HPP_
+
+#include <iostream>
+#include <math.h>
+
+#include <base/base>
+#include <base/array>
+#include <base/consts>
+#include <base/Vector>
+#include <base/Matrix>
+#include <base/Quat4>
+#include <base/Matrix3>
+
+
+namespace base {
+
+class Serializer;
+
+
+/// Orientation in 3D
+/**
+ * Represents an orientation in 3D using various internal representations.
+ *
+ * There are many parameterizations and terms in use for rotations and orientation/attitude.
+ * Some of the more common are:
+ *
+ *  - 3x3 transformation matrices.  As this has 9 direction cosine values, it contains redundant information.
+ *                                  Consequently, without care, roundoff errors can yield matrices
+ *                                  that contain unwanted effects (e.g. scaling, skew)
+ *                                  There are no singularities.  This is the representation used
+ *                                  by OpenGL.
+ *
+ *  - Euler parameters.             A vector of 4 components - not to be confused with Euler angles.
+ *                                  The mathematics corresponds to unit Quaternions - hence this
+ *                                  representation is often refered to as such.  No singularities,
+ *                                  hence useful for interpolation.  Roundoff error often results
+ *                                  in non-normalized vectors.  Some formulations place the scalar
+ *                                  component as the first component and some as the last component
+ *                                  (it is placed last here)
+ *
+ *  - Cardan-Bryant angles.         These are a 3 component vectors that represents rotations about
+ *                                  3 principle axes (anti-cyclic).  The possibilities are XYZ, XZY,
+ *                                  YZX, YXZ, ZYX and ZXY. i.e. rotation about the first axis, followed
+ *                                  by a rotation about the (now transformed) second axis and finally
+ *                                  about the (now twice transformed) third axis.
+ *                                  Commonly refered to as Euler angles (although technically they are not).
+ *                                  Has a singularity (gimble-lock) when 2nd rotation is 90 or 270deg.
+ *                                  Often the terms Roll, Pitch and Yaw (RPY) are used, where Roll is roation
+ *                                  about the forward axis by phi, Pitch is about the right axis by theta
+ *                                  and Yaw is about the up axis by psi.
+ *                                  For aeronautics, and the manipulator DH notation frames, the axes
+ *                                  are assigned x-forward, y-right & z-up.  In this case RPY
+ *                                  is equivelent to EulerXYZ applied in the order Roll,Pitch,Yaw
+ *                                  Note that For the OpenSim world frame the assignments are x-back, y-right & z-up.
+ *
+ * - Euler angles.                  A 3 component vector similar to Cardan-Bryant angles, but where
+ *                                  the first and last rotation axis are the same (cyclic). Possibilities
+ *                                  are XYX, XZX, YXY, YZY, ZXZ and ZYZ.  Has a singularity when the 2nd
+ *                                  rotation is 0 or 180deg.
+ *                                  Euler used ZXZ, which is the most common - and also called 'x-convention'.
+ *
+ * - Rodriguez parameters.          A 3 component vector. Also known as a Rotation Vector (Benati, Rodriguez-Hamilton), or Gibbs Vector.
+ *                                  Defined by gamma = v.tan(theta/2), where v is the axis of rotation and theta is the
+ *                                  angle.  Has a gimble-lock singularity at 180deg.
+ *
+ * \todo finish implementing and testing this class!
+ */
+class Orient
+{
+
+public:
+  /** Quat      - Euler parameters expressed as a quaternion (v.x,v.y,v.z,w)
+   *  Mat       - 3x3 transformation matrix of direction cosines.
+   *  EulerABC  - Euler (possibly Cardan-Bryant) angles about the axes A, B & C in that order.
+   *  EulerRPY  - Euler (Cardan-Bryant) Roll, Pitch, Yaw angles (alpha,beta,gamma).
+   *               This is equivelent to EulerXYZ and assumes that the
+   *               x-axis points forward, y-axis points right and the z-axis up.
+   *               (Aeronautical convention)
+   *  Euler     - alias for EulerZXZ
+   *  Rodriguez - Rodriguez parameters (gamma1, gamma2, gamma3)
+   */
+public:
+  typedef Byte Representation;
+
+public:
+  // Static axes
+  static const Representation EulerXYZs;
+  static const Representation EulerXYXs;
+  static const Representation EulerXZYs;
+  static const Representation EulerXZXs;
+  static const Representation EulerYZXs;
+  static const Representation EulerYZYs;
+  static const Representation EulerYXZs;
+  static const Representation EulerYXYs;
+  static const Representation EulerZXYs;
+  static const Representation EulerZXZs;
+  static const Representation EulerZYXs;
+  static const Representation EulerZYZs;
+  // Rotating axes
+  static const Representation EulerZYXr;
+  static const Representation EulerXYXr;
+  static const Representation EulerYZXr;
+  static const Representation EulerXZXr;
+  static const Representation EulerXZYr;
+  static const Representation EulerYZYr;
+  static const Representation EulerZXYr;
+  static const Representation EulerYXYr;
+  static const Representation EulerYXZr;
+  static const Representation EulerZXZr;
+  static const Representation EulerXYZr;
+  static const Representation EulerZYZr;
+
+  static const Representation LastEuler = 23;
+
+  static const Representation EulerRPY; // EulerXYZs
+
+  static const Representation Quat = 24;
+  static const Representation Mat  = 25;
+  static const Representation Rodriguez = 26;
+  static const Representation RepEnd = 27;
+
+
+  /// construct a zero orientation. (like the identify transform - defaults to EulerRPY vector 0)
+  Orient();
+
+  /// construct a zero orientation. (like the identify transform)
+  Orient(Representation representation);
+
+  /// construct from a quaternion (x,y,z,w)
+  Orient(const Quat4& q);
+
+  /// construct from EulerRPY
+  Orient(Real roll, Real pitch, Real yaw);
+
+  /// construct from a Vector.
+  explicit Orient(const Vector& v, Representation representation = EulerRPY);
+
+  /// construct from a 3x3 rotation transformation matrix
+  Orient(const Matrix3& m3);
+
+  /// construct from a 3x3 rotation transformation matrix
+  Orient(const Matrix& m);
+
+  Orient(const Orient& copy);
+
+  ~Orient();
+
+
+  Representation representation() const { return rep; }
+
+  static String representationString(Representation rep);
+
+  static bool isEuler(Representation rep) { return rep<=LastEuler; }
+  bool isEuler() const { return rep<=LastEuler; }
+
+  static Int size(Representation rep)
+  {
+    if (rep == Mat)  return 9;
+    if (rep == Quat) return 4;
+    return 3;
+  }
+
+  Int size() const
+  {
+    return size(rep);
+  }
+
+
+  Real& operator[](Int i)
+  {
+    if (rep!=Mat)
+      return v[i];
+    else {
+      Int r=i/3;
+      Int c=i-(r*3);
+      return (*m)(r,c);
+    }
+  }
+
+  const Real& operator[](Int i) const
+  {
+    if (rep!=Mat)
+      return v[i];
+    else {
+      Int r=i/3;
+      Int c=i-(r*3);
+      return (*m)(r,c);
+    }
+  }
+
+  Orient& operator=(const Quat4& q)
+  {
+    if (rep == Mat)
+      delete &(*m);
+    rep = Quat;
+    v.resize(4);
+    v[0]=q.v.x; v[1]=q.v.y; v[2]=q.v.z; v[3]=q.w;
+    return *this;
+  }
+
+  Orient& operator=(const Matrix3& mt);
+
+  Orient& operator=(const Orient& copy) throw();
+
+
+  void setIdentity(Representation representation = Quat);
+  void setFromRotationComponent(const Matrix4& mt);
+
+  /// equality.
+  /** NB: expensive if representations are not the same (conversion attempted) */
+  bool operator==(const Orient& o) const throw();
+
+
+  bool operator!=(const Orient& o) const throw()
+    { return !operator==(o); }
+
+
+  bool equals(const Orient& o, Real epsilon = consts::epsilon) const throw();
+
+
+  void rotatePoint(Point3& p) const
+  {
+    Quat4 q(getQuat4());
+    q.rotatePoint(p);
+  }
+
+  Point3 rotate(const Point3& p) const
+  {
+    Quat4 q(getQuat4());
+    return q.rotate(p);
+  }
+
+  void rotatePoint(Point4& p) const
+  {
+    Quat4 q(getQuat4());
+    q.rotatePoint(p);
+  }
+
+  Point4 rotate(const Point4& p) const
+  {
+    Quat4 q(getQuat4());
+    return q.rotate(p);
+  }
+
+
+  /// invert the rotation (i.e. switch to the reverse rotation)
+  Orient& invert();
+
+
+  /// interpolate between the orientations lower and upper t:[0..1]
+  static Orient interpolate(const Orient& lower, const Orient& upper, Real t);
+
+  /// get the rotation corresponding to the combined sequence of two rotations r1 followed by r2
+  ///  (r2 is converted to the same representation as r1, if necessary)
+  ///  e.g. if r1 is in matrix rep, this is equivelent to matrix multiplication of r2*r1; similarly for quaternions
+  static Orient concatenate(const Orient& r1, const Orient& r2);
+
+
+
+  // these involve representation conversion if required
+  Matrix  getRotationMatrix() const;
+  Matrix3 getRotationMatrix3() const;
+  Quat4   getQuat4() const;
+  Vector  getVector(Representation representation) const;
+  Vector3 getVector3(Representation representation) const;
+
+  /// automatic conversion to a Vector
+  operator Vector() const
+    { if (rep!=Mat) return v; else return getVector(rep); }
+
+  /// automatic conversion to a rotation matrix
+  operator Matrix3() const
+    { return getRotationMatrix3(); }
+
+  /// automatic conversion to a Quat4
+  operator Quat4() const
+    { return getQuat4(); }
+
+
+  /// request change the internal representation (which may or may not be honored)
+  void changeRepresentation(Representation newRepresentation)
+  { try { changeRep(newRepresentation); } catch (std::exception&e) {} }
+
+
+  /// returns the inverse of B, such that omega = B(v)^-1 . dv/dt, where omega is angular velocity and v is this orientation
+  Matrix getBinv() const;
+
+  void serialize(Serializer& s); ///< read or write object state to Serializer
+
+protected:
+  mutable Representation rep;
+  mutable Vector v; ///< component of vector-based representations (Quat, Euler, etc.)
+  typedef Matrix* MatrixRef;
+  mutable MatrixRef m; ///< Matrix(3,3) ref if rep==Mat
+
+  enum Axis { X=0, Y=1, Z=2, W=3 };
+  enum Frame { Static=0, Rotating=1 };
+  enum Repetition { NonRepeating=0, Repeating=1 };
+  enum Parity { Even=0, Odd=1 };
+
+  inline static Representation eulerRep(Axis axis, Parity parity, Repetition repetition, Frame frame)
+  { return Representation(((((((Byte(axis))<<1)+(Byte(parity)))<<1)+(Byte(repetition)))<<1)+(Byte(frame))); }
+
+  static inline Frame      frame(Representation rep)      { return Frame(Byte(rep)&1); }
+  static inline Repetition repetition(Representation rep) { return Repetition((Byte(rep)>>1)&1); }
+  static inline Parity     parity(Representation rep)     { return Parity((Byte(rep)>>2)&1); }
+
+  static inline Axis       axisI(Representation rep) { return Axis(EulSafe[((Byte(rep)>>3)&3)]); }
+  static inline Axis       axisJ(Representation rep) { return Axis(Byte(EulNext[axisI(rep)+(parity(rep)==Odd)])); }
+  static inline Axis       axisK(Representation rep) { return Axis(Byte(EulNext[axisI(rep)+(parity(rep)!=Odd)])); }
+  static inline Axis       axisH(Representation rep) { return ((repetition(rep)==NonRepeating)?axisK(rep):axisI(rep)); }
+  static inline void       getRep(Representation rep, Axis& i, Axis& j, Axis& k, Axis& h,
+                                               Parity& n, Repetition& s, Frame& f)
+    {
+      Byte o=rep;
+      f=Frame(o&1); o>>=1;
+      s=Repetition(o&1); o>>=1;
+      n=Parity(o&1); o>>=1;
+      i=Axis(EulSafe[o&3]);
+      j=Axis(EulNext[Byte(i)+Byte(n)]);
+      k=Axis(EulNext[Byte(i)+1-Byte(n)]);
+      h=s?k:i;
+    }
+
+
+  static Byte EulSafe[4];
+  static Byte EulNext[4];
+
+
+  /// change the current internal representation to that specified.
+  void changeRep(Representation newRep) const;
+
+  friend std::ostream& operator<<(std::ostream& out, const Orient& o);
+};
+
+
+// Operations
+
+
+std::ostream& operator<<(std::ostream& out, const Orient& o); // Output
+
+
+
+} // base
+
+#endif

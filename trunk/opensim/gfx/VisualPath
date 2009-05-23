@@ -1,0 +1,85 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: VisualPath 1135 2004-09-28 20:54:05Z jungd $
+
+****************************************************************************/
+
+#ifndef _GFX_VISUALPATH_
+#define _GFX_VISUALPATH_
+
+#include <gfx/gfx>
+
+#include <base/Path>
+#include <gfx/Visual>
+
+#include <osg/Node>
+
+
+namespace gfx {
+
+
+class VisualPath : public base::Path, public Visual
+{
+public:
+  /// default path - all points are 0
+  VisualPath()
+    : Path(), zaxisLength(0) {}
+
+  VisualPath(const Path& p)
+    : Path(p), zaxisLength(0) {}
+
+  /// simple line segment start[position|orientation] - end[position|orientation]
+  VisualPath(const base::Point3& sp, const base::Orient& so, const base::Point3& ep, const base::Orient& eo)
+    : Path(sp,so,ep,eo), zaxisLength(0) {}
+
+  /// a set of 'waypoints' - actually points and their corresponding orientations
+  VisualPath(const array<base::Point3>& points, const array<base::Orient>& orients = array<base::Orient>())
+    : Path(points, orients), zaxisLength(0) {}
+
+  /// a set of 'waypoints'.  If vector dim is 3, specifies position only; dim 6, specifies
+  ///  position and orientation using the EulerRPY (roll, pitch, yaw) convention; dim 7
+  ///  specifies position and orientation as a quaternion qx,qy,qz,qw.
+  VisualPath(const array<base::Vector>& points)
+    : Path(points), zaxisLength(0) {}
+
+  /// arbitrary path defined by symbolic expressions for x,y,z,qx,qy,qz,qw in terms of s
+  VisualPath(const base::ExpressionVector& p)
+    : Path(p), zaxisLength(0) {}
+
+  virtual String className() const { return String("VisualPath"); }
+
+  /// set length of zaxis vector used to display orientations (if any)
+  ///  use 0 for no visualization of orientation
+  void setZAxisVectorLength(const Real& l = 0) { zaxisLength=l; }
+
+  virtual bool visualTypeSupported(VisualType type) const { return OSGVisual; }
+
+  virtual osg::Node* createOSGVisual(Attributes visualAttributes=0) const;
+
+private:
+  Real zaxisLength;
+
+  mutable Visual::Attributes attributes;
+  mutable ref_ptr<osg::Node> node;
+
+};
+
+
+} // gfx
+
+#endif

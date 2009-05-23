@@ -1,0 +1,132 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: ManipulatorPIDPositionController 1037 2004-02-11 20:50:18Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:50:18 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_MANIPULATORPIDPOSITIONCONTROLLER_
+#define _ROBOT_MANIPULATORPIDPOSITIONCONTROLLER_
+
+#include <robot/control/control>
+
+#include <robot/Controller>
+#include <robot/Controllable>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+namespace control {
+
+/**
+ * Controls the inputs of a Robot's serial manipulator to maintain a
+ *  reference position. 
+ *
+ * Requires the following ControlInterface (:type)
+ *
+ *  :JointVelocityControl
+ *   - outputs control manipulator joint velocity and corresponding inputs give joint position
+ *
+ * Provides the following ControlInterface (name:type)
+ *
+ *  manipulatorPosition:JointPositionControl
+ *   - outputs control the position of a maniulators joints (angle for revolute joints
+ *     and extension for prismatic joints)
+ *
+ * \todo later this should be changed to require :JointForceControl instead.
+ *
+ */
+class ManipulatorPIDPositionController : public robot::Controller, public robot::Controllable
+{
+public:
+  ManipulatorPIDPositionController(const robot::KinematicChain& chain);
+  ManipulatorPIDPositionController(const ManipulatorPIDPositionController& c)
+    : chain(c.chain), manipInterface(c.manipInterface), positionInterface(c.positionInterface)
+    {}
+
+  virtual String className() const { return String("ManipulatorPIDPositionController"); }
+  virtual Object& clone() const { return *NewObj ManipulatorPIDPositionController(*this); } 
+
+
+  virtual void setControlInterface(ref<ControlInterface> controlInterface);
+
+  virtual bool isConnected() const;
+
+  virtual bool iterate(const base::Time& time); 
+
+  virtual ref<ControlInterface> getControlInterface(String interfaceName="") throw(std::invalid_argument);
+
+  
+  void setCoeffs(Real Kp, Real Ki=0, Real Kd=0)
+    { this->Kp = Kp; this->Ki = Ki; this->Kd = Kd; }
+  
+protected:
+
+  class PositionInterface : public robot::ControlInterface
+  {
+  public:
+    PositionInterface(ref<ManipulatorPIDPositionController> c)
+      : c(c) { setName("manipulatorPosition"); setType("JointPositionControl"); }
+    PositionInterface(const PositionInterface& i)
+      : c(i.c) {}
+
+    virtual String className() const { return String("PositionInterface"); }
+    virtual Object& clone() const { return *NewObj PositionInterface(*this); } 
+
+    Int inputSize() const;
+    String inputName(Int i) const;
+    Real getInput(Int i) const;
+    const Vector& getInputs() const;
+    
+    Int outputSize() const;
+    String outputName(Int i) const;
+    void setOutput(Int i, Real value);
+    void setOutputs(const Vector& values);
+
+  protected:
+    ref<ManipulatorPIDPositionController> c;
+  };
+
+  
+  robot::KinematicChain chain; ///< kinematic chain of the manipulator we're controlling
+
+  ref<robot::ControlInterface>  manipInterface; ///< interface for joint control of manipulator
+  ref<PositionInterface>     positionInterface; ///< interface we return for joint position control
+
+  Int lastInputSize;  ///< size of input on previous iteration
+  Int lastOutputSize; ///< size of output on previous iteration
+
+  Real Kp;
+  Real Ki;
+  Real Kd;
+
+  Vector R;  // reference position
+  Vector pe; // previous error e
+  Vector s; // sum of error e
+
+  
+
+};
+
+
+}
+} // robot::control
+
+#endif

@@ -1,0 +1,242 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Vector3 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.10 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_VECTOR3_HPP_
+#define _BASE_VECTOR3_HPP_
+
+#include <iostream>
+#include <math.h>
+
+#include <base/base>
+#include <base/array>
+#include <base/consts>
+
+
+#ifdef USE_OSG
+#include <osg/Vec3>
+#endif
+
+
+namespace base {
+
+
+class Serializer;
+
+
+
+class Vector3 
+{
+
+public:
+  Vector3() { x=y=z=Real(0); }
+  Vector3(Real xc, Real yc, Real zc) { x=xc; y=yc; z=zc; }
+  Vector3(const Vector3& v) { this->operator=(v); }
+#ifdef USE_OSG
+  Vector3(const osg::Vec3& v) { x=v._v[0]; y=v._v[1]; z=v._v[2]; }
+#endif
+  ~Vector3() {}
+
+  enum Coords { X=1, Y=2, Z=3, Coords3D=4 };
+  
+  void setZero() throw()
+  { x=y=z=Real(0); }
+
+  bool isZero() const throw()
+   { return (x==0)||(y==0)||(z==0); }
+
+  bool equalsZero(Real eps=consts::epsilon)
+  { return (base::equals(x,0,eps) || base::equals(y,0,eps) || base::equals(z,0,eps)); }
+
+  Real& e(Int i) throw()
+  { 
+    Assertm( ((i>=1)&&(i<=3)), "vector index in bounds (debug only check)");
+    return (i==1)?x:(i==2)?y:z; 
+  }
+
+  const Real& e(Int i) const throw()
+  {
+    Assertm( ((i>=1)&&(i<=3)), "vector index in bounds (debug only check)");
+    return (i==1)?x:(i==2)?y:z; 
+  }
+
+  Real& at(Int i) throw(std::out_of_range)
+  {
+    if ((i < 1) || (i > 3))
+      throw std::out_of_range(Exception("vector index out of bounds"));
+
+    return (i==1)?x:(i==2)?y:z;
+  }
+
+  const Real& at(Int i) const throw(std::out_of_range)
+  {
+    if ((i < 1) || (i > 3))
+      throw std::out_of_range(Exception("vector index out of bounds"));
+
+    return (i==1)?x:(i==2)?y:z;
+  }
+
+  Real& operator[](Int i)  
+  { return e(i); }
+
+  const Real& operator[](Int i) const
+  { return e(i); }
+
+  Vector3& operator=(const Vector3& src) throw()
+  { 
+    if (&src != this) {
+      x=src.x; y=src.y; z=src.z;
+    }
+    return *this;
+  }
+
+
+  bool operator==(const Vector3& v) const throw()
+  {
+    if (&v == this) return true;
+
+    return ((x==v.x)&&(y==v.y)&&(z==v.z));
+  }
+
+  bool operator!=(const Vector3& v) const throw()
+  {
+    if (&v == this) return false;
+
+    return ((x!=v.x)||(y!=v.y)||(z!=v.z));
+  }
+
+
+  bool equals(const Vector3& v, Real epsilon = consts::epsilon) const throw()
+  {
+    if (&v == this) return true;
+
+    return (base::equals(x,v.x,epsilon) && base::equals(y,v.y,epsilon) && base::equals(z,v.z,epsilon));
+  }
+
+
+  Real norm() const throw()
+  { return (x*x+y*y+z*z); }
+
+  Real magnitude() const throw()
+  { return sqrt(norm()); }
+
+  Real length() const throw()
+  { return magnitude(); }
+
+  Vector3& negate() throw()
+  { x=-x; y=-y; z=-z; return *this; }
+
+  Vector3& normalize()
+  { Real l=length(); Assert(l>0); x/=l; y/=l; z/=l; return *this; }
+
+  Real magNormalize()
+  { Real l=length(); Assert(l>0); x/=l; y/=l; z/=l; return l; }
+
+  Vector3& cross(const Vector3& p) throw() // this = thisxp
+  { Vector3 r(y*p.z-z*p.y, -(x*p.z-z*p.x), x*p.y-y*p.x); return (*this=r); }  
+  
+  Vector3& cross(const Vector3& a, const Vector3& b) throw() // this = axb
+  { *this=a; return cross(b); }
+
+  Real dot(const Vector3& p) const throw()
+  { return x*p.x+y*p.y+z*p.z; }
+
+
+  Vector3& operator+=(const Vector3& v2) throw()
+  { x+=v2.x; y+=v2.y; z+=v2.z; return *this; }
+
+  Vector3& operator-=(const Vector3& v2) throw()
+  { x-=v2.x; y-=v2.y; z-=v2.z; return *this; }
+
+  Vector3& operator*=(const Real& s) throw()
+  { x*=s; y*=s; z*=s; return *this; }
+
+  Vector3& operator/=(const Real& s)
+  { x/=s; y/=s; z/=s; return *this; }
+
+  Int largestAxis() const {
+    Real a[Y+1];
+    Int axis = ( (a[X] = base::abs(x)) < (a[Y] = base::abs(y)) ) ? Y : X;
+    return (a[axis] < base::abs(z)) ? Z : axis; 
+  }
+
+
+  const Real* c_array() const { return &x; }
+  Real* c_array() { return &x; }
+#ifdef USE_OSG
+  osg::Vec3 toVec3() const { return osg::Vec3(x,y,z); }
+#endif
+
+  static Vector3 min(const base::array<Vector3>& vectors);
+  static Vector3 max(const base::array<Vector3>& vectors);
+  static void minmax(const base::array<Vector3>& vectors, Vector3& minimum, Vector3& maximum);
+
+
+  void serialize(Serializer& s); ///< read or write object state to Serializer
+
+
+  Real x,y,z;
+
+};
+
+
+// Operations
+
+inline Vector3 operator+(const Vector3& v1, const Vector3& v2) throw() // Addition
+{ Vector3 r(v1); return r+=v2; }
+
+inline Vector3 operator-(const Vector3& v1, const Vector3& v2) throw() // Subtraction
+{ Vector3 r(v1); return r-=v2; }
+
+inline Vector3 operator-(const Vector3& v1) throw() // Negation
+{ Vector3 r(v1); return r.negate(); }
+
+inline Vector3 operator*(const Vector3& v1, const Real& s) throw() // Scalar multiplication
+{ Vector3 r(v1); return r*=s; }
+
+inline Vector3 operator*(const Real& s, const Vector3& v1) throw() // Scalar multiplication
+{ Vector3 r(v1); return r*=s; }
+
+inline Vector3 operator/(const Vector3& v1, const Real& s) // Scalar division
+{ Vector3 r(v1); return r/= s; }
+
+inline std::ostream& operator<<(std::ostream& out, const Vector3& v) // Output
+{ return out << "(" << v.x << "," << v.y << "," << v.z << ")"; }
+
+
+inline Vector3 midpoint(const Vector3& v1, const Vector3& v2) throw() // midpoint between
+{ Vector3 r(v1); r+=v2; return r/=2; }
+
+inline Vector3 cross(const Vector3& v1, const Vector3& v2) throw() // cross product v1xv2
+{ Vector3 r(v1); return r.cross(v2); }
+
+inline Real dot(const Vector3& v1, const Vector3& v2) throw() // dot product v1.v2
+{ Vector3 r(v1); return r.dot(v2); }
+
+inline Real operator*(const Vector3& v1, const Vector3& v2) // dot procuct v1.v2
+{ return dot(v1,v2); }
+
+
+} // base
+
+#endif

@@ -1,0 +1,25 @@
+project robot_sim
+  : usage-requirements
+                 <library>/robot//os_robot
+                 <library>/physics//os_physics
+                 <library>/gfx//os_gfx
+  : requirements
+                 <library>/robot//os_robot
+                 <library>/physics//os_physics
+                 <library>/gfx//os_gfx
+  ;
+
+lib os_robot_sim :
+                SimulatedManipulatorDescription.cpp
+		SimulatedToolDescription.cpp
+                SimulatedRobot.cpp
+                SimulatedPlatform.cpp
+                SimulatedKinematicChain.cpp
+                SimulatedSerialManipulator.cpp
+                SimulatedTool.cpp
+                SimulatedBasicEnvironment.cpp
+                TestBasicEnvironment.cpp
+                IKORTest.cpp
+                VisualIKORTest.cpp
+                IKORTester.cpp
+  ;

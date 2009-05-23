@@ -1,0 +1,91 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SVD 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.10 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_SVD_
+#define _BASE_SVD_
+
+#include <base/base>
+
+#include <base/Matrix>
+
+
+namespace base {
+
+
+/// Singular Value Decomposition of a rectangluar Matrix
+/**
+ *                           A = U * S * V'
+ *
+ * where matrices U and V are orthogonal and S is a digonal matrix.
+ *
+ * The singular value decomposition is performed by constructing an SVD
+ * object from an M*N matrix A with M>=N (that is, at least as many rows
+ * as columns). Note, in case M > N, matrix S has to be a M*N diagonal
+ * matrix. However, it has only N diag elements, which we store in a 1:N
+ * Vector sig.
+ *
+ * This code is based on the Numerical Recipies in C book.
+ */
+
+class SVD
+{
+public:
+  /// Decompose Matrix A, of M rows and N columns, M>=N
+  SVD(const Matrix &A);	  
+  
+  /// Return U
+  const Matrix& U() const;
+  /// Return V
+  const Matrix& V() const;
+  /// Return vector of singular values ( min(M,N)x1 )
+  const Vector diag() const;
+  
+  /// Return S - diagonal matrix of singular values (diagonal elements are diag() )
+  Matrix S() const;
+  
+  static const Real maxCondition;  // maximum condition number to return
+  static const Real minSingValue;   // minimum singular value before set to 0
+
+  /// Return condition number (max singular value / min singular value)
+  /** (S_max/S_min) */
+  Real condition(Real maxCond = maxCondition) const;
+
+
+  /// pseudo-inverse of A
+  Matrix inv(Real minSingVal = minSingValue) const;  
+  
+
+private:
+  Int M,N;      ///< Dimensions of the problem (M>=N)
+  Matrix UMat;  ///< M*M orthogonal matrix U
+  Matrix VMat;  ///< N*N orthogonal matrix V
+  Vector s;     ///< Vector of N unordered singular values
+
+};
+
+
+} // base
+
+
+#endif

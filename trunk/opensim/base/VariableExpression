@@ -1,0 +1,87 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: VariableExpression 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.12 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_VARIABLEEXPRESSION_
+#define _BASE_VARIABLEEXPRESSION_
+
+#include <base/base>
+#include <base/ConstantExpression>
+
+
+namespace base {
+
+
+//
+// Expression that evaluates to a specific parameter variable from the params Vector
+//
+
+class VariableExpression : public ExpressionNode
+{
+public:
+  VariableExpression(Int paramsIndex)
+    : index(paramsIndex) {}
+  VariableExpression(const VariableExpression& e)
+    : index(e.index) {}
+
+  virtual NodeType type() const { return NodeType(Leaf|Variable); } 
+
+  virtual Object& clone() const { return *NewObj VariableExpression(*this); }
+  virtual String className() const { return String("VariableExpression"); }
+
+  virtual String toString() const { return String("p[")+base::intToString(index)+"]"; }
+
+  virtual void serialize(Serializer& s) { s(index,"index"); }
+
+protected:
+  VariableExpression() {}
+  
+  virtual void cacheValue(const Vector& params) const
+    { 
+      if (index >= params.size())
+	throw std::invalid_argument(Exception(String("Expression refers to variable index not present in evaluation parameter vector:")+base::intToString(index)));
+      value = params[index]; valueCached=true; 
+    }
+  virtual void resetCache() const { valueCached=false; }
+
+  virtual void cacheDerivative(Int withRespectToIndex) const 
+    {
+      derivative = ref<ExpressionNode>(NewObj ConstantExpression(( index==withRespectToIndex)?1:0 ));
+      derivWithRespToIndex = withRespectToIndex;
+      derivCached = true;
+    }
+  virtual void resetDerivCached() const { derivCached=false; derivative = ref<ExpressionNode>(0); }
+
+  virtual void operationCounts(Int& addsub, Int& multdiv, Int& trig) const 
+    {}
+
+  Int index;
+
+  friend class Expression;
+  friend class Serializable::SerializableDerivedInstantiator<VariableExpression>;
+};
+
+} // base
+
+#endif
+

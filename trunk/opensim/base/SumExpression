@@ -1,0 +1,77 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SumExpression 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_SUMEXPRESSION_
+#define _BASE_SUMEXPRESSION_
+
+#include <base/base>
+#include <base/BinaryOpExpression>
+
+
+namespace base {
+
+
+//
+// Sum operator - adds args
+//
+
+class SumExpression : public BinaryOpExpression 
+{
+public:
+  SumExpression(ref<ExpressionNode> left, ref<ExpressionNode> right)
+    : BinaryOpExpression(left, right) {}
+  SumExpression(const SumExpression& e)
+    : BinaryOpExpression(e) {}
+
+  virtual NodeType type() const { return NodeType(BinaryOp|Sum); } 
+
+  virtual Object& clone() const { return *NewObj SumExpression(*this); }
+  virtual String className() const { return String("SumExpression"); }
+
+  virtual String toString() const { return String("(")+leftArg->toString() + "+" + rightArg->toString()+")"; }
+
+protected:
+  SumExpression() {}
+
+  virtual void cacheValue(const Vector& params) const
+    { value = leftArg->evaluate(params) + rightArg->evaluate(params); valueCached=true; }
+
+  virtual void cacheDerivative(Int withRespectToIndex) const
+    {
+      derivative = ref<ExpressionNode>(NewObj SumExpression(leftArg->differentiate( withRespectToIndex ),
+                                                            rightArg->differentiate( withRespectToIndex )) ); 
+      derivWithRespToIndex = withRespectToIndex;
+      derivCached = true;
+    }
+
+  virtual void operationCounts(Int& addsub, Int& multdiv, Int& trig) const 
+    { BinaryOpExpression::operationCounts(addsub,multdiv,trig); addsub++; }
+  
+  friend class Serializable::SerializableDerivedInstantiator<SumExpression>;
+};
+
+} // base
+
+#endif
+

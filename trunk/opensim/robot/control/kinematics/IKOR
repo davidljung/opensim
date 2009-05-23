@@ -1,0 +1,175 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: IKOR 1127 2004-09-28 20:46:01Z jungd $
+  $Revision: 1.14 $
+  $Date: 2004-09-28 16:46:01 -0400 (Tue, 28 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_IKOR_
+#define _ROBOT_CONTROL_KINEMATICS_IKOR_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <sstream>
+
+#include <robot/KinematicChain>
+#include <robot/control/kinematics/InverseKinematicsSolver>
+#include <robot/control/kinematics/FullSpaceSolver>
+#include <robot/control/kinematics/BetaFormConstraints>
+
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// IKOR inverse kinematics solver.
+/** \todo test.
+ */
+class IKOR : public InverseKinematicsSolver
+{
+public:
+  IKOR(const robot::KinematicChain& chain, const Vector& jointWeights = Vector(),
+       bool nonHolonomicPlatformActive=false, Real platformL=0);
+
+  virtual String className() const { return String("IKOR"); }
+
+
+  /// call to use a different solver, before using solve()
+  void setFullSpaceSolver(ref<FullSpaceSolver> fsp) { solver=fsp; }
+
+
+  class JointLimitBetaConstraint : public BetaFormConstraints::BetaFormConstraint
+  {
+  public:
+    JointLimitBetaConstraint(Int j, Real dist, const Matrix& gs)
+      : BetaFormConstraint(matrixRow(gs,j)/dist), j(j), dist(dist) { setName(className()); }
+
+    JointLimitBetaConstraint(const JointLimitBetaConstraint& jlc)
+      : BetaFormConstraint(jlc), j(j), dist(dist) {}
+
+    virtual String className() const { return String("JointLimitBetaConstraint"); }
+
+    Int j;     ///< joint/variable index
+    Real dist; ///< desired change in q[j]
+
+    virtual String toString() const
+    { return String("j:")+base::intToString(j)+" d:"+base::realToString(dist); }
+
+  };
+
+
+  class PushAwayBetaConstraint : public BetaFormConstraints::BetaFormConstraint
+  {
+  public:
+    // push point on 'link' with parameter index v at Xvx along the link's x-axis, a distance L in direction n
+    PushAwayBetaConstraint(Int v, Real Xvx,
+                           const Vector& n, Real L,
+                           const Matrix& gs,
+                           const robot::KinematicChain& chain, const Vector& q);
+
+    PushAwayBetaConstraint(const PushAwayBetaConstraint& pac)
+      : BetaFormConstraint(pac), v(v), Xvx(Xvx), n(n), L(L) {}
+
+    virtual String className() const { return String("PushAwayBetaConstraint"); }
+
+    Int  v;   ///< variable index
+    Real Xvx; ///< x component of proximity sensor location (in link frame)
+    Vector n; ///< direction to push
+    Real L;   ///< distance to push in direction n
+
+    virtual String toString() const
+    { std::ostringstream str;
+      str << "v:" << v << " Xvx:" << Xvx << " n:" << n << " L:" << L;
+      return str.str();
+    }
+  };
+
+
+  class RankLossBetaConstraint : public BetaFormConstraints::BetaFormConstraint
+  {
+  public:
+    RankLossBetaConstraint(Int row, const Matrix& A, const Vector& b, const Matrix& gs);
+    RankLossBetaConstraint(const RankLossBetaConstraint& rlc)
+      : BetaFormConstraint(rlc), row(row) {}
+
+    virtual String className() const { return String("RankLossBetaConstraint"); }
+
+    Int row;
+
+    virtual String toString() const { return String("row:")+base::intToString(row); }
+  };
+
+
+
+
+  ///  Solve inverse kinematics.
+  virtual Vector solve(const Vector& dx, Real dt, const Vector& x, const Vector& q,
+                       const base::Matrix& J,
+                       OptimizationMethod      optMethod      = Lagrangian,
+                       OptimizationCriterion   optCriterion   = LeastNorm,
+                       OptimizationConstraints optConstraints = OptimizationConstraints(JointLimits));
+
+  virtual bool isConstraintTypeSupported(OptimizationConstraint  optConstraint,
+                                         OptimizationMethod      optMethod      = DefaultMethod,
+                                         OptimizationCriterion   optCriterion   = DefaultCriterion);
+
+
+  virtual void setProximitySensorData(const array<LinkProximityData>& proximityData, Real d);
+
+
+
+  /// Set implementation specific parameters.  Unknown names will throw a std::invald_argument exception
+  /** Valid parameters:   name               value            description
+   *  none currently
+   */
+  virtual void setParameter(const String& name, Real value);
+
+protected:
+  ref<FullSpaceSolver> solver;
+  robot::KinematicChain chain;
+  Vector weights; ///< relative weights for each joint for LeastNorm (vector of all 1s for equal weighting)
+  bool nonHolonomicPlatformActive;
+  Real L;  ///< platform parameter L - distance from origin P to center of drive axle M (see paper 2)
+
+  //!!! may cache the objective later, if it speeds things up
+  //ref<Optimizer::Objective> objective; // objective function for Optimizer
+
+  array<LinkProximityData> proximitySensorData; /// proximity data indexed by chain dof variable
+  Real d; ///< link obstacle proximity 'danger distance'
+
+
+  void weightedLeastNorm(Matrix& B, Vector& dZr, Vector weights);
+
+  void addDependentRowConstraints(const array<Int>& rows, const Matrix& gs, const Matrix& A, const Vector& b, ref<BetaFormConstraints> constraints);
+  void addJointLimitConstraints(const Matrix& gs, const Vector& q, const Vector& dq, ref<BetaFormConstraints> constraints);
+
+  void addNonholonomicConstraint(const Matrix& gs, const Vector& q, ref<BetaFormConstraints> constraints);
+
+  void addObstacleAvoidanceConstraints(const Matrix& gs, const Vector& q, const Vector& dq, ref<BetaFormConstraints> constraints);
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

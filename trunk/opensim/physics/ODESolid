@@ -1,0 +1,122 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODESolid 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODESOLID_
+#define _PHYSICS_ODESOLID_
+
+#include <base/ref>
+#include <physics/physics>
+#include <physics/Solid>
+
+#include <ode/ode.h>
+
+
+namespace physics {
+
+
+class ODESolid : public Solid
+{
+public:
+  ODESolid(const Solid& s);
+  virtual ~ODESolid();
+
+  virtual String className() const { return String("ODESolid"); }
+
+  virtual MassProperties massProperties() const;
+
+  virtual Body& operator=(const Body& b);
+
+  virtual void setEnabled(bool enable);
+  virtual bool isEnabled() const;
+
+
+  virtual void setPosition(const Point3& x);
+  virtual void setOrientation(const Orient& orient);
+  virtual void setVelocity(const Vector3& v);
+  virtual void setAngVelocity(const Vector3& w);
+
+  virtual Point3  getPosition() const;
+  virtual Orient  getOrientation() const;
+  virtual Vector3 getVelocity() const;
+  virtual Vector3 getAngVelocity() const;
+
+  virtual void saveState();
+  virtual void restoreState();
+
+  virtual Point3  getSavedPosition() const;
+  virtual Orient  getSavedOrientation() const;
+  virtual Vector3 getSavedVelocity() const;
+  virtual Vector3 getSavedAngVelocity() const;
+
+  // Utility
+  virtual Point3  getRelPointPos(const Point3& p);
+  virtual Vector3 getRelPointVel(const Point3& p);
+  virtual Point3  getGlobalPointRelPos(const Point3& p);
+
+
+  // Force/Torque accumulator functions
+  //  (accumulated forces are zero'd before each step)
+  virtual void addForce(const Vector3& f);
+  virtual void addTorque(const Vector3& t);
+  virtual void addRelForce(const Vector3& f);
+  virtual void addRelTorque(const Vector3& t);
+  virtual void addForceAtPos(const Vector3& f, const Point3& p);
+  virtual void addForceAtRelPos(const Vector3& f, const Point3& p);
+  virtual void addRelForceAtPos(const Vector3& f, const Point3& p);
+  virtual void addRelForceAtRelPos(const Vector3& f, const Point3& p);
+
+  virtual Vector3 getForce() const;
+  virtual Vector3 getTorque() const;
+  
+  virtual ref<Collidable> createCollidable(ref<const Shape> collisionShape, CollidableFlags flags = 0);
+
+  virtual dBodyID getBodyID() const { return bodyID; } ///< get ODE's dBodyID
+  
+protected:
+  ODESolid(ref<const Shape> shape, ref<const Material> material);
+  void create(dWorldID worldID) const; ///< create ODE body etc. and add to worldID
+  void destroy() const; ///< destroy the body and remove it from the world
+  Vector3 AngVelToAngMomentum(const Quat4& orient, const Vector3& w) const;
+
+  virtual void updateVisual() { Solid::updateVisual(); }
+
+  // saved ODE body state
+  dVector3    savedPos;
+  dQuaternion savedOrient;
+  dVector3    savedVel;
+  dVector3    savedAngVel;
+
+  mutable bool created;  ///< have ODE entities been created? (creation is delayed until call to create() )
+  mutable dWorldID worldID; ///< ODE's world ID (for world this is in)
+  mutable dBodyID  bodyID;  ///< ODE's body ID
+
+  friend class ODESolidSystem;
+  friend class ODEJoint;
+  friend class ODECollisionResponseHandler;
+};
+
+
+} // physics
+
+#endif

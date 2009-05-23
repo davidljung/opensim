@@ -1,0 +1,147 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: OBBCollisionModel 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_OBBCOLLISIONMODEL_
+#define _PHYSICS_OBBCOLLISIONMODEL_
+
+#include <physics/physics>
+#include <physics/CollisionModel>
+
+#include <base/array>
+#include <gfx/TriangleContainer>
+#include <gfx/Triangle3>
+
+
+
+namespace physics {
+
+
+class OBBCollisionModel : public CollisionModel
+{
+public:
+  OBBCollisionModel(const gfx::TriangleContainer& triangles);
+  OBBCollisionModel(const OBBCollisionModel& cm);
+  virtual ~OBBCollisionModel();
+
+  virtual String className() const { return String("OBBCollisionModel"); }
+  virtual Object& clone() const { return *NewNamedObj(className()) OBBCollisionModel(*this); }
+
+  virtual CollisionModelType getType() const { return OBBModel; }
+
+  // OSGVisual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Visual::Attributes visualAttributes=0) const;
+
+protected:
+  
+  // helper classes
+  
+  // Moment
+  class Moment {
+  public:
+    Moment() { clear(); }
+    ~Moment() {}
+    
+    Real A;
+    base::Vector3 m;
+    base::Matrix3 s;
+    
+    bool operator==(const Moment& moment) const 
+    {
+      return ((A==moment.A) && (m==moment.m) && (s==moment.s));
+    }
+
+    bool equals(const Moment& moment, Real epsilon = consts::epsilon) const throw()
+    {
+      return (base::equals(A,moment.A,epsilon) && m.equals(moment.m,epsilon)
+	&& s.equals(moment.s,epsilon));
+    }
+
+    void clear();
+    void accumulate(const Moment& b);
+    base::Vector3 meanFromMoment() const { return m; }
+    base::Vector3 meanFromAccum() const { return m/A; }
+    base::Matrix3 covariance() const;
+
+    static void computeMoment(Moment& M, const gfx::Vector3& p,
+			      const base::Vector3& q, const base::Vector3& r);
+    static void computeMoment(base::array<Moment>& M,
+			      base::array<gfx::Triangle3>& tris,
+			      Int firstTri, Int numTris);
+		
+  };
+  
+  
+  // Oriented Bounding Box
+  class OBB {  
+  public:
+    OBB() : P(0), N(0) {}
+    ~OBB() {}
+    
+    bool leaf() const { return ((P==0) && (N==0)); }
+    Real size() const { return d.x; }
+    
+    Int splitRecurse(base::array<gfx::Triangle3>& tri, 
+		     base::array<Moment>& moment, base::array<OBB>& boxes,
+		     Int OBBsInited, Int t[], Int f, Int n);
+    Int splitRecurse(base::array<gfx::Triangle3>& tri, 
+		     base::array<Moment>& moment, base::array<OBB>& boxes,
+		     Int OBBsInited, Int t[], Int f);    // specialized for leaf nodes
+    
+    
+    base::Matrix3 pR;   // placement in parent's space
+    base::Vector3 pT;
+    
+    OBB* P;
+    OBB* N;
+    gfx::Triangle3 tr;      // valid if leaf
+    base::Vector3 d;    // this is "radius", that is, 
+    // half the measure of a side length
+  protected:
+    void reaccumMoments(Moment& A, base::array<Moment>& moment, Int t[], Int f, Int n);
+    static void minmax(base::Vector3& min, base::Vector3& max, const base::Vector3& v);
+    
+  };
+  
+  
+  // methods
+  void buildHierarchy();
+  static Int eigenAndSort1(Matrix3& evecs, const Matrix3& cov, Int maxIterations=50);
+  osg::Node* createOBBVisualRecurse(OBB& obb, Int level) const;
+  
+  // variables
+  base::array<OBB>& b;
+  base::array<gfx::Triangle3>& tris;
+  
+  static const Int maxLevels = 3;
+  static const Int onlyLevel = 3;
+  static const bool onlyOneLevel = false;
+
+  friend class OBBCollisionDetector;
+};
+
+
+} // physics
+
+#endif

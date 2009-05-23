@@ -1,0 +1,141 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedPlatform 1033 2004-02-11 20:47:52Z jungd $
+  $Revision: 1.11 $
+  $Date: 2004-02-11 15:47:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_SIMULATEDPLATFORM_
+#define _ROBOT_SIM_SIMULATEDPLATFORM_
+
+#include <robot/sim/sim>
+
+#include <base/ReferencedObject>
+#include <base/Externalizable>
+
+#include <physics/PositionableOrientable>
+#include <physics/Spatial>
+#include <physics/SpatialGroup>
+#include <physics/SolidSystem>
+
+#include <robot/PlatformDescription>
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * A simulated robot platform created
+ *  according to a supplied specification.
+ *  Simulated using gfx/physics.
+ */
+class SimulatedPlatform : public physics::Spatial, public physics::CollidableProvider, public base::Externalizable
+{
+public:
+  SimulatedPlatform();
+  SimulatedPlatform(ref<const robot::PlatformDescription> platformDescription, ref<physics::SolidSystem> solidSystem = ref<physics::SolidSystem>(0), bool dynamic=true);
+  virtual ~SimulatedPlatform();
+
+  virtual String className() const { return String("SimulatedPlatform"); }
+
+  virtual void setDynamic(bool enabled) { dynamic = enabled; }
+
+  void setSolidSystem(ref<physics::SolidSystem> solidSystem) { this->solidSystem = solidSystem; }
+  
+  ref<const robot::PlatformDescription> getPlatformDescription() const { return platformDescr; }
+
+  void construct(const base::Point3& initialPosition, const base::Orient& initialOrientation);
+
+  ref<physics::Solid> getPlatformSolid() const { return platformSolids[Platform]; }
+
+  /// Nonholonomic platform - set the torque applied to the left back drive wheel
+  void setLeftBackWheelTorque(Real t);
+  /// Nonholonomic platform - set the velocity of the left back drive wheel
+  void setLeftBackWheelVel(Real v, Real maxTorque=10.0);
+  /// Nonholonomic platform - get angular velocity of the left back drive wheel
+  Real getLeftBackWheelVel() const;
+
+  /// Nonholonomic platform - set the torque applied to the right back drive wheel
+  void setRightBackWheelTorque(Real t);
+  /// Nonholonomic platform - set the angular velocity of the right back drive wheel
+  void setRightBackWheelVel(Real v, Real maxTorque=10.0);
+  /// Nonholonomic platform - get angular velocity of the right back drive wheel
+  Real getRightBackWheelVel() const;
+
+  /// Nonholonomic platform -  set the torque applied by the front steering motor
+  void setSteeringTorque(Real t);
+  /// Nonholonomic platform -  set the angular velocity of the front steering motor
+  void setSteeringVel(Real v, Real maxTorque=10.0);
+  /// Nonholonomic platform - get angle of the steering wheels
+  Real getSteeringAngle() const;
+
+  
+  // Spatial
+  virtual void   setPosition(const Point3& pos);
+  virtual Point3 getPosition() const;
+  virtual void   setOrientation(const Orient& orient);
+  virtual Orient getOrientation() const;
+  virtual void   setConfiguration(const base::Transform& configuration);
+  virtual base::Transform getConfiguration() const;
+  
+  // CollidableProvider
+  virtual ref<physics::Collidable> createCollidable(CollidableFlags flags = 0);
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(base::Externalizer& e, const String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+
+protected:
+  
+  ref<physics::SolidSystem> solidSystem;
+  ref<const robot::PlatformDescription> platformDescr;
+  
+  /// if true, full physics is simulated; if false, the Solids that comprise the Platform aren't connected together (& only their pos/orient is significant)
+  bool dynamic;
+
+  enum PlatformSolids { Platform, 
+                        LeftFrontWheel, RightFrontWheel, 
+                        LeftBackWheel,  RightBackWheel,
+                        LeftFrontWheelMount, RightFrontWheelMount,
+                        Crossbar, 
+                        MaxPlatformSolids };
+                       
+  array<ref<physics::Solid> > platformSolids;  ///< Solids that comprise the platform, indexed by PlatformSolids enum
+  
+  ref<physics::SpatialGroup> spatialGroup;   ///< all the Spatials that comprise the platform (e.g. the Solids)
+  void updateGroupConfigurationFromPlatformSolid() const;
+  
+  void disableCollisions(const array<ref<physics::Collidable> >& collidables);
+  
+  // only relevant if dynamic==true
+  ref<physics::ConstraintGroup> wheelConstraintGroup;
+  ref<physics::HingeJoint> leftDriveHingeJoint;
+  ref<physics::HingeJoint> rightDriveHingeJoint;
+  ref<physics::HingeJoint> steeringHingeJoint;
+  ref<physics::Motor> leftDriveMotor;  ///< drive motor for left back wheel of non-holonomic mobile base
+  ref<physics::Motor> rightDriveMotor; ///< drive motor for right back wheel of non-holonomic mobile base
+  ref<physics::Motor> steeringMotor;   ///< steering motor for front wheels of non-holonomic mobile base
+};
+
+
+}
+} // robot::sim
+
+#endif

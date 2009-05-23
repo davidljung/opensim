@@ -1,0 +1,98 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: WaypointPathRep 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_WAYPOINTPATHREP_
+#define _BASE_WAYPOINTPATHREP_
+
+#include <base/PathRep>
+#include <base/Math>
+
+
+namespace base {
+
+
+/// Concrete path representation as a sequence of 'waypoints' (including orientation)
+class WaypointPathRep : public PathRep
+{
+public:
+  WaypointPathRep(const array<Point3>& points, const array<Orient>& orients)
+    : points(points), orients(orients), flags(None)
+  { computeSis(); }
+
+
+  virtual Object& clone() const
+    { return *NewObj WaypointPathRep(points, orients, si, flags); }
+
+  virtual String className() const { return String("WaypointPathRep"); }
+
+  /// get cartesian position at s:[0..1]
+  virtual Point3 position(Real s) const;
+
+  /// get orientation at s:[0..1]
+  virtual Orient orientation(Real s) const;
+
+  virtual Real distinguishedValue(Int i) const;
+
+  /// number of distinguished s values
+  virtual Int numDistinguishedValues() const;
+
+  /// translate the path position by t
+  virtual void translate(const Vector3& t);
+
+  /// rotate the path orientation by r
+  virtual void rotate(const Quat4& r);
+
+  /// transform the path by m
+  virtual void transform(const Matrix4& m);
+
+  virtual void scalePosition(Real s);
+
+  virtual void serialize(Serializer& s);
+
+protected:
+  enum Flags { None=0, ConstPos=1, ConstOrient=2 };
+
+  WaypointPathRep() {}
+  WaypointPathRep(const array<Point3>& points, const array<Orient>& orients, array<Real> si, Int flags)
+    : points(points), orients(orients), si(si), flags(flags) {}
+
+  array<Point3> points;
+  array<Orient> orients;
+  array<Real> si;  ///< value of s:[0..1] corresponding to each waypoint.
+  
+  ///  compute si's using path length from start of path to waypoint i w.r.t. total path length
+  /// (NB: for a path that has both constant position & orientation, si is unused/meaningless)
+  virtual void computeSis();
+
+  Int  findIndex(Real s) const; ///< find the closest index into points/orients before s
+
+  Int flags;
+
+  friend class Serializable::SerializableDerivedInstantiator<WaypointPathRep>;
+};
+
+
+} // base
+
+#endif

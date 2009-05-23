@@ -1,0 +1,97 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: ControlInterface 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROLINTERFACE_
+#define _ROBOT_CONTROLINTERFACE_
+
+#include <robot/robot>
+#include <base/ReferencedObject>
+#include <base/Named>
+
+#include <base/Vector>
+
+
+namespace robot {
+
+/**
+ * The abstract interface through which Controller(s) can control
+ *  Controllables.
+ *
+ * Each interface has a number of inputs and outputs.  The meaning
+ *  of these depend on the specific interface type.  Interfaces are
+ *  also named.  Both the type and name are Strings.  Type strings
+ *  are title case with an initial capital letter and name strings are
+ *  title case with an initial lower case letter.
+ *
+ *  An example specification of a ControlInterface:
+ *   type: "ManipulatorForceControl"
+ *   name: "titanJoints"
+ *   outputs: i:[0..N-1] - N= num of joints: commanded joint force/torque 
+ *   inputs:  i:[0..N-1] - N= num of joints: current joint position
+ *    
+ *  The inputs and outputs of each interface are also named.
+ *  For example, getInputName(0) on the above interface might return
+ *   "jointPosition1".
+ *  ControlInterfaces are obtained via the Controllable method
+ *   getControlInterface(String interfaceName) by name.
+ *  e.g. ref<ControlInterface> titan( c->getControlInterface("titanJoints") );
+ *  They can then be passed to a Contoller that is expecting a ControlInterface
+ *   of that type.
+ *  e.g. controller->setControlInterface(titan);
+ *   will succeed if the controller was expecting an interface of type "ManipulatorForceControl"
+ *   and will be silently ignored otherwise.  Use the Controller::isConnected() to
+ *   query if a Controller has been connected to all the ControlInterfaces it needs.
+ */
+class ControlInterface : public base::ReferencedObject, public base::Named
+{
+public:
+  ControlInterface() {}
+  ControlInterface(const String& name, const String& type)
+    : base::Named(name), type(type) {}
+  ControlInterface(const ControlInterface& ci)
+    : base::Named(ci), type(ci.type) {}
+
+  const String& getType() const { return type; }
+
+  virtual Int           inputSize() const = 0;
+  virtual String        inputName(Int i) const = 0;
+  virtual Real          getInput(Int i) const = 0;
+  virtual const Vector& getInputs() const = 0;
+
+  virtual Int    outputSize() const = 0;
+  virtual String outputName(Int i) const = 0;
+  virtual void   setOutput(Int i, Real value) = 0;
+  virtual void   setOutputs(const Vector& values) = 0;
+
+protected:
+  void setType(const String& type) { this->type=type; }
+
+private:
+  String type;
+};
+
+
+} // robot
+
+#endif

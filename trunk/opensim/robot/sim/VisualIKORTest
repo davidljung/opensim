@@ -1,0 +1,111 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: VisualIKORTest 1033 2004-02-11 20:47:52Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:47:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_VISUALIKORTEST_
+#define _ROBOT_SIM_VISUALIKORTEST_
+
+#include <robot/sim/sim>
+
+#include <robot/sim/IKORTest>
+
+#include <base/DOM>
+#include <gfx/Visual>
+#include <gfx/Segment3>
+#include <gfx/Color4>
+#include <robot/sim/BasicEnvironment>
+
+#include <osg/Switch>
+#include <osg/Array>
+#include <osg/Geometry>
+
+
+namespace robot {
+namespace sim {
+
+
+/// provides a Visual to display IKORTest results
+class VisualIKORTest :  public IKORTest, public gfx::Visual
+{
+public:
+  VisualIKORTest(ref<base::VFile> testSpecification,
+                 ref<base::VFileSystem> fs, ref<base::Cache> cache);
+
+  virtual String className() const { return String("VisualIKORTest"); }
+
+  
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Attributes visualAttributes=0) const;
+  
+  virtual void updateVisuals() const;
+  
+  
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return (    ((format=="svg") && (version==1.0) && (type==Externalizable::Output))
+               || IKORTest::formatSupported(format,version,type)); }
+
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+
+
+protected:
+
+  typedef base::array<gfx::Segment3> LineSegArray;
+
+  // helpers for rendering line diagram of test results
+  static LineSegArray manipToolAsLines(const KinematicChain& chain, const Vector& q, Int numPlatformLinks);
+  static LineSegArray platformAsLines(ref<const PlatformDescription> platfDescr, const KinematicChain& platfChain, const Vector& q, Real steerAngle);
+  static LineSegArray obstaclesAsLines(ref<const BasicEnvironment> env);
+  static LineSegArray trajectoryAsLines(const array<base::Vector>& xs);
+  
+  // cached OSGVisual & construction helpers
+  mutable Visual::Attributes attributes;
+  mutable osg::ref_ptr<osg::Switch> node;
+
+  static osg::Vec3Array* newVertexArrayFromLines(const LineSegArray& lines);
+  static osg::Geometry* newGeometryFromLines(const LineSegArray& lines, const gfx::Color4& color);
+  
+  osg::Node* osgCreateAxes() const;
+  osg::Node* osgCreateObstacles() const;
+  osg::Node* osgCreateManipulator() const;
+  osg::Node* osgCreateTrajectory() const;
+  
+  mutable array< osg::ref_ptr<osg::Switch> > testPlatfSwitches; ///< one Switch per test, where children are joint space configurations of platform
+  mutable array< osg::ref_ptr<osg::Switch> > testManipSwitches; ///< one Switch per test, where children are joint space configurations of manipulator
+
+  
+  // helpers for SVG output
+  base::Matrix4 svgTransform;
+  void svgLine(base::Externalizer& e, base::dom::DOMElement* svgElem, const gfx::Segment3& line) const;
+  void svgLines(base::Externalizer& e, base::dom::DOMElement* svgElem, const LineSegArray& lines) const;
+  void svgText(base::Externalizer& e, base::dom::DOMElement* svgElem, const Point3& pos, const String& text, Real size=11) const;
+  void svgOutputAxes(base::Externalizer& e, base::dom::DOMElement* svgElem) const;
+  
+};
+
+
+} // namespace sim
+} // namespace robot
+
+#endif

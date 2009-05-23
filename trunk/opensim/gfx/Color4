@@ -1,0 +1,79 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Color4 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_COLOR4_
+#define _GFX_COLOR4_
+
+#include <gfx/gfx>
+
+#include <gfx/Color3>
+
+namespace gfx {
+
+class Color4
+{
+
+public:
+  Color4() { r=g=b=a=Real(0); }
+  Color4(const Color4& c) { r=c.r; g=c.g; b=c.b; a=c.a; }
+  Color4(const String& name, Real ac = Real(1)) { *this = Color3(name); a=ac; }
+  Color4(const Color3& c) { r=c.r; g=c.g; b=c.b; a=Real(1); }
+  Color4(Real rc, Real gc, Real bc, Real ac = Real(1))
+  { r = rc; g = gc; b = bc; a = ac; }
+  ~Color4() {}
+
+  Color4& operator=(const Color4& c)
+  { r=c.r; g=c.g; b=c.b; a=c.a; return *this; }
+
+  Color4& operator=(const Color3& c)
+  { r=c.r; g=c.g; b=c.b; a=Real(1); return *this; }
+
+  bool operator==(const Color4& c) const
+  { return ((r==c.r) && (g==c.g) && (b==c.b) && (a==c.a)); }
+
+  bool equals(const Color4& c, Real epsilon = consts::epsilon) const
+  { return base::equals(r,c.r,epsilon) && base::equals(g,c.g,epsilon) 
+           && base::equals(b,c.b,epsilon) && base::equals(a,c.a,epsilon); }
+
+  void setZero() { r=g=b=a=Real(0); }
+	
+  Color4& operator*=(Real s) 
+  { s=base::abs(s); if (s<1.0) { r*=s; g*=s; b*=s; } return *this; }
+  
+  static Color4 interpolate(const Color4& c1, const Color4& c2, Real t)
+  { return Color4((1.0-t)*c1.r+t*c2.r,(1.0-t)*c1.g+t*c2.g,(1.0-t)*c1.b+t*c2.b,(1.0-t)*c1.a+t*c2.a); }
+
+  Real* c_array() { return &r; }
+
+
+  Real r,g,b,a;
+
+};
+
+inline std::ostream& operator<<(std::ostream& out, const Color4& c) // Output
+{ return out << "(" << c.r << "," << c.g << "," << c.b << "," << c.a << ")"; }
+
+} // gfx
+
+#endif

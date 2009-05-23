@@ -1,0 +1,107 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: VDirectory 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_VDIRECTORY_
+#define _BASE_VDIRECTORY_
+
+#include <base/base>
+#include <base/reflist>
+#include <base/VEntry>
+#include <base/PathName>
+#include <base/path_not_found>
+#include <base/io_error>
+
+
+namespace base {
+
+
+class VDirectory : public VEntry
+{
+public:
+  virtual ~VDirectory() {}
+
+  virtual String className() const { return String("VDirectory"); }
+
+  virtual bool isDirectory() const { return true; }
+
+  virtual bool contains(ref<const VEntry> entry) const = 0;
+  virtual bool contains(const PathName& name) const = 0;
+  virtual bool empty() const { return size()==0; }
+
+  virtual ref<VFile>      file(const PathName& name) const throw(path_not_found) = 0; ///< construct a new VFile object 
+  virtual ref<VDirectory> directory(const PathName& name) const throw(path_not_found) = 0; ///< construct a new VDirectory object
+
+  virtual ref<VFile>      createFile(const PathName& name) const throw(io_error) = 0; ///< create a new file in this directory
+  virtual void            deleteFile(const PathName& name) const throw(path_not_found, io_error) = 0; ///< delete a file in this directory
+  virtual ref<VDirectory> createDirectory(const PathName& name) const throw(io_error) = 0; ///< create a new directory in this directory
+  virtual void            deleteDirectory(const PathName& name) const throw(path_not_found, io_error) = 0; ///< delete a directory in this directory
+  
+
+  class VEntryIterator : public std::iterator<std::input_iterator_tag, ref<VEntry>, Int, ref<VEntry>*, const ref<VEntry>&>
+  {
+  public:
+    VEntryIterator(const VEntryIterator& iter) : dir(iter.dir), index(iter.index) {}
+    ~VEntryIterator() {}
+    VEntryIterator& operator=(const VEntryIterator& i) { dir=i.dir; index=i.index; return *this; }
+
+    value_type operator*() const { return dir->entry(index); }
+    
+    VEntryIterator& operator++() { if (index != dir->size()) ++index; return *this; }
+    bool operator==(const VEntryIterator& i) const { return (dir==i.dir) && (index==i.index); }
+    bool operator!=(const VEntryIterator& i) const { return !(*this==i); }
+
+  protected:
+    VEntryIterator(ref<const VDirectory> dir, Int i) : dir(dir), index(i) {}
+    ref<const VDirectory> dir;
+    Int index;
+
+    friend class VDirectory;
+  };
+
+  
+  typedef VEntryIterator       iterator;
+  typedef VEntryIterator const_iterator;
+
+  iterator begin()             { return VEntryIterator(ref<VDirectory>(this),0); }
+  const_iterator begin() const { return VEntryIterator(ref<const VDirectory>(this),0); }
+
+  iterator end()               { return VEntryIterator(ref<VDirectory>(this),size()); }
+  const_iterator end() const   { return VEntryIterator(ref<const VDirectory>(this),size()); }
+
+
+protected:
+  virtual ref<VEntry> entry(Int i) const = 0;
+  virtual Int size() const = 0;
+
+  VDirectory() {}
+  VDirectory(const PathName& pathname) throw(std::invalid_argument) : VEntry(pathname) {}
+  VDirectory(const VDirectory& d) : VEntry(d) {}
+  VDirectory& operator=(const VDirectory& d) { VEntry::operator=(d); return *this; }
+
+  friend class VFileSystem;
+};
+
+} // base
+
+#endif

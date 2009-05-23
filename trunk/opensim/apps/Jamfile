@@ -1,0 +1,69 @@
+
+project app 
+  : requirements 
+                 <include>/usr/include/gtkmm-2.0                 #GTKmm
+                 <include>/usr/lib/gtkmm-2.0/include
+                 <include>/usr/include/gtk-2.0
+                 <include>/usr/lib/sigc++-1.2/include
+                 <include>/usr/include/sigc++-1.2
+                 <include>/usr/include/glib-2.0
+                 <include>/usr/lib/glib-2.0/include
+                 <include>/usr/lib/gtk-2.0/include
+                 <include>/usr/include/pango-1.0
+                 <include>/usr/X11R6/include
+                 <include>/usr/include/freetype2
+                 <include>/usr/include/atk-1.0
+
+                 <library>..//gtkmm
+                 <library>..//gdkmm
+                 <library>..//atkmm
+                 <library>..//gtkx11
+                 <library>..//pangomm
+                 <library>..//glibmm
+                 <library>..//sigc
+                 <library>..//gdkx11
+                 <library>..//atk
+                 <library>..//gdkpixbuf
+                 <library>..//pangoxft
+                 <library>..//pangox
+                 <library>..//pango
+                 <library>..//gobject
+                 <library>..//gmodule
+                 <library>..//glib
+
+                 <library>..//dl
+                 <library>..//m
+                
+                 <library>/base//os_base
+                 <library>/gfx//os_gfx
+                 <library>/physics//os_physics
+                 <library>/robot//os_robot
+                 <library>../robot/control//os_robot_control
+                 <library>../robot/control/kinematics//os_robot_control_kinematics
+                 <library>../robot/sim//os_robot_sim
+  ;
+
+lib os_gui :    
+          /base//os_base
+          ViewEnvWindow.cpp
+          GenericControlInterfaceWidget.cpp
+          JointPositionControlWidget.cpp 
+          InverseKinematicsControlWidget.cpp
+          JointPosAndIKControlWidget.cpp
+          JointVelocityControlWidget.cpp
+          JointPosVelControllerWidget.cpp
+          LinkProximitySensorsWidget.cpp
+#        : <link>static
+  ;
+ 
+
+exe viewenv : viewenv.cpp os_gui ;
+
+exe test : test.cpp ;
+
+exe sim_tut1 : sim_tut1.cpp ;
+
+exe sim_tut2 : sim_tut2.cpp ;
+
+#exe traumapod : traumapod.cpp ;
+

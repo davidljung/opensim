@@ -1,0 +1,104 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: JFKengine 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_JFKENGINE_
+#define _ROBOT_JFKENGINE_
+
+#include <robot/robot>
+
+#include <base/Expression>
+#include <robot/KinematicEvaluator>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+
+
+/**
+ * A KinematicEvaluator that uses symbolic differentiation to compute 
+ * Jacobian and forward kinematics matrix expressions.
+ */
+class JFKengine : public KinematicEvaluator
+{
+public:
+  JFKengine();   
+
+  virtual String className() const { return String("JFKengine"); } ///< identifies this class type as a JFKengine
+  virtual Object& clone() const { return *NewObj JFKengine(*this); } ///< makes a copy of this JFKengine
+
+  
+  // KinematicEvaluator interface
+  virtual Matrix getForwardKinematics(const KinematicChain& chain, const Vector& q) const;
+  virtual Matrix getJacobian(const KinematicChain& chain, const Vector& q, bool includeOrientation = true) const;
+  virtual array<base::Vector> getJointOrigins(const KinematicChain& chain, const base::Vector& q ) const;
+  virtual array<base::Vector> getLinkOrigins(const KinematicChain& chain, const base::Vector& q ) const;
+
+  
+  ///  forms symbolic forward kinematics expression matrix
+  /**
+   *   @param      chain  a description of a chain of links from which expression matrices are to be formed.
+   *   @return     A 4 x 4 ExpressionMatrix containing transformation matrix T for the given SerialManipulator;
+   *               T represents the position and orientation of the nth link with reference
+   *               to the base coordinate frame of the manipulator.
+   *   @exception  std::out_of_range exception, if no joints are specified or n is greater than the number
+   *               of joints in manipulator 
+   */
+  base::ExpressionMatrix getForwardKinematics(const KinematicChain& chain) const;
+
+
+  /// forms a symbolic Jacobian expression matrix
+  /** 
+   *   @param      chain  a description of a chain of joints each specified via D-H parameters for which
+   *                      the Jacobian is to be formed.
+   *   @param      includeOrientation if true, J will be a 6 x n ExpressionMatrix with orientation components
+   *               otherwise it will be a 3 x n ExpressionMatrix including only position components
+   *   @return     A [6|3] x n ExpressionMatrix containing the Jacobian for the given SerialManipulator.
+   *               n is the number of joints in the given chain.
+   *   @exception  std::out_of_range exception, if no joints are specified
+   * \todo check & document if this is the Geometric Jacobian or Analytical Jacobian
+   *       (in Jg the orientation components represent ang. vel (omega), in Ja the orientation components
+   *        represent the time derivative of Euler angles - theta_dot) - I think this implementation is Jg.
+   *        (omega is better for representing ang. velocity than theta_dot.
+   *         On the other hand, the intergral of theta_dot, Euler angles themselves (theta) can easily represent
+   *         orientation, but the intergral of omega has no physical meaning (called quasi-coordinates))
+   */
+  base::ExpressionMatrix getJacobian(const KinematicChain& chain, bool includeOrientation = true) const;
+
+
+  
+protected:
+  JFKengine(const JFKengine& jfke) {} ///< copy constructor
+ 
+  mutable bool forwardKinematicsCached;     ///< ==true signals that A and T have already been calculated and are cached
+  mutable array<base::ExpressionMatrix> A;  ///< array of matrices that give position and orientation with respect to previous frame
+  mutable array<base::ExpressionMatrix> T;  ///< array of matrices that give position and orientation with respect to base
+  mutable KinematicChain chain_AT;          ///< cached chain used to form A and T
+  mutable bool JCached;                     ///< ==true signals that J has already been calculated and is cached
+  mutable KinematicChain chain_J;           ///< cached chain used to form J
+  mutable base::ExpressionMatrix J;         ///< contains the cached 6 x n Jacobian
+};
+
+} // namespace robot
+
+#endif

@@ -1,0 +1,106 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ExpressionNode 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_EXPRESSIONNODE_
+#define _BASE_EXPRESSIONNODE_
+
+#include <base/base>
+#include <base/ReferencedObject>
+#include <base/Serializable>
+#include <base/Serializer>
+#include <base/Vector>
+
+
+namespace base {
+
+
+//
+// Base class of expressions that can be evaluated with a parameter Vector
+//  and differentiated, 
+//
+
+class ExpressionNode : public ReferencedObject, public Serializable
+{
+public:
+  ExpressionNode() 
+    : valueCached(false), derivCached(false) {}
+
+  enum NodeType { Sum, Difference, Product, Quotient,
+		  Negative, Constant, Variable,
+		  Sine, Cosine,
+		  Leaf=1024, UnaryOp = 2048, BinaryOp = 4096 };
+
+  virtual NodeType type() const = 0; ///< get NodeType
+  bool isOperator() const { return (isUnaryOp() || isBinaryOp()); }
+  bool isUnaryOp()  const { return Int(type() & UnaryOp); }
+  bool isBinaryOp() const { return Int(type() & BinaryOp); }
+  NodeType opType() const { return NodeType(Int(type()) & Int(Leaf-1)); }
+
+  Real evaluate(const Vector& params) const 
+    { 
+      if (!valueCached)
+        cacheValue(params);
+      return value;
+    }
+
+  ref<ExpressionNode> differentiate( Int withRespectToIndex ) const 
+    {   
+      if (!(derivCached && (withRespectToIndex == derivWithRespToIndex)))
+	cacheDerivative(withRespectToIndex);
+      if (!derivative) { Assert(derivative); }
+      return derivative;
+    }
+
+  virtual String toString() const = 0;
+
+protected:
+  virtual void cacheValue(const Vector& params) const = 0; ///< perform evaluation with params and store in value (& set valueCached true)
+  virtual void resetCache() const = 0; ///< set valueCached false and call resetCache() on children
+
+  mutable bool valueCached;
+  mutable Real value;
+
+  virtual void cacheDerivative(Int withRespectToIndex) const = 0; ///< perform differentiation and cache in derivative (& set set derivCached)
+  virtual void resetDerivCached() const = 0; ///< set derivCached false and call resetDerivCached() on children
+
+  mutable bool derivCached;
+  mutable Int derivWithRespToIndex;
+  mutable ref<ExpressionNode> derivative;
+
+  virtual void operationCounts(Int& addsub, Int& multdiv, Int& trig) const = 0;
+
+  friend class BinaryOpExpression;
+  friend class UnaryOpExpression;
+  friend class Expression;
+};
+
+
+inline std::ostream& operator<<(std::ostream& out, const ExpressionNode& e) // Output
+{ return (out << e.toString()); }
+
+
+} // base
+
+#endif
+

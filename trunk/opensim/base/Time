@@ -1,0 +1,127 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Time 1046 2004-02-27 19:20:16Z jungd $
+  $Revision: 1.6 $
+  $Date: 2004-02-27 14:20:16 -0500 (Fri, 27 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_TIME_
+#define _BASE_TIME_
+
+#include <base/base>
+#include <base/Object>
+
+namespace base {
+
+class Serializer;
+
+
+class Time : public Object
+{
+public:
+  Time();
+  Time(const Time& t) { secs=t.secs; micros=t.micros; }
+  Time(long secs, long micros) { this->secs=secs; this->micros=micros; }
+  Time(Real secs);
+  virtual ~Time();
+
+  virtual String className() const { return String("Time"); }
+
+  bool isPast() const { return less(*this,now()); }
+
+  Time& operator=(const Time& t) { secs=t.secs; micros=t.micros; return *this; }
+  bool operator==(const Time& t) const { return equal(*this,t); }
+  Time& operator-=(const Time& t);
+  Time& operator+=(const Time& t);
+  Time& operator*=(Real s);
+  Time& operator/=(Real s) { return operator*=(1.0/s); }
+
+  Real seconds() const { return Real(secs) + Real(micros)/Real(microsPerSec); }
+
+  static const long microsPerSec = 1000000;
+  static const Time& now();
+  static bool isPast(const Time& t) { return less(t,now()); }
+
+  bool equals(const Time& t, Time eps = Time(0,10));
+
+  static bool less(const Time& t1, const Time& t2);
+  static bool greater(const Time& t1, const Time& t2);
+
+  static void sleep(const Time& t);
+  static void sleep(long secs, long micros);
+  static void sleep(Real secs) { sleep(Time(secs)); }
+
+  static long timeResolution() { return resolution; } // us
+
+  void serialize(Serializer& s); ///< read or write object state to Serializer
+
+  long secs, micros;
+
+protected:
+  static Time* time;
+
+  static long baseSecs;
+  static long baseMicros;
+  static Time lastNow;
+  static long resolution;
+
+  static bool equal(const Time& t1, const Time& t2) { return (t1.secs==t2.secs) && (t1.micros==t2.micros); }
+  void normalize();
+
+};
+
+std::ostream& operator<<(std::ostream& out, const Time& t); // Output
+
+inline Time operator-(const Time& t1, const Time& t2)
+{ Time r(t1); r-=t2; return r; }
+
+inline Time operator+(const Time& t1, const Time& t2)
+{ Time r(t1); r+=t2; return r; }
+
+inline Time operator*(const Time& t, Real s)
+{ Time r(t); r*=s; return r; }
+
+inline Time operator*(Real s, const Time& t)
+{ Time r(t); r*=s; return r; }
+
+inline Time operator/(const Time& t, Real s)
+{ Time r(t); r/=s; return r; }
+
+inline bool Time::equals(const Time& t, Time eps)
+{
+  if (Time::equal(*this, t)) return true;
+
+  if (Time::greater(*this, t)) 
+    return Time::less(*this - t, eps);
+  return Time::less(t - *this, eps);
+
+}
+
+inline bool operator<(const Time& t1, const Time& t2)
+{ return Time::less(t1,t2); }
+
+inline bool operator>(const Time& t1, const Time& t2)
+{ return Time::greater(t1,t2); }
+
+
+
+} // base
+
+#endif

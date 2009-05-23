@@ -1,0 +1,160 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: PlatformDescription 1121 2004-09-27 22:16:14Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_PLATFORMDESCRIPTION_
+#define _ROBOT_PLATFORMDESCRIPTION_
+
+#include <robot/robot>
+
+#include <base/Named>
+#include <base/Externalizable>
+#include <base/ReferencedObject>
+#include <base/Dimension3>
+#include <base/Expression>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+
+/**
+ * An abstract description of a Robot's platform
+ *  (typically the mobile base)
+ */
+class PlatformDescription : public base::Named, public base::Externalizable, public base::ReferencedObject
+{
+public:
+  PlatformDescription()
+    : Named("platform"), mobile(false),
+      holonomic(true), dims(base::Dimension3(1,1,0.1)) , offset(0,0,-0.05)
+    {}
+
+  PlatformDescription(String name, const base::Dimension3& dimensions,
+                      const base::Vector3& originOffset,
+                      bool mobile, bool holonomic=true, Real L=1, Real W=2)
+    : Named(name), mobile(mobile), holonomic(holonomic),
+      dims(dimensions),offset(originOffset), nhL(L), nhW(W) {}
+
+  PlatformDescription(const PlatformDescription& p)
+    : Named(p),
+      mobile(p.mobile), holonomic(p.holonomic),
+      dims(p.dims), offset(p.offset), nhL(p.nhL), nhW(p.nhW) {}
+
+  PlatformDescription& operator=(const PlatformDescription& p)
+    {
+      setName(p.getName());
+      mobile = p.mobile;
+      holonomic = p.holonomic;
+      dims = p.dims;
+      offset = p.offset;
+      nhL = p.nhL;
+      nhW = p.nhW;
+      return *this;
+    }
+
+  void set(String name, const base::Dimension3& dimensions,
+           const base::Vector3& originOffset,
+           bool mobile, bool holonomic=true, Real L=1, Real W=2)
+    {
+      setName(name);
+      setMobile(mobile);
+      setHolonomic(holonomic);
+      setDimensions(dimensions);
+      setOriginOffset(originOffset);
+      setL(L);
+      setW(W);
+    }
+
+
+  virtual String className() const { return String("PlatformDescription"); }
+
+  virtual bool   isMobile() const    ///< is the robot mobile, or fixed (e.g. to the floor)?
+    { return mobile; }
+  virtual bool   isHolonomic() const ///< if mobile, is the platform capable of holonomic movement
+    { return holonomic; }
+
+  virtual base::Dimension3 dimensions() const ///< physical platform bounding dimensions (Length, Width, Thickness)
+    { return dims; }
+
+  virtual base::Vector3 originOffset() const ///< offset of platfom/robot origin from platform shape's origin
+    { return offset; }
+
+  virtual Real L() const  ///< distance of nonholonomic platform drive axle back from platform origin
+    { return nhL; }
+
+  virtual Real W() const  ///< distance between nonholonomic platform steering axle and drive axle
+    { return nhW; }
+
+
+  /**
+   * get an equivelent kinematic chain for this platform.
+   * The platform dof can either be 0, 3 or 6:
+   * - 0-dof: the chain consists of a single link; a FixedTransform set to platformTransform (transform from world frame to platform origin)
+   * - 3-dof: platform position in the 2D (x,y) plane with orientation theta about the Z-axis.
+   *          The static components of the platform position are taken from platformTransform.
+   * - 6-dof: platform position in 3D (x,y,z) and EulerRPY (roll, pitch, yaw) orientation.
+   * If the platform is not mobile, platformDOF is considered 0
+   */
+  virtual KinematicChain getKinematicChain(Int platformDOF=0, const base::Matrix4& platformTransform = base::Matrix4()) const;
+
+
+  /**
+   * utility method to compute the steering angle needed to move the non-holonomic platform from state q to qp.
+   * The dimension of q determines the platform DOF assumed (see getKinematicChain) - must be 0, 3 or 6.
+   *  (since a 0-dof platform can't be controlled, 0 is returned)
+   */
+  virtual Real requiredSteeringAngle(const Vector& q, const Vector& qp) const;
+
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  PlatformDescription(String name) : Named(name), mobile(false) {}
+
+  void setMobile(bool mobile) { this->mobile = mobile; }
+  void setHolonomic(bool holonomic) { this->holonomic = holonomic; }
+  void setDimensions(base::Dimension3 dimensions) { dims = dimensions; }
+  void setOriginOffset(base::Vector3 originOffset) { offset = originOffset; }
+  void setL(Real L) { nhL = L; }
+  void setW(Real W) { nhW = W; }
+
+private:
+  bool   mobile;
+  bool   holonomic;
+
+  base::Dimension3 dims;
+  base::Vector3 offset; ///< offset of platfom/robot origin from platform shape's origin
+
+  // for non-holonomic platform only
+  Real nhL; ///< distance of nonholonomic platform drive axle back from platform origin
+  Real nhW; ///< distance between nonholonomic platform steering axle and drive axle
+
+  friend class Robot;
+};
+
+
+} // robot
+
+#endif

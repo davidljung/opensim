@@ -1,0 +1,1403 @@
+/****************************************************************************
+  Copyright (C)2001 by Andrei Alexandrescu
+
+  This file is a derivative of a file from the Loki Library written by
+  Andrei Alexandrescu.  It was distributed by him under the terms
+  listed below (titled Loki Original Distribution Terms).
+  In accordance with the terms, this distribution contains the copyright
+  notice here and the copyright notice and permission notice
+  in supporting documentation.  The terms do *not* require
+  redistribution under those same terms.  This code is distributed
+  to you under the terms of the GNU General Public License (GPL) 
+  below.  The GPL does not require you to maintain the terms of
+  the Loki Original Distribution Terms, but you are encouraged to do so.
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+ ****************************************************************************
+  Loki Original Distribution Terms:
+
+  The Loki Library
+  Copyright (c) 2001 by Andrei Alexandrescu
+  This code accompanies the book:
+  Alexandrescu, Andrei. "Modern C++ Design: Generic Programming and Design 
+      Patterns Applied". Copyright (c) 2001. Addison-Wesley.
+  Permission to use, copy, modify, distribute and sell this software for any 
+      purpose is hereby granted without fee, provided that the above copyright 
+      notice appear in all copies and that both that copyright notice and this 
+      permission notice appear in supporting documentation.
+  The author or Addison-Welsey Longman make no representations about the 
+      suitability of this software for any purpose. It is provided "as is" 
+      without express or implied warranty.
+ ****************************************************************************
+
+  $Id: policyref.impl 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+// Last update: June 20, 2001
+
+#ifndef SMARTPTR_INC_
+#define SMARTPTR_INC_
+
+////////////////////////////////////////////////////////////////////////////////
+// IMPORTANT NOTE
+// Due to threading issues, the OwnershipPolicy has been changed as follows:
+//     Release() returns a boolean saying if that was the last release
+//        so the pointer can be deleted by the StoragePolicy
+//     IsUnique() was removed
+////////////////////////////////////////////////////////////////////////////////
+
+
+#include <base/SmallObj>
+#include <base/TypeManip>
+#include <base/NullType>
+#include <base/static_check>
+#include <functional>
+#include <stdexcept>
+
+namespace base
+{
+
+////////////////////////////////////////////////////////////////////////////////
+// class template DefaultSPStorage
+// Implementation of the StoragePolicy used by ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class T>
+    class DefaultSPStorage
+    {
+    public:
+        typedef T* StoredType;    // the type of the pointee_ object
+        typedef T* PointerType;   // type returned by operator->
+        typedef T& ReferenceType; // type returned by operator*
+        
+        DefaultSPStorage() : pointee_(Default()) 
+        {}
+
+        // The storage policy doesn't initialize the stored pointer 
+        //     which will be initialized by the OwnershipPolicy's Clone fn
+        DefaultSPStorage(const DefaultSPStorage&)
+        {}
+
+        template <class U>
+        DefaultSPStorage(const DefaultSPStorage<U>&) 
+        {}
+        
+        DefaultSPStorage(const StoredType& p) : pointee_(p) {}
+        
+        PointerType operator->() const { return pointee_; }
+        
+        ReferenceType operator*() const { return *pointee_; }
+        
+        void Swap(DefaultSPStorage& rhs)
+        { std::swap(pointee_, rhs.pointee_); }
+    
+        // Accessors
+        friend inline PointerType GetImpl(const DefaultSPStorage& sp)
+        { return sp.pointee_; }
+        
+    	friend inline const StoredType& GetImplRef(const DefaultSPStorage& sp)
+    	{ return sp.pointee_; }
+
+    	friend inline StoredType& GetImplRef(DefaultSPStorage& sp)
+    	{ return sp.pointee_; }
+
+        // Default value to initialize the pointer
+        static StoredType Default()
+        { return 0; }
+
+    protected:
+        // Destroys the data stored
+        // (Destruction might be taken over by the OwnershipPolicy)
+        void Destroy()
+        { delete pointee_; }
+    
+    private:
+        // Data
+        StoredType pointee_;
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template RefCounted
+// Implementation of the OwnershipPolicy used by ref
+// Provides a classic external reference counting implementation
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    class RefCounted
+    {
+    public:
+        RefCounted() 
+        {
+            pCount_ = static_cast<unsigned int*>(
+                SmallObject<>::operator new(sizeof(unsigned int)));
+            assert(pCount_);
+            *pCount_ = 1;
+        }
+        
+        RefCounted(const RefCounted& rhs) 
+        : pCount_(rhs.pCount_)
+        {}
+        
+        // MWCW lacks template friends, hence the following kludge
+        template <typename P1>
+        RefCounted(const RefCounted<P1>& rhs) 
+        : pCount_(reinterpret_cast<const RefCounted&>(rhs).pCount_)
+        {}
+        
+        P Clone(const P& val)
+        {
+            ++*pCount_;
+            return val;
+        }
+        
+        void OnInit(const P&)
+        {}
+
+        bool Release(const P&)
+        {
+            if (!--*pCount_)
+            {
+                SmallObject<>::operator delete(pCount_, sizeof(unsigned int));
+                return true;
+            }
+            return false;
+        }
+        
+        void Swap(RefCounted& rhs)
+        { std::swap(pCount_, rhs.pCount_); }
+    
+        enum { destructiveCopy = false };
+
+    private:
+        // Data
+        unsigned int* pCount_;
+    };
+    
+////////////////////////////////////////////////////////////////////////////////
+// class template RefCountedMT
+// Implementation of the OwnershipPolicy used by ref
+// Implements external reference counting for multithreaded programs
+////////////////////////////////////////////////////////////////////////////////
+    template <class P,
+        template <class> class ThreadingModel>
+    class RefCountedMT : public ThreadingModel< RefCountedMT<P, ThreadingModel> >
+    {
+    public:
+        RefCountedMT() 
+        {
+            pCount_ = static_cast<unsigned int*>(
+                SmallObject<ThreadingModel>::operator new(
+                    sizeof(unsigned int)));
+            assert(pCount_);
+            *pCount_ = 1;
+        }
+        
+        RefCountedMT(const RefCountedMT& rhs) 
+        : pCount_(rhs.pCount_)
+        {}
+        
+        // MWCW lacks template friends, hence the following kludge
+        template <typename P1>
+        RefCountedMT(const RefCountedMT<P1, ThreadingModel>& rhs) 
+        : pCount_(reinterpret_cast<const RefCounted<P>&>(rhs).pCount_)
+        {}
+        
+        P Clone(const P& val)
+        {
+            ThreadingModel<RefCountedMT>::AtomicIncrement(*pCount_);
+            return val;
+        }
+        
+        void OnInit(const P&)
+        {}
+
+        bool Release(const P&)
+        {
+            if (!ThreadingModel<RefCountedMT>::AtomicDecrement(*pCount_))
+            {
+                SmallObject<ThreadingModel>::operator delete(pCount_, 
+                    sizeof(unsigned int));
+                return true;
+            }
+            return false;
+        }
+        
+        void Swap(RefCountedMT& rhs)
+        { std::swap(pCount_, rhs.pCount_); }
+    
+        enum { destructiveCopy = false };
+
+    private:
+        // Data
+        volatile unsigned int* pCount_;
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template COMRefCounted
+// Implementation of the OwnershipPolicy used by ref
+// Adapts COM intrusive reference counting to OwnershipPolicy-specific syntax
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    class COMRefCounted
+    {
+    public:
+        COMRefCounted()
+        {}
+        
+        template <class U>
+        COMRefCounted(const COMRefCounted<U>&)
+        {}
+        
+        static P Clone(const P& val)
+        {
+            val->AddRef();
+            return val;
+        }
+        
+        static void OnInit(const P&)
+        {}
+
+        static bool Release(const P& val)
+        { val->Release(); return false; }
+        
+        enum { destructiveCopy = false };
+        
+        static void Swap(COMRefCounted&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template IntrRefCounted
+// Implementation of the OwnershipPolicy used by ref
+// Intrusive reference counting through class Referenced
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    class IntrRefCounted
+    {
+    public:
+        IntrRefCounted()
+        {}
+        
+        template <class U>
+        IntrRefCounted(const IntrRefCounted<U>&)
+        {}
+        
+        static P Clone(const P& val)
+        {
+          if (val!=0)
+	    val->reference();
+	  return val;
+        }
+        
+        static void OnInit(const P& val)
+        {
+	  if (val!=0)
+	    val->reference();
+	}
+
+        static bool Release(const P& val)
+        { 
+	  if (val!=0) 
+	    return val->unreference(); 
+	  return false;
+	}
+        
+        enum { destructiveCopy = false };
+        
+        static void Swap(IntrRefCounted&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template NonSmartShared
+// Implementation of the OwnershipPolicy used by ref
+// Behaves like a regular 'non-smart' builtin pointer
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    class NonSmartShared
+    {
+    public:
+        NonSmartShared()
+        {}
+        
+        template <class U>
+        NonSmartShared(const NonSmartShared<U>&)
+        {}
+        
+        static P Clone(const P& val)
+        {
+	  return val;
+        }
+        
+        static void OnInit(const P& val)
+        {}
+
+        static bool Release(const P& val)
+        { 
+	  return false;
+	}
+        
+        enum { destructiveCopy = false };
+        
+        static void Swap(NonSmartShared&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template DeepCopy
+// Implementation of the OwnershipPolicy used by ref
+// Implements deep copy semantics, assumes existence of a Clone() member 
+//     function of the pointee type
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct DeepCopy
+    {
+        DeepCopy()
+        {}
+        
+        template <class P1>
+        DeepCopy(const DeepCopy<P1>&)
+        {}
+        
+        static P Clone(const P& val)
+        { return val->Clone(); }
+        
+        static void OnInit(const P&)
+        {}
+
+        static bool Release(const P& val)
+        { return true; }
+        
+        static void Swap(DeepCopy&)
+        {}
+        
+        enum { destructiveCopy = false };
+    };
+    
+////////////////////////////////////////////////////////////////////////////////
+// class template RefLinked
+// Implementation of the OwnershipPolicy used by ref
+// Implements reference linking
+////////////////////////////////////////////////////////////////////////////////
+
+    namespace Private
+    {
+        class RefLinkedBase
+        {
+        public:
+            RefLinkedBase() 
+            { prev_ = next_ = this; }
+            
+            RefLinkedBase(const RefLinkedBase& rhs) 
+            {
+                prev_ = &rhs;
+                next_ = rhs.next_;
+                prev_->next_ = this;
+                next_->prev_ = this;
+            }
+            
+            bool Release()
+            {
+                if (next_ == this)
+                {   
+                    assert(prev_ == this);
+                    return true;
+                }
+                prev_->next_ = next_;
+                next_->prev_ = prev_;
+                return false;
+            }
+            
+            void Swap(RefLinkedBase& rhs)
+            {
+                if (next_ == this)
+                {
+                    assert(prev_ == this);
+                    if (rhs.next_ == &rhs)
+                    {
+                        assert(rhs.prev_ == &rhs);
+                        // both lists are empty, nothing 2 do
+                        return;
+                    }
+                    prev_ = rhs.prev_;
+                    next_ = rhs.next_;
+                    prev_->next_ = next_->prev_ = this;
+                    rhs.next_ = rhs.prev_ = &rhs;
+                    return;
+                }
+                if (rhs.next_ == &rhs)
+                {
+                    rhs.Swap(*this);
+                    return;
+                }
+                std::swap(prev_, rhs.prev_);
+                std::swap(next_, rhs.next_);
+                std::swap(prev_->next_, rhs.prev_->next_);
+                std::swap(next_->prev_, rhs.next_->prev_);
+            }
+                
+            enum { destructiveCopy = false };
+
+        private:
+            mutable const RefLinkedBase* prev_;
+            mutable const RefLinkedBase* next_;
+        };
+    }
+    
+    template <class P>
+    class RefLinked : public Private::RefLinkedBase
+    {
+    public:
+        RefLinked()
+        {}
+        
+        template <class P1>
+        RefLinked(const RefLinked<P1>& rhs) 
+        : Private::RefLinkedBase(rhs)
+        {}
+
+        static P Clone(const P& val)
+        { return val; }
+
+        static void OnInit(const P&)
+        {}
+
+        bool Release(const P&)
+        { return Private::RefLinkedBase::Release(); }
+    };
+    
+////////////////////////////////////////////////////////////////////////////////
+// class template DestructiveCopy
+// Implementation of the OwnershipPolicy used by ref
+// Implements destructive copy semantics (a la std::auto_ptr)
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    class DestructiveCopy
+    {
+    public:
+        DestructiveCopy()
+        {}
+        
+        template <class P1>
+        DestructiveCopy(const DestructiveCopy<P1>&)
+        {}
+        
+        template <class P1>
+        static P Clone(P1& val)
+        {
+            P result(val);
+            val = P1();
+            return result;
+        }
+
+        static void OnInit(const P&)
+        {}
+
+        static bool Release(const P&)
+        { return true; }
+        
+        static void Swap(DestructiveCopy&)
+        {}
+        
+        enum { destructiveCopy = true };
+    };
+    
+////////////////////////////////////////////////////////////////////////////////
+// class template NoCopy
+// Implementation of the OwnershipPolicy used by ref
+// Implements a policy that doesn't allow copying objects
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    class NoCopy
+    {
+    public:
+        NoCopy()
+        {}
+        
+        template <class P1>
+        NoCopy(const NoCopy<P1>&)
+        {}
+        
+        static P Clone(const P&)
+        {
+            CT_ASSERT(false, This_Policy_Disallows_Value_Copying);
+        }
+
+        static void OnInit(const P&)
+        {}
+
+        static bool Release(const P&)
+        { return true; }
+        
+        static void Swap(NoCopy&)
+        {}
+        
+        enum { destructiveCopy = false };
+    };
+    
+////////////////////////////////////////////////////////////////////////////////
+// class template AllowConversion
+// Implementation of the ConversionPolicy used by ref
+// Allows implicit conversion from ref to the pointee type
+////////////////////////////////////////////////////////////////////////////////
+
+    struct AllowConversion
+    {
+        enum { allow = true };
+
+        void Swap(AllowConversion&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template DisallowConversion
+// Implementation of the ConversionPolicy used by ref
+// Does not allow implicit conversion from ref to the pointee type
+// You can initialize a DisallowConversion with an AllowConversion
+////////////////////////////////////////////////////////////////////////////////
+
+    struct DisallowConversion
+    {
+        DisallowConversion()
+        {}
+        
+        DisallowConversion(const AllowConversion&)
+        {}
+        
+        enum { allow = false };
+
+        void Swap(DisallowConversion&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template NoCheck
+// Implementation of the CheckingPolicy used by ref
+// Well, it's clear what it does :o)
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct NoCheck
+    {
+        NoCheck()
+        {}
+        
+        template <class P1>
+        NoCheck(const NoCheck<P1>&)
+        {}
+        
+        static void OnDefault(const P&)
+        {}
+
+        static void OnInit(const P&)
+        {}
+
+        static void OnDereference(const P&)
+        {}
+
+        static void Swap(NoCheck&)
+        {}
+    };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// class template AssertCheck
+// Implementation of the CheckingPolicy used by ref
+// Checks the pointer before dereference
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct AssertCheck
+    {
+        AssertCheck()
+        {}
+        
+        template <class P1>
+        AssertCheck(const AssertCheck<P1>&)
+        {}
+        
+        template <class P1>
+        AssertCheck(const NoCheck<P1>&)
+        {}
+        
+        static void OnDefault(const P&)
+        {}
+
+        static void OnInit(const P&)
+        {}
+
+        static void OnDereference(P val)
+        { assert(val); }
+
+        static void Swap(AssertCheck&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template AssertCheckStrict
+// Implementation of the CheckingPolicy used by ref
+// Checks the pointer against zero upon initialization and before dereference
+// You can initialize an AssertCheckStrict with an AssertCheck 
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct AssertCheckStrict
+    {
+        AssertCheckStrict()
+        {}
+        
+        template <class U>
+        AssertCheckStrict(const AssertCheckStrict<U>&)
+        {}
+        
+        template <class U>
+        AssertCheckStrict(const AssertCheck<U>&)
+        {}
+        
+        template <class P1>
+        AssertCheckStrict(const NoCheck<P1>&)
+        {}
+        
+        static void OnDefault(P val)
+        { assert(val); }
+        
+        static void OnInit(P val)
+        { assert(val); }
+        
+        static void OnDereference(P val)
+        { assert(val); }
+        
+        static void Swap(AssertCheckStrict&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class NullPointerException
+// Used by some implementations of the CheckingPolicy used by ref
+////////////////////////////////////////////////////////////////////////////////
+
+    struct NullPointerException : public std::runtime_error
+    {
+        NullPointerException() : std::runtime_error("")
+        { }
+        const char* what() const throw()  // added throw() DJ
+        { return "Null Pointer Exception"; }
+    };
+        
+////////////////////////////////////////////////////////////////////////////////
+// class template RejectNullStatic
+// Implementation of the CheckingPolicy used by ref
+// Checks the pointer upon initialization and before dereference
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct RejectNullStatic
+    {
+        RejectNullStatic()
+        {}
+        
+        template <class P1>
+        RejectNullStatic(const RejectNullStatic<P1>&)
+        {}
+        
+        template <class P1>
+        RejectNullStatic(const NoCheck<P1>&)
+        {}
+        
+        template <class P1>
+        RejectNullStatic(const AssertCheck<P1>&)
+        {}
+        
+        template <class P1>
+        RejectNullStatic(const AssertCheckStrict<P1>&)
+        {}
+        
+        static void OnDefault(const P&)
+        {
+            CompileTimeError<false>
+                ERROR_This_Policy_Does_Not_Allow_Default_Initialization;
+        }
+        
+        static void OnInit(const P& val)
+        { if (!val) throw NullPointerException(); }
+        
+        static void OnDereference(const P& val)
+        { if (!val) throw NullPointerException(); }
+        
+        static void Swap(RejectNullStatic&)
+        {}
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template RejectNull
+// Implementation of the CheckingPolicy used by ref
+// Checks the pointer before dereference
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct RejectNull
+    {
+        RejectNull()
+        {}
+        
+        template <class P1>
+        RejectNull(const RejectNull<P1>&)
+        {}
+        
+        static void OnInit(P val)
+        { if (!val) throw NullPointerException(); }
+
+        static void OnDefault(P val)
+        { OnInit(val); }
+        
+        void OnDereference(P val)
+        { OnInit(val); }
+        
+        void Swap(RejectNull&)
+        {}        
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template RejectNullStrict
+// Implementation of the CheckingPolicy used by ref
+// Checks the pointer upon initialization and before dereference
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class P>
+    struct RejectNullStrict
+    {
+        RejectNullStrict()
+        {}
+        
+        template <class P1>
+        RejectNullStrict(const RejectNullStrict<P1>&)
+        {}
+        
+        template <class P1>
+        RejectNullStrict(const RejectNull<P1>&)
+        {}
+        
+        static void OnInit(P val)
+        { if (!val) throw NullPointerException(); }
+
+        void OnDereference(P val)
+        { OnInit(val); }
+        
+        void Swap(RejectNullStrict&)
+        {}        
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template ByRef
+// Transports a reference as a value
+// Serves to implement the Colvin/Gibbons trick for ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template <class T>
+    class ByRef
+    {
+    public:
+        ByRef(T& v) : value_(v) {}
+        operator T&() { return value_; }
+        // gcc doesn't like this:
+        // operator const T&() const { return value_; }
+    private:
+        T& value_;
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// class template ref (declaration)
+// The reason for all the fuss above
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OwnershipPolicy = IntrRefCounted,
+        class ConversionPolicy = DisallowConversion,
+        template <class> class CheckingPolicy = AssertCheck,
+        template <class> class StoragePolicy = DefaultSPStorage
+    >
+    class ref;
+
+////////////////////////////////////////////////////////////////////////////////
+// class template ref (definition)
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OwnershipPolicy,
+        class ConversionPolicy,
+        template <class> class CheckingPolicy,
+        template <class> class StoragePolicy
+    >
+    class ref
+        : public StoragePolicy<T>
+        , public OwnershipPolicy<typename StoragePolicy<T>::PointerType>
+        , public CheckingPolicy<typename StoragePolicy<T>::StoredType>
+        , public ConversionPolicy
+    {
+        typedef StoragePolicy<T> SP;
+        typedef OwnershipPolicy<typename StoragePolicy<T>::PointerType> OP;
+        typedef CheckingPolicy<typename StoragePolicy<T>::StoredType> KP;
+        typedef ConversionPolicy CP;
+        
+    public:
+        typedef typename SP::PointerType PointerType;
+        typedef typename SP::StoredType StoredType;
+        typedef typename SP::ReferenceType ReferenceType;
+        
+        typedef typename Select<OP::destructiveCopy, 
+                ref, const ref>::Result
+            CopyArg;
+
+    
+        ref()
+        { KP::OnDefault(GetImpl(*this)); }
+    	
+        explicit ref(const StoredType& p) : SP(p)
+        { KP::OnInit(GetImpl(*this)); OP::OnInit(GetImpl(*this)); }
+    	
+    	ref(CopyArg& rhs)
+        : SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+        { GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+    	ref(const ref<T1, OP1, CP1, KP1, SP1>& rhs)
+    	: SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+    	{ GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+    	ref(ref<T1, OP1, CP1, KP1, SP1>& rhs)
+    	: SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+    	{ GetImplRef(*this) = OP::Clone(GetImplRef(rhs)); }
+
+
+        ref(ByRef<ref> rhs)
+    	: SP(rhs), OP(rhs), KP(rhs), CP(rhs)
+        {}
+        
+        operator ByRef<ref>()
+        { return ByRef<ref>(*this); }
+
+    	ref& operator=(CopyArg& rhs)
+    	{
+    	    ref temp(rhs);
+    	    temp.Swap(*this);
+    	    return *this;
+    	}
+
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+    	ref& operator=(const ref<T1, OP1, CP1, KP1, SP1>& rhs)
+    	{
+    	    ref temp(rhs);
+    	    temp.Swap(*this);
+    	    return *this;
+    	}
+    	
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+    	ref& operator=(ref<T1, OP1, CP1, KP1, SP1>& rhs)
+    	{
+    	    ref temp(rhs);
+    	    temp.Swap(*this);
+    	    return *this;
+    	}
+    	
+    	void Swap(ref& rhs)
+    	{
+    	    OP::Swap(rhs);
+    	    CP::Swap(rhs);
+    	    KP::Swap(rhs);
+    	    SP::Swap(rhs);
+    	}
+    	
+    	~ref()
+    	{
+    	    if (OP::Release(GetImpl(*static_cast<SP*>(this))))
+    	    {
+	      SP::Destroy();
+    	    }
+    	}
+    	
+    	friend inline void Release(ref& sp, typename SP::StoredType& p)
+    	{
+    	    p = GetImplRef(sp);
+    	    GetImplRef(sp) = SP::Default();
+    	}
+    	
+    	friend inline void Release(ref& sp)
+    	{
+    	    GetImplRef(sp) = SP::Default();
+    	}
+    	
+    	friend inline void Reset(ref& sp, typename SP::StoredType p)
+    	{ ref(p).Swap(sp); }
+
+        PointerType operator->()
+        {
+            KP::OnDereference(GetImplRef(*this));
+            return SP::operator->();
+        }
+
+        PointerType operator->() const
+        {
+            KP::OnDereference(GetImplRef(*this));
+            return SP::operator->();
+        }
+
+        ReferenceType operator*()
+        {
+            KP::OnDereference(GetImplRef(*this));
+            return SP::operator*();
+        }
+    	
+        ReferenceType operator*() const
+        {
+            KP::OnDereference(GetImplRef(*this));
+            return SP::operator*();
+        }
+
+    	
+        bool operator!() const // Enables "if (!sp) ..."
+        { return GetImpl(*this) == 0; }
+        
+        inline friend bool operator==(const ref& lhs,
+            const T* rhs)
+        { return GetImpl(lhs) == rhs; }
+        
+        inline friend bool operator==(const T* lhs,
+            const ref& rhs)
+        { return rhs == lhs; }
+        
+        inline friend bool operator!=(const ref& lhs,
+            const T* rhs)
+        { return !(lhs == rhs); }
+        
+        inline friend bool operator!=(const T* lhs,
+            const ref& rhs)
+        { return rhs != lhs; }
+
+        // Ambiguity buster
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+        bool operator==(const ref<T1, OP1, CP1, KP1, SP1>& rhs) const
+        { return *this == GetImpl(rhs); }
+
+        // Ambiguity buster
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+        bool operator!=(const ref<T1, OP1, CP1, KP1, SP1>& rhs) const
+        { return !(*this == rhs); }
+
+        // Ambiguity buster
+        template
+        <
+            typename T1,
+            template <class> class OP1,
+            class CP1,
+            template <class> class KP1,
+            template <class> class SP1
+        >
+        bool operator<(const ref<T1, OP1, CP1, KP1, SP1>& rhs) const
+        { return *this < GetImpl(rhs); }
+
+    private:
+        // Helper for enabling 'if (sp)'
+        struct Tester
+        {
+            Tester() {}
+        private:
+            void operator delete(void*);
+        };
+        
+    public:
+        // enable 'if (sp)'
+        operator Tester*() const
+        {
+            if (!*this) return 0;
+            static Tester t;
+            return &t;
+        }
+
+    private:
+        // Helper for disallowing automatic conversion
+        struct Insipid
+        {
+            Insipid(PointerType) {}
+        };
+        
+        typedef typename Select<CP::allow, PointerType, Insipid>::Result
+            AutomaticConversionResult;
+    
+    public:        
+        operator AutomaticConversionResult() const
+        { return GetImpl(*this); }
+    };
+
+////////////////////////////////////////////////////////////////////////////////
+// casting operations class template ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template 
+    <
+      typename Sub,
+      typename Super,
+      template <class> class OwnershipPolicy,
+      class ConversionPolicy,
+      template <class> class CheckingPolicy,
+      template <class> class StoragePolicy
+    >
+    inline base::ref<Sub, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy>
+    static_cast_ref(const base::ref<Super, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy>& r)
+    {
+      base::ref <Sub, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy> subref;
+      typedef StoragePolicy<Sub> DSP;
+      typedef OwnershipPolicy<typename StoragePolicy<Sub>::PointerType> OP;
+      typename DSP::PointerType subp = static_cast<typename DSP::PointerType>(GetImpl(r));
+      GetImplRef(subref) = (subp!=0)?subref.OP::Clone(subp):0;
+      return subref;
+    }
+
+    template 
+    <
+      typename Sub,
+      typename Super,
+      template <class> class OwnershipPolicy,
+      class ConversionPolicy,
+      template <class> class CheckingPolicy,
+      template <class> class StoragePolicy
+    >
+    inline base::ref<Sub, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy>
+    dynamic_cast_ref(const base::ref<Super, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy>& r)
+    {
+      base::ref <Sub, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy> subref;
+      typedef StoragePolicy<Sub> DSP;
+      typedef OwnershipPolicy<typename StoragePolicy<Sub>::PointerType> OP;
+      typename DSP::PointerType subp = dynamic_cast<typename DSP::PointerType>(GetImpl(r));
+      GetImplRef(subref) = (subp!=0)?subref.OP::Clone(subp):0;
+      return subref;
+    }
+
+
+    template 
+    <
+      typename Sub,
+      typename Super,
+      template <class> class OwnershipPolicy,
+      class ConversionPolicy,
+      template <class> class CheckingPolicy,
+      template <class> class StoragePolicy
+    >
+    inline base::ref<Sub, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy>
+    // crashes gcc3.2
+    //narrow_cast_ref(base::ref< typename Select< SUPERSUBCLASS_STRICT(Super,Sub),Super,NullType>::Result, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy> r)
+    narrow_cast_ref(base::ref<Super, OwnershipPolicy, ConversionPolicy, CheckingPolicy, StoragePolicy> r)
+    {
+      return static_cast_ref<Sub,Super,OwnershipPolicy,ConversionPolicy,CheckingPolicy,StoragePolicy>(r);
+    }
+
+#define narrow_ref narrow_cast_ref
+
+
+////////////////////////////////////////////////////////////////////////////////
+// free comparison operators for class template ref
+////////////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////////////////////
+// operator== for lhs = ref, rhs = raw pointer
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator==(const ref<T, OP, CP, KP, SP>& lhs,
+        const U* rhs)
+    { return GetImpl(lhs) == rhs; }
+    
+////////////////////////////////////////////////////////////////////////////////
+// operator== for lhs = raw pointer, rhs = ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator==(const U* lhs,
+        const ref<T, OP, CP, KP, SP>& rhs)
+    { return rhs == lhs; }
+
+////////////////////////////////////////////////////////////////////////////////
+// operator!= for lhs = ref, rhs = raw pointer
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator!=(const ref<T, OP, CP, KP, SP>& lhs,
+        const U* rhs)
+    { return !(lhs == rhs); }
+    
+////////////////////////////////////////////////////////////////////////////////
+// operator!= for lhs = raw pointer, rhs = ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator!=(const U* lhs,
+        const ref<T, OP, CP, KP, SP>& rhs)
+    { return rhs != lhs; }
+
+////////////////////////////////////////////////////////////////////////////////
+// operator< for lhs = ref, rhs = raw pointer -- NOT DEFINED
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator<(const ref<T, OP, CP, KP, SP>& lhs,
+        const U* rhs);
+        
+////////////////////////////////////////////////////////////////////////////////
+// operator< for lhs = raw pointer, rhs = ref -- NOT DEFINED
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator<(const U* lhs,
+        const ref<T, OP, CP, KP, SP>& rhs);
+        
+////////////////////////////////////////////////////////////////////////////////
+// operator> for lhs = ref, rhs = raw pointer -- NOT DEFINED
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator>(const ref<T, OP, CP, KP, SP>& lhs,
+        const U* rhs)
+    { return rhs < lhs; }
+        
+////////////////////////////////////////////////////////////////////////////////
+// operator> for lhs = raw pointer, rhs = ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator>(const U* lhs,
+        const ref<T, OP, CP, KP, SP>& rhs)
+    { return rhs < lhs; }
+  
+////////////////////////////////////////////////////////////////////////////////
+// operator<= for lhs = ref, rhs = raw pointer
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator<=(const ref<T, OP, CP, KP, SP>& lhs,
+        const U* rhs)
+    { return !(rhs < lhs); }
+        
+////////////////////////////////////////////////////////////////////////////////
+// operator<= for lhs = raw pointer, rhs = ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator<=(const U* lhs,
+        const ref<T, OP, CP, KP, SP>& rhs)
+    { return !(rhs < lhs); }
+
+////////////////////////////////////////////////////////////////////////////////
+// operator>= for lhs = ref, rhs = raw pointer
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator>=(const ref<T, OP, CP, KP, SP>& lhs,
+        const U* rhs)
+    { return !(lhs < rhs); }
+        
+////////////////////////////////////////////////////////////////////////////////
+// operator>= for lhs = raw pointer, rhs = ref
+////////////////////////////////////////////////////////////////////////////////
+
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP,
+        typename U
+    >
+    inline bool operator>=(const U* lhs,
+        const ref<T, OP, CP, KP, SP>& rhs)
+    { return !(lhs < rhs); }
+
+} // namespace base
+
+////////////////////////////////////////////////////////////////////////////////
+// specialization of std::less for ref
+////////////////////////////////////////////////////////////////////////////////
+
+namespace std
+{
+    template
+    <
+        typename T,
+        template <class> class OP,
+        class CP,
+        template <class> class KP,
+        template <class> class SP
+    >
+    struct less< base::ref<T, OP, CP, KP, SP> >
+        : public binary_function<base::ref<T, OP, CP, KP, SP>,
+            base::ref<T, OP, CP, KP, SP>, bool>
+    {
+        bool operator()(const base::ref<T, OP, CP, KP, SP>& lhs,
+            const base::ref<T, OP, CP, KP, SP>& rhs) const
+        { return less<T*>()(GetImpl(lhs), GetImpl(rhs)); }
+    };
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Change log:
+// June 20, 2001: ported by Nick Thurn to gcc 2.95.3. Kudos, Nick!!!
+////////////////////////////////////////////////////////////////////////////////
+
+#endif // SMARTPTR_INC_

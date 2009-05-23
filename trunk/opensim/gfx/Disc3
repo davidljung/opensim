@@ -1,0 +1,114 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Disc3 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_DISC3_
+#define _GFX_DISC3_
+
+#include <gfx/gfx>
+#include <base/Point3>
+#include <base/Vector3>
+#include <gfx/Segment3>
+
+#include <iostream>
+
+
+namespace gfx {
+
+
+class Disc3
+{
+
+public:
+  Disc3() 
+    : n(Vector3(0,0,1)), r(1) {}
+  Disc3(const Point3& origin, const Vector3& normal, Real radius) 
+    : o(origin), n(normal), r(radius) { n.normalize(); }
+  Disc3(const Disc3& d) 
+    : o(d.o), n(d.n), r(d.r) {}
+  ~Disc3() {}
+  
+  Disc3& operator=(const Disc3& d)
+    {
+      if (&d == this) return *this;
+      o=d.o;
+      n=d.n;
+      r=d.r;
+      n.normalize();
+      return *this; 
+    }
+  
+  bool operator==(const Disc3& d) const
+    {
+      if (&d == this) return true;
+      return (o==d.o) && (n==d.n) && (r==d.r);
+    }
+    
+  bool operator!=(const Disc3& d) const
+    { 
+      if (&d == this) return false;
+      return (o!=d.o) || (n!=d.n) || (r!=d.r);
+    }
+    
+  bool equals(const Disc3& d, Real epsilon = consts::epsilon) const
+    { 
+      if (&d == this) return true;
+      return (o.equals(d.o,epsilon) && n.equals(d.n,epsilon) && Math::equals(r,d.r,epsilon));
+    }
+  
+  /// shortest distance between disc and p
+  Real distanceTo(const Point3& p) const
+    {
+      return (pointClosestTo(p)-p).length();
+    }
+  
+  
+  /// find point on the disc that is closest to p
+  Point3 pointClosestTo(const Point3& p) const;
+  
+  /// is point p on the disc?
+  bool contains(const Point3& p) const
+    {
+      return Math::equals(distanceTo(p),0);
+    }
+  
+  
+  /// return shortest segment between this disc and segment s
+  Segment3 shortestSegmentBetween(const Segment3& s) const;
+  
+  
+  Point3 o;  ///< origin
+  Vector3 n; ///< normal
+  Real r;    ///< radius
+};
+
+
+// Operations
+
+inline std::ostream& operator<<(std::ostream& out, const Disc3& d) // Output
+{ return out << "(origin:" << d.o << " normal:" << d.n << " radius:" << d.r << ")"; }
+
+
+} // gfx
+
+#endif

@@ -1,0 +1,108 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SpatialGroup 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_SPATIALGROUP_
+#define _PHYSICS_SPATIALGROUP_
+
+#include <physics/physics>
+
+#include <base/ReferencedObject>
+#include <base/Named>
+#include <physics/Spatial>
+
+#include <base/reflist>
+#include <physics/Body>
+
+
+namespace physics {
+
+/// A collection of spatial entities
+class SpatialGroup : public Spatial
+{
+public:
+  SpatialGroup();
+  SpatialGroup(const String& name);
+  SpatialGroup(const SpatialGroup& bg);
+  virtual ~SpatialGroup();
+
+  virtual String className() const { return String("SpatialGroup"); }
+
+  
+  virtual SpatialGroup& operator=(const SpatialGroup& sg);
+  
+  virtual void setImplicitConfiguration(ref<Spatial> spatial);
+  virtual void setExplicitConfiguration(const base::Transform& configuration);
+  
+  virtual void   setPosition(const Point3& pos);
+  virtual Point3 getPosition() const;
+  virtual void   setOrientation(const Orient& orient);
+  virtual Orient getOrientation() const;
+  virtual void setConfiguration(const base::Transform& configuration);
+
+  virtual void add(ref<Spatial> spatial);
+  virtual void remove(ref<Spatial> spatial);
+  virtual void clear();
+  
+  typedef base::reflist<Spatial> SpatialList;
+  typedef SpatialList::iterator       iterator;
+  typedef SpatialList::const_iterator const_iterator;
+  
+  iterator       begin() { return spatials.begin(); }
+  iterator       end()   { return spatials.end(); }
+  const_iterator begin() const { return spatials.begin(); }
+  const_iterator end() const   { return spatials.end(); }
+  
+  virtual void updateGroupPositionOrientation(const Point3& pos, const Orient& orient);
+  virtual void updateGroupConfiguration(const base::Transform& configuration);
+  
+protected:
+  SpatialList spatials;
+  
+private:
+  bool implicit; ///< if true, the configuration of this group is implicit (i.e. it is that of spatial)
+
+  ref<Spatial> spatial; ///< if implicit, the configuration of this group is the same configuration of this spatial
+  
+  Point3 position; ///< if explicit, origin of this group (i.e. its position) 
+  Orient orient;   ///< if explicit, orientation of this group 
+  
+  friend std::ostream& operator<<(std::ostream& out, const SpatialGroup& sg);
+};
+  
+  
+inline std::ostream& operator<<(std::ostream& out, const SpatialGroup& sg) // Output
+{
+  SpatialGroup::SpatialList::const_iterator s = sg.spatials.begin();
+  SpatialGroup::SpatialList::const_iterator end = sg.spatials.end();
+  while (s != end) {
+    out << *(*s);
+    s++;
+  }
+  return out;
+}
+  
+
+} // physics
+
+#endif

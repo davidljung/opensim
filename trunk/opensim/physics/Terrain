@@ -1,0 +1,55 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Terrain 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+  
+****************************************************************************/
+
+#ifndef _PHYSICS_TERRAIN_
+#define _PHYSICS_TERRAIN_
+
+#include <physics/physics>
+#include <physics/ComplexShape>
+#include <physics/HeightField>
+
+
+namespace physics {
+
+
+class Terrain : virtual public ComplexShape
+{
+public:
+  Terrain() {}
+  Terrain(const Terrain& t) {}
+  virtual ~Terrain() {}
+  
+  virtual void loadMap(ref<base::VFile> mapfile) throw(std::invalid_argument, base::io_error) = 0;
+  virtual void loadHeightField(ref<HeightField> heightfield) throw(std::invalid_argument, base::io_error) = 0;
+
+  virtual void setHeight(Real x, Real y, Real h) throw(std::out_of_range) = 0;
+  virtual Real getHeight(Real x, Real y) const   throw(std::out_of_range) = 0;
+
+  virtual base::Dimension3 getDimension() const = 0;
+};
+
+
+} // physics
+
+#endif

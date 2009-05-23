@@ -1,0 +1,313 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: array 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_ARRAY_
+#define _BASE_ARRAY_
+
+#include <iterator>
+#include <stdexcept>
+
+
+namespace base {
+
+template<typename T>
+class array 
+{
+public:
+  typedef T value_type;
+  typedef value_type* pointer;
+  typedef const value_type* const_pointer;
+  typedef value_type* iterator;
+  typedef const value_type* const_iterator;
+  typedef value_type& reference;
+  typedef const value_type& const_reference;
+  typedef Int size_type;
+  typedef SInt difference_type;
+
+  typedef std::reverse_iterator<const_iterator> const_reverse_iterator;
+  typedef std::reverse_iterator<iterator> reverse_iterator;
+
+  array() { init(0,1); }
+  array(size_type n) { init(n,n); }
+  array(size_type n, size_type initial_capacity) { init(n,initial_capacity); }
+
+  array(size_type n, T a[], bool by_reference=true) {
+    if (!by_reference) {
+      init(n,n);
+      for(size_type e=0; e<n; ++e) _a[e] = a[e];
+    }
+    else {
+      _size = _capacity = n;
+      _a = a;
+      _owner = false;
+    }
+  }
+  
+  array(const array& a) { 
+    init(a._size,a._size);
+    copy(a);
+  }
+  
+  ~array() {
+    if (_owner) delete[] _a;
+  }
+  
+  
+  array& operator=(const array& a)
+  {
+    copy(a);
+    return *this;
+  }
+
+  bool operator==(const array& a) const
+  {
+    if (_size != a._size) return false;
+    for(size_type e=0; e<_size; ++e)
+      if (!(_a[e] == a._a[e])) return false;
+    return true;
+  }
+
+  bool operator!=(const array& a) const
+  {
+    if (_size != a._size) return true;
+    for(size_type e=0; e<_size; ++e)
+      if (_a[e] != a._a[e]) return true;
+    return false;
+  }
+
+
+  // 0-based indexing
+  reference operator[](difference_type i) {
+#ifdef DEBUG
+    if ((size_type(i) >= _size) || (i<0)) {
+      Assertm( false, "array index within bounds (debug only check)");
+    }
+#endif
+    return _a[i];
+  }
+  
+  const_reference operator[](difference_type i) const {
+#ifdef DEBUG
+    if ((size_type(i) >= _size) || (i<0)) {
+      Assertm( false, "array index within bounds (debug only check)");
+    }
+#endif
+    return _a[i];
+  }
+
+  // 1-based indexing
+  reference operator()(difference_type i) {
+#ifdef DEBUG
+    if ((size_type(i) > _size) || (i<1)) {
+      Assertm( false, "array index within bounds (debug only check)");
+    }
+#endif
+    return _a[i-1];
+  }
+  const_reference operator()(difference_type i) const {
+#ifdef DEBUG
+    if ((size_type(i) > _size) || (i<1)) {
+      Assertm( false, "array index within bounds (debug only check)");
+    }
+#endif    
+    return _a[i-1];
+  }
+
+  // auto resize to index (0-based)
+  reference at(difference_type i) throw(std::out_of_range) {
+    if (size_type(i) >= _size) {
+      if (_owner) 
+	resize(i+1);
+      else
+	throw std::out_of_range(Exception("array index out of bounds"));
+    }
+    return _a[i];
+  }
+  
+  size_type size() const { return _size; }
+  size_type capacity() const { return _capacity; }
+  
+  array& clear() 
+  {
+    if (_owner) delete[] _a;
+    init(0,1);
+    return *this;
+  }
+  
+  bool empty() { return _size == size_type(0); }
+
+  
+  // swap content of this with a
+  void swap(array& a) {
+    T* tmp_a = _a;
+    size_type tmp_size = _size;
+    size_type tmp_capacity = _capacity;
+    bool tmp_owner = _owner;
+    
+    _a = a._a;
+    _size = a._size;
+    _capacity = a._capacity;
+    _owner = a._owner;
+
+    a._a = tmp_a;
+    a._size = tmp_size;
+    a._capacity = tmp_capacity;
+    a._owner = tmp_owner;
+  }
+
+  
+  // stack operations
+  reference front() throw(std::out_of_range) {
+    if (_size>0)
+      return _a[0];
+    else
+      throw std::out_of_range((Exception("array has no elements (no front)")));
+  }
+  
+  const_reference front() const throw(std::out_of_range) {
+    if (_size>0)
+      return _a[0];
+    else
+      throw std::out_of_range((Exception("array has no elements (no front)")));
+  }
+  
+  reference back() throw(std::out_of_range) {
+    if (_size>0)
+      return _a[_size-1];
+    else
+      throw std::out_of_range((Exception("array has no elements (no back)")));
+  }
+
+  const_reference back() const throw(std::out_of_range) {
+    if (_size>0)
+      return _a[_size-1];
+    else
+      throw std::out_of_range((Exception("array has no elements (no back)")));
+  }
+
+  void push_back(const T& e) {
+    resize(_size+1);
+    _a[_size-1] = e;
+  }
+  
+  void pop_back() throw(std::out_of_range) {
+    if (_size>0)
+      resize(_size-1);
+    else
+      throw std::out_of_range((Exception("array has no elements (nothing to pop)")));
+  }
+
+
+  iterator begin() { return _a; }
+  const_iterator begin() const { return _a; }
+  
+  iterator end() { return _a + _size; }
+  const_iterator end() const { return _a + _size; }
+
+  pointer c_array() { return _a; }
+  const_pointer c_array() const { return _a; }
+  
+  //  operator T*() { return _a; }
+
+
+  void extend(size_type new_min_capacity)
+  {
+    size_type newcapacity = _capacity;
+    while (newcapacity < new_min_capacity)
+      newcapacity = size_type((Real(newcapacity) * 1.5) +1);
+    
+    if (newcapacity > _capacity) {
+      T *_olda = _a;
+      _a = new T[newcapacity];
+      for(size_type e=0; e<_size; ++e)
+	_a[e] = _olda[e];
+      
+      if (_owner) delete[] _olda;
+      _capacity = newcapacity;
+      _owner=true;
+    }
+  }
+
+
+  array& trim()
+  {
+    if (!_owner) return *this;
+    size_type newcapacity = _size;
+    if (newcapacity==0) newcapacity=1;
+    T *_olda = _a;
+    _a = new T[newcapacity];
+    for(size_type e=0; e<_size; ++e)
+      _a[e] = _olda[e];
+    delete[] _olda;
+    _capacity = newcapacity;
+    return *this;
+  }
+
+  
+  array& resize(size_type newsize)
+  {
+    if (newsize > _capacity) extend(newsize);
+    _size = newsize;
+    return *this;
+  }
+
+
+  array& destructive_resize(size_type newsize)
+  {
+    if (_owner) delete[] _a;
+    _size = _capacity = newsize;
+    _a = new T[_capacity];
+    _owner = true;
+    return *this;
+  }
+
+  
+private:
+  T *_a;
+  size_type _size;
+  size_type _capacity;
+  bool      _owner;  // true if we alloc'd _a, false is it was provided
+
+  void init(size_type size, size_type cap) {
+    if (cap<size) cap = size;
+    if (cap<=0) cap=1;
+    _size=size; _capacity=cap;
+    _a = new T[_capacity];
+    _owner = true;
+  }
+  
+  void copy(const array& a)
+  {
+    if (_owner)
+      resize(a._size);
+    size_type minsize = (_size<a._size)?_size:a._size;
+    for(size_type e=0; e<minsize; ++e)
+      _a[e] = a._a[e];
+  }
+
+};
+
+} // base
+
+#endif

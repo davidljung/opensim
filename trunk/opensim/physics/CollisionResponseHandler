@@ -1,0 +1,68 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: CollisionResponseHandler 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_COLLISIONRESPONSEHANDLER_
+#define _PHYSICS_COLLISIONRESPONSEHANDLER_
+
+#include <physics/physics>
+
+#include <physics/Collider>
+#include <physics/CollidableBody>
+#include <physics/CollisionDetector>
+
+
+namespace physics {
+
+class CollisionState;
+
+
+class CollisionResponseHandler : public Collider
+{
+public:
+  CollisionResponseHandler(ref<CollisionDetector> collisionDetector) : collisionDetector(collisionDetector) {}
+  virtual ~CollisionResponseHandler() {}
+
+  virtual void handleCollision(ref<CollisionState> collisionState) = 0;
+  
+  virtual void collide(ref<const Collidable> collidable1, ref<const Collidable> collidable2) 
+    { 
+      Assert( instanceof(*collidable1, const CollidableBody) );
+      Assert( instanceof(*collidable2, const CollidableBody) );
+      ref<const CollidableBody> body1( narrow_ref<const CollidableBody>(collidable1) );
+      ref<const CollidableBody> body2( narrow_ref<const CollidableBody>(collidable2) );
+      handleCollision(collisionDetector->getCollisionState(body1, body2)); 
+    }
+  virtual void collide(ref<const CollidableGroup> group) { Collider::collide(group); }
+
+protected:
+  CollisionResponseHandler() {}
+  CollisionResponseHandler(const CollisionResponseHandler& h) : Collider(h) {}
+  
+  ref<CollisionDetector> collisionDetector; //!!! should be a weak pointer (as typically the detector has us as a listener - cyclic)
+};
+
+
+} // physics
+
+#endif

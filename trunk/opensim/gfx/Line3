@@ -1,0 +1,124 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Line3 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_LINE3_
+#define _GFX_LINE3_
+
+#include <gfx/gfx>
+#include <base/Point3>
+#include <base/Vector3>
+#include <gfx/Segment3>
+
+#include <iostream>
+
+
+namespace gfx {
+
+
+class Line3
+{
+
+public:
+  Line3() {}
+  Line3(const Point3& origin, const Vector3& direction) 
+    : o(origin), d(direction) { d.normalize(); }
+  Line3(const Segment3& seg)
+    : o(seg.s), d(seg.e-seg.s) { d.normalize(); }
+  Line3(const Line3& l) 
+    : o(l.o), d(l.d) {}
+  ~Line3() {}
+  
+  Line3& operator=(const Line3& l)
+    {
+      if (&l == this) return *this;
+      o=l.o;
+      d=l.d;
+      d.normalize();
+      return *this; 
+    }
+  
+  bool operator==(const Line3& l) const
+    {
+      if (&l == this) return true;
+      return (o==l.o) && (d==l.d);
+    }
+    
+  bool operator!=(const Line3& l) const
+    { 
+      if (&l == this) return false;
+      return (o!=l.o) || (d!=l.d);
+    }
+    
+  bool equals(const Line3& l, Real epsilon = consts::epsilon) const
+    { 
+      if (&l == this) return true;
+      return (o.equals(l.o,epsilon) && d.equals(l.d,epsilon));
+    }
+  
+  /// shortest distance between line and p
+  Real distanceTo(const Point3& p) const
+    {
+      return cross(d,p-o).length();
+    }
+  
+  
+  /// shortest distance between line and line l2
+  Real distanceTo(const Line3& l2) const
+    { return shortestSegmentBetween(l2).length(); }
+  
+  /// find point on the line that is closest to p
+  Point3 pointClosestTo(const Point3& p) const
+    {
+      Real u = dot(d,p-o);
+      return o + u*d;
+    }
+  
+  /// is point p on the line?
+  bool contains(const Point3& p) const
+    {
+      if (p.equals(o)) return true;
+
+      Point3 pn = (p-o).normalize();
+      return pn.equals(d) || pn.equals(-d);
+    }
+  
+  
+  /// return shortest segment between this line and line l2
+  Segment3 shortestSegmentBetween(const Line3& l2) const;
+  
+  
+  Point3 o;  ///< origin
+  Vector3 d; ///< direction
+};
+
+
+// Operations
+
+inline std::ostream& operator<<(std::ostream& out, const Line3& l) // Output
+{ return out << "(origin:" << l.o << " dir:" << l.d << ")"; }
+
+
+} // gfx
+
+#endif

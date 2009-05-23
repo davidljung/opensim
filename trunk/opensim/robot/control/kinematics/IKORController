@@ -1,0 +1,190 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: IKORController 1130 2004-09-28 20:48:31Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_IKORCONTROLLER_
+#define _ROBOT_CONTROL_KINEMATICS_IKORCONTROLLER_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <base/Time>
+
+#include <robot/Controller>
+#include <robot/Controllable>
+#include <robot/Robot>
+#include <robot/control/kinematics/InverseKinematicsSolver>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// IKOR (Inverse Kinematics On Redundant systems) Controller.
+/**
+ * An inverse kinematics controller for redundant manipulators.  Can use either a
+ * least norm solution method (without constraints) or the Full Space Parameterization (FSP)
+ * method (with a selection of optimization method, criteria and constraints).
+ *
+ * Requires the following ControlInterface (:type)
+ *
+ *  :JointPositionControl
+ *   - outputs control the position of a maniulators joints (angle for revolute joints
+ *     and extension for prismatic joints)
+ *
+ * Provides the following ControlInterfaces (name:type)
+ *
+ *  manipulatorEEPosition:EndEffectorPositionControl
+ *   - outputs control the position (and possibly orientation) of the manipulator
+ *     end-effector (through inverse kinematics).  Inputs give the current EE position.
+ *
+ *  manipulatorLinkPositions:LinkOriginPositions
+ *   - inputs provide the position of the manipulator link origins
+ *
+ */
+class IKORController : public robot::Controller, public robot::Controllable
+{
+public:
+  enum IKMethod { LeastNorm, FSPLagrangian };
+
+  IKORController(IKMethod method, ref<robot::Robot> robot, Int manipulatorIndex,
+                 bool platformActive = false, bool orientationControl = true,
+                 base::Orient::Representation orientationRepresentation = base::Orient::EulerRPY);
+
+  virtual String className() const { return String("IKORController"); }
+
+
+  /// Requires a "JointPositionControl" ControlInterface type.
+  virtual void setControlInterface(ref<ControlInterface> controlInterface);
+
+  virtual bool isConnected() const { return (manipulatorInterface!=0); }
+
+  virtual bool iterate(const base::Time& time);
+
+  virtual array<std::pair<String,String> > controlInterfaces() const;
+
+  virtual ref<ControlInterface> getControlInterface(String interfaceName="") throw(std::invalid_argument);
+
+  /// proximity distance below which obstacle avoidance constraints become active
+  void setProximityDangerDistance(Real d) { this->d = d; }
+
+protected:
+  IKMethod method;                 ///< Inverse Kinematics method to employ (e.g. FSP)
+  ref<const robot::Robot> robot;   ///< Robot to be controlled
+  bool platformActive;             ///< consider first dof(s) to be the platform?
+  bool orientationControl;         ///< position & orientation control of EE, or just position control?
+  base::Orient::Representation orientRep;///< representation of the orientation components of the interface inputs/outputs
+
+  robot::KinematicChain manipChain;    ///< kinematic chain of the manipulator (without any tools)
+
+  Real d; // proximity danger distance
+
+  /// Solvers to use for computing IK
+  ref<InverseKinematicsSolver>     ikSolver;
+  InverseKinematicsSolver::OptimizationMethod      optMethod;
+  InverseKinematicsSolver::OptimizationCriterion   optCriterion;
+  InverseKinematicsSolver::OptimizationConstraints optConstraints;
+  Vector tx; ///< requested target End-Effector position
+  base::Time lastTime;        ///< time of last iterate() (or 0)
+  mutable Vector x;     ///< temporary to hold last computed EE position/orient
+  mutable Vector q;     ///< corresponding joint variables for posEE
+
+  ref<ControlInterface> manipulatorInterface; ///< position ControlInterface for manipulator
+  ref<ControlInterface> proxInterface;        ///< proximity sensor interface (or 0)
+
+
+  /// Calculate the End-Effector position and orientation from the forward kinematics transform
+  /** caches q & x. Representation of orientation component is orientRep */
+  void calcEEPositionOrientation();
+
+
+  /// ControlInterface provided for controlling the desired End-Effector motion
+  /** Just holds a ref to IKORController and calls back to its members to do its work */
+  class EEPositionControlInterface : public robot::ControlInterface
+  {
+  public:
+    EEPositionControlInterface(ref<IKORController> c, const String& interfaceName, const String& interfaceType)
+      : c(c) { setName(interfaceName); setType(interfaceType); }
+    EEPositionControlInterface(const EEPositionControlInterface& copy)
+      : c(copy.c) {}
+
+    virtual String className() const { return String("EEPositionControlInterface"); }
+    virtual Object& clone() const { return *NewObj EEPositionControlInterface(*this); }
+
+    Int inputSize() const;
+    String inputName(Int i) const;
+    Real getInput(Int i) const;
+    const Vector& getInputs() const;
+
+    Int outputSize() const;
+    String outputName(Int i) const;
+    void setOutput(Int i, Real value);
+    void setOutputs(const Vector& values);
+
+  protected:
+    ref<IKORController> c;
+
+  };
+
+  /// ControlInterface provided for obtaining the link origin positions
+  /** Just holds a ref to IKORController and calls back to its members to do its work */
+  class LinkPositionsControlInterface : public robot::ControlInterface
+  {
+  public:
+    LinkPositionsControlInterface(ref<IKORController> c, const String& interfaceName, const String& interfaceType)
+      : c(c) { setName(interfaceName); setType(interfaceType); }
+    LinkPositionsControlInterface(const LinkPositionsControlInterface& copy)
+      : c(copy.c) {}
+
+    virtual String className() const { return String("LinkPositionsControlInterface"); }
+    virtual Object& clone() const { return *NewObj LinkPositionsControlInterface(*this); }
+
+    Int inputSize() const;
+    String inputName(Int i) const;
+    Real getInput(Int i) const;
+    const Vector& getInputs() const;
+
+    Int outputSize() const;
+    String outputName(Int i) const;
+    void setOutput(Int i, Real value);
+    void setOutputs(const Vector& values);
+
+  protected:
+    ref<IKORController> c;
+
+  };
+
+  mutable Vector linkPositions; ///< positions of origins of each link (3*M components - i.e. (x,y,z)*M )
+
+
+  static array<String> inputName;  ///< name of EEPositionControlInterface inputs
+  static array<String> outputName; ///< name of EEPositionControlInterface outputs
+
+
+
+  friend class EEPositionControlInterface;
+};
+
+
+}
+}
+} // robot::control::kinematics
+
+#endif

@@ -1,0 +1,43 @@
+#.ext_dir = ../../../external ;
+
+project gfx
+  : usage-requirements
+                 <include>$(ext)/osg/include         #OpenSceneGraph
+                 <include>$(ext)/producer/include    #OpenProducer
+                 <include>$(ext)/openthreads/include #OpenThreads
+                 <library>..//osg
+                 <library>..//osgProducer
+                 <library>..//osgGA
+                 <library>..//osgDB
+                 <library>..//osgText
+                 <library>..//osgUtil
+                 <library>..//osgProducer
+                 <library>..//producer
+                 <library>..//openthreads
+  : requirements
+                 <include>$(ext)/osg/include         #OpenSceneGraph
+                 <include>$(ext)/producer/include    #OpenProducer
+                 <include>$(ext)/openthreads/include #OpenThreads
+  ;
+
+lib os_gfx :    /base//os_base
+                Color3.cpp
+                Line3.cpp
+                Segment3.cpp
+                Quad3.cpp
+                Disc3.cpp
+                GfxTest.cpp
+#               TriangleContainer.cpp
+                TriangleIterator.cpp
+                VisualTriangles.cpp
+#                EnhancedShapeDrawable.cpp
+                Triangle3.cpp
+                IndexedPoint3Array.cpp
+                CLODTerrainRenderer.cpp
+                CLODTerrainDrawable.cpp
+                OSGWorld.cpp
+                LookAtCameraManipulator.cpp
+                TrackballManipulator.cpp
+                VisualPath.cpp
+                cutils.c
+        ;

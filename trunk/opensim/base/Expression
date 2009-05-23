@@ -1,0 +1,268 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Expression 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.23 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_EXPRESSION_
+#define _BASE_EXPRESSION_
+
+#include <base/base>
+#include <base/ReferencedObject>
+#include <base/Serializable>
+#include <base/Serializer>
+#include <base/Vector>
+#include <base/Matrix>
+
+#include <base/ExpressionNode>
+#include <base/ConstantExpression>
+#include <base/VariableExpression>
+#include <base/NegateExpression>
+#include <base/SumExpression>
+#include <base/DifferenceExpression>
+#include <base/ProductExpression>
+#include <base/QuotientExpression>
+#include <base/SinExpression>
+#include <base/CosExpression>
+
+#ifdef USE_BOOST_UBLAS
+#include <boost/numeric/ublas/vector.hpp>
+#endif
+
+namespace base {
+
+#ifdef USE_BOOST_UBLAS
+
+namespace ublas = boost::numeric::ublas; // alias
+
+// A Matrix|Vector of Expressions
+typedef ublas::matrix<Expression> ExpressionMatrix;
+typedef ublas::vector<Expression> ExpressionVector;
+
+#else
+typedef matrix<Expression> ExpressionMatrix;
+typedef vector<Expression> ExpressionVector;
+#endif
+
+
+//
+// An expression that can be evaluated with a parameter Vector
+//  and differentiated. Has value semantics.
+//  (represented as an ExpressionNode tree)
+
+class Expression : public Serializable
+{
+  friend  void base::setIdentity( ExpressionMatrix& A );
+  friend class VariableIndexer;
+
+public:
+  Expression();
+  Expression(Real constant);
+  Expression(const Expression& e);
+  Expression(const String& exprString); ///< construct from string - e.g. '2.3*cos(p[0])+p[2]/(4*p[1])'
+
+  virtual String className() const { return String("Expression"); }
+
+  Real       evaluate(const Vector& params) const;
+  Expression differentiate( Expression withRespectTo ) const;
+
+  void simplify(); ///< simplify the expression (constant sub-expression evaluation, common sub-expression elimination etc.)
+  void operationCounts(Int& addsub, Int& multdiv, Int& trig) const; ///< calculate operation counts for evaluating the expression (added to args)
+
+  String toString() const;
+
+  struct VariableIndexer { Expression operator[](Int i) const; };
+
+  static VariableIndexer p; ///< p[i] is an Expression that evaluates to the variable params[i]
+
+  Expression& operator=(const Expression& e) { expr = e.expr; return *this; }
+  Expression& operator+=(const Expression& e);
+  Expression& operator-=(const Expression& e);
+  Expression& operator*=(const Expression& e);
+  Expression& operator/=(const Expression& e);
+  Expression& negate();
+  Expression& sin();
+  Expression& cos();
+
+  virtual void serialize(Serializer& s);
+
+protected:
+  Expression(ref<ExpressionNode> expr)
+    : expr(expr) {}
+
+  ref<ExpressionNode> expr; ///< root of ExpressionNode tree
+
+  // Simplification helper methods
+  ref<ExpressionNode> simplifyConstantExpressions(ref<ExpressionNode> expr); ///< evaluate and replace constant expression subtrees with a single ConstantExpression
+
+  // expression string parsing methods
+  static bool peek(const String& s, Int pos, String next);
+  inline static bool peek(const String& s, Int pos, String::value_type c) 
+                   { if (pos<s.size()) return (s[pos] == c); else return false; }
+  static SInt index(const String& s, Int& pos);
+  static Real real(const String& s, Int& pos);
+  
+  static Expression expression(const String& s, Int& pos);
+  static Expression term(const String& s, Int& pos);
+  static Expression prod(const String& s, Int& pos);
+  
+  
+  // Serialization helpers
+  Serializable::SerializableDerivedInstantiator<SumExpression> sumInstantiator;
+  Serializable::SerializableDerivedInstantiator<DifferenceExpression> differenceInstantiator;
+  Serializable::SerializableDerivedInstantiator<ProductExpression> productInstantiator;
+  Serializable::SerializableDerivedInstantiator<QuotientExpression> quotientInstantiator;
+  Serializable::SerializableDerivedInstantiator<NegateExpression> negateInstantiator;
+  Serializable::SerializableDerivedInstantiator<SinExpression> sinInstantiator;
+  Serializable::SerializableDerivedInstantiator<CosExpression> cosInstantiator;
+  Serializable::SerializableDerivedInstantiator<ConstantExpression> constantInstantiator;
+  Serializable::SerializableDerivedInstantiator<VariableExpression> variableInstantiator;
+};
+
+
+inline std::ostream& operator<<(std::ostream& out, const Expression& e) // Output
+{ return (out << e.toString()); }
+
+
+
+// function operators/operations
+inline Expression operator+(const Expression& lhs, const Expression& rhs)
+{ Expression r(lhs); r+= rhs; return r; }
+
+inline Expression operator-(const Expression& lhs, const Expression& rhs)
+{ Expression r(lhs); r-= rhs; return r; }
+
+inline Expression operator*(const Expression& lhs, const Expression& rhs)
+{ Expression r(lhs); r*= rhs; return r; }
+
+inline Expression operator/(const Expression& lhs, const Expression& rhs)
+{ Expression r(lhs); r/= rhs; return r; }
+
+inline Expression operator-(const Expression& e)
+{ Expression r(e); r.negate(); return r; }
+
+inline Expression sin(const Expression& angle)
+{ Expression r(angle); r.sin(); return r; }
+
+inline Expression cos(const Expression& angle)
+{ Expression r(angle); r.cos(); return r; }
+
+
+
+// Functions for Matrix|Vector of Expressions
+
+#ifdef USE_BOOST_UBLAS
+
+inline ExpressionVector operator*(const ExpressionMatrix& A, const ExpressionVector& x)
+{ return ublas::prod(A,x); }
+
+inline const base::ExpressionMatrix operator*( const ExpressionMatrix A, const ExpressionMatrix B)
+{ return ublas::prod(A,B); }
+
+#else
+
+inline ExpressionVector operator*(const ExpressionMatrix& A, const ExpressionVector& x)
+{
+  Assert(A.cols() == x.size());
+  
+  ExpressionVector r(A.rows());
+
+  for(Int i=0; i<A.rows(); i++) {
+    r(i) = 0;
+    for(Int k=0; k<A.cols(); k++)
+      r(i) += A(i,k) * x(k);
+  }
+ 
+  return r;
+}
+
+inline const base::ExpressionMatrix operator*( const ExpressionMatrix A, const ExpressionMatrix B)
+{ ExpressionMatrix r(A); r*=B; return r; }
+
+
+#endif
+
+/// convert a Matrix into an ExpressionMatrix (of constant Expressions)
+ExpressionMatrix toExpressionMatrix(const base::Matrix& m);
+
+
+
+inline std::ostream& operator<<(std::ostream& out, const ExpressionMatrix& m) // Output
+{ 
+  for(Int r=0; r<m.size1(); r++) {
+    for(Int c=0; c<m.size2(); c++) {
+      out << m(r,c) << " ";
+    }
+    out << "\n";
+  }
+  return out;
+}
+
+inline std::ostream& operator<<(std::ostream& out, const ExpressionVector& v) // Output
+{ 
+  out << "[";
+  for(Int i=0; i<v.size(); i++)
+    out << v[i] << ((i!=v.size()-1)?",":"]");
+  return out;
+}
+
+void base::simplify( ExpressionMatrix& m );
+base::Matrix base::evaluate( const ExpressionMatrix& m, const Vector& params );
+
+
+inline void base::operationCounts( ExpressionMatrix m, Int& addsub, Int& multdiv, Int& trig ) {
+  for ( Int r=0; r < m.size1(); r++ ) {
+    for ( Int c=0; c < m.size2(); c++ ) {
+      m(r,c).operationCounts(addsub,multdiv,trig);
+    }
+  }
+  return;
+}
+
+
+inline void base::serialize(base::Serializer& s, ExpressionMatrix& m)
+{
+  Int rows(m.size1());
+  Int cols(m.size2());
+  s(rows,"rows");
+  s(cols,"cols");
+  if (s.isInput()) m.resize(rows,cols);
+  for ( Int r=0; r < m.size1(); r++ ) 
+    for ( Int c=0; c < m.size2(); c++ ) 
+      s(m(r,c));
+}
+
+
+inline void base::serialize(base::Serializer& s, ExpressionVector& v)
+{
+  Int dim(v.size());
+  s(dim,"dim");
+  if (s.isInput()) v.resize(dim);
+  for ( Int i=0; i < v.size(); i++ ) 
+    s(v[i]);
+}
+
+
+
+} // base
+
+#endif
+

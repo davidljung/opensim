@@ -1,0 +1,83 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: consts 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_CONSTS_
+#define _BASE_CONSTS_
+
+#include <base/Object>
+
+#include <limits>
+
+// we make a namespace consts and them alias consts to base::consts
+//  so that we can write consts::epsilon, which is more readable than
+//  base::epsilon
+
+namespace base {
+namespace consts {
+
+  const  Real epsilon = Real(1e-10);  
+  const  Real epsilon2 = Real(1e-20);
+  const  Real minReal = Real(1.17549435e-38f);
+  const  Real maxReal = Real(3.40282347e+38f);
+  const  SInt minSInt  = (-2147483647-1);
+  const  SInt maxSInt  = 2147483647;
+  const  Int  minInt  = 0;
+  const  Int  maxInt  = 4294967293U;
+  const  Real Pi = Real(3.1415926535897932384626433832795029L);
+  const  Real SqrtHalf = Real(0.7071067811865475244008443621048490);
+  const  Real TwoPi = Real(Pi*2.0);
+  const  Real Infinity = maxReal;
+
+  // unit conversion
+  const Real inchesPerMeter = 39.37007874;
+  const Real metersPerInch = 0.0254;
+
+} // consts
+
+
+
+  // NB: Unfortunately, these are identical to functions in Math, just here 
+  //     as they are used in many inline headers before they can include
+  //     Math (otherwise they'd have to be not inline and we'd take
+  //     a performance hit.
+
+  // equals within eps (i.e. true if |r1-r2| < eps)
+  inline bool equals(const Real r1, const Real r2, Real eps = consts::epsilon)
+  { return ::fabs(r1-r2) < eps; }
+
+  // absolute value (i.e. |s|)
+  inline Real abs(Real s) { return ::fabs(s); }
+
+  // squate root (i.e. n^.5)
+  inline Real sqrt(Real n) { return ::sqrt(n); }
+
+  inline Real sin(Real a) { return ::sin(a); }
+  inline Real cos(Real a) { return ::cos(a); }
+
+
+} // base
+
+namespace consts = base::consts;
+
+#endif

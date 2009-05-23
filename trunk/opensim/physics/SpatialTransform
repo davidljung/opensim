@@ -1,0 +1,79 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: SpatialTransform 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_SPATIALTRANSFORM_
+#define _PHYSICS_SPATIALTRANSFORM_
+
+#include <physics/physics>
+
+#include <physics/Spatial>
+
+#include <base/Transform>
+
+
+namespace physics {
+
+/// A spatial that wraps a Transform around another Spatial 
+///  (its configuration is a relative transform from the child's configuration)
+class SpatialTransform : public Spatial
+{
+public:
+  SpatialTransform();
+  SpatialTransform(const base::Transform& childTransform);
+  SpatialTransform(ref<Spatial> child, const base::Transform& childTransform);
+  SpatialTransform(ref<Spatial> child, ref<Spatial> transformedRelativeTo);
+  SpatialTransform(const String& name);
+  SpatialTransform(const SpatialTransform& st);
+  virtual ~SpatialTransform();
+
+  virtual String className() const { return String("SpatialTransform"); }
+  
+  SpatialTransform& operator=(const SpatialTransform& st);
+
+  virtual void setTransform(const base::Transform& transform);
+  virtual base::Transform getTransform() const;
+  
+  virtual void setChild(ref<Spatial> child);
+  virtual ref<Spatial> getChild() const;
+  
+  // Spatial
+  virtual void   setPosition(const Point3& pos);
+  virtual Point3 getPosition() const;
+  virtual void   setOrientation(const Orient& orient);
+  virtual Orient getOrientation() const;
+  virtual void setConfiguration(const base::Transform& configuration);
+  virtual base::Transform getConfiguration() const;
+  
+
+
+protected:
+  base::Transform t;
+  base::Transform tinv;
+  ref<Spatial> child;
+};
+
+
+} // physics
+
+#endif

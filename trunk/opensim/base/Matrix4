@@ -1,0 +1,387 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Matrix4 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.12 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_MATRIX4_
+#define _BASE_MATRIX4_
+
+#include <iostream>
+
+#include <base/base>
+#include <base/Object>
+#include <base/consts>
+#include <base/Vector3>
+#include <base/Point3>
+#include <base/Vector4>
+#include <base/Matrix3>
+
+#ifdef USE_OSG
+#include <osg/Matrix>
+#endif
+
+
+#define MATRIX4_ACCESS(r,c) (4*(c-1)+r-1)
+
+
+namespace base {
+
+class Matrix4;
+
+// classes to help speed up common vector/matrix operations
+//  (not used directly by the user)
+
+struct M4V4mul {
+  const Matrix4& m;
+  const Vector4& v;
+
+  M4V4mul(const Matrix4& mm, const Vector4& vv) : m(mm), v(vv) {}
+
+  operator Vector4() const;
+};
+
+struct M4V4mulV4add {
+  const Matrix4& m;
+  const Vector4& v;
+  const Vector4& v2;
+
+  M4V4mulV4add(const M4V4mul& mv, const Vector4& vv) : m(mv.m), v(mv.v), v2(vv) {}
+
+  operator Vector4() const;
+};
+
+
+//
+// The matrix
+//
+
+class Matrix4
+{
+
+public:
+  Matrix4() { setIdentity(); }
+  Matrix4(const Matrix4& m) { this->operator=(m); }
+  Matrix4(const Matrix3& m) 
+  {
+    e(1,1)=m.e(1,1); e(1,2)=m.e(1,2); e(1,3)=m.e(1,3); e(1,4)=0;
+    e(2,1)=m.e(2,1); e(2,2)=m.e(2,2); e(2,3)=m.e(2,3); e(2,4)=0;
+    e(3,1)=m.e(3,1); e(3,2)=m.e(3,2); e(3,3)=m.e(3,3); e(3,4)=0;
+    e(4,1) = e(4,2) = e(4,3) = 0; e(4,4) = 1;
+  } 
+  explicit Matrix4(const Real& s) { setDiag(s); }
+  Matrix4(Real e11, Real e12, Real e13, Real e14,
+	  Real e21, Real e22, Real e23, Real e24,
+	  Real e31, Real e32, Real e33, Real e34,
+	  Real e41, Real e42, Real e43, Real e44)
+  {
+    e(1,1)=e11; e(1,2)=e12; e(1,3)=e13; e(1,4)=e14;
+    e(2,1)=e21; e(2,2)=e22; e(2,3)=e23; e(2,4)=e24;
+    e(3,1)=e31; e(3,2)=e32; e(3,3)=e33; e(3,4)=e34;
+    e(4,1)=e41; e(4,2)=e42; e(4,3)=e43; e(4,4)=e44;
+  }
+  Matrix4(const Matrix3& orientation, const Point3& translation)
+  {
+    const Matrix3& m(orientation);
+    e(1,1)=m.e(1,1); e(1,2)=m.e(1,2); e(1,3)=m.e(1,3); e(1,4)=translation.x;
+    e(2,1)=m.e(2,1); e(2,2)=m.e(2,2); e(2,3)=m.e(2,3); e(2,4)=translation.y;
+    e(3,1)=m.e(3,1); e(3,2)=m.e(3,2); e(3,3)=m.e(3,3); e(3,4)=translation.z;
+    e(4,1) = e(4,2) = e(4,3) = 0; e(4,4) = 1;
+  }
+  
+  
+#ifdef USE_OSG
+  Matrix4(const osg::Matrix& matrix)
+  {
+#ifdef OSG_USE_DOUBLE_MATRICES
+    typedef double osgreal;
+#else
+    typedef float osgreal;
+#endif
+    // NB: This relies on both types having the same layout
+    const osgreal* mat = matrix.ptr();
+    for(Int e=0; e<16; e++)
+      m[e] = mat[e];
+  }
+#endif
+  ~Matrix4() {}
+
+
+  Matrix4& setIdentity() throw()
+  {
+    setDiag(Real(1)); return *this;
+  }
+
+  Matrix4& setZero() throw()
+  {
+    setDiag(Real(0)); return *this;
+  }
+
+
+  Real& e(Int row, Int col) throw()
+  {
+    Assertm( !((row < 1) || (row > 4) || (col < 1) || (col > 4)), "matrix row and col within bounds (debug only check)");
+    return m[MATRIX4_ACCESS(row,col)]; 
+  }
+
+  const Real& e(Int row, Int col) const throw()
+  {
+    Assertm( !((row < 1) || (row > 4) || (col < 1) || (col > 4)), "matrix row and col within bounds (debug only check)");
+    return m[MATRIX4_ACCESS(row,col)]; 
+  }
+
+  Real& at(Int row, Int col) throw(std::out_of_range)
+  {
+    if ((row < 1) || (row > 4) || (col < 1) || (col > 4))
+      throw std::out_of_range(Exception("matrix row or col out of bounds"));
+
+    return m[MATRIX4_ACCESS(row,col)];
+  }
+
+  const Real& at(Int row, Int col) const throw(std::out_of_range)
+  {
+    if ((row < 1) || (row > 4) || (col < 1) || (col > 4))
+      throw std::out_of_range(Exception("matrix row or col out of bounds"));
+
+    return m[MATRIX4_ACCESS(row,col)];
+  }
+
+  Real& operator()(Int row, Int col) throw()
+  {
+#ifdef DEBUG
+    return at(row,col);
+#else
+    return e(row,col);
+#endif
+  }
+
+  const Real& operator()(Int row, Int col) const throw()
+  {
+#ifdef DEBUG
+    return at(row,col);
+#else
+    return e(row,col);
+#endif
+  }
+
+
+  Vector4 row(Int row) const         // extract row vector
+  { return Vector4(e(row,1),e(row,2),e(row,3),e(row,4)); }
+
+  Vector4 column(Int col) const      // extract column vector
+  { return Vector4(e(1,col),e(2,col),e(3,col),e(4,col)); }
+
+  void setRow(Int row, const Vector3& r) throw()
+  { e(row,1)=r.x; e(row,2)=r.y; e(row,3)=r.z; }
+
+  void setRow(Int row, const Vector4& r) throw()
+  { e(row,1)=r.x; e(row,2)=r.y; e(row,3)=r.z; e(row,4)=r.w; }
+
+  void setColumn(Int col, const Vector3& c) throw()
+  { e(1,col)=c.x; e(2,col)=c.y; e(3,col)=c.z; }
+
+  void setColumn(Int col, const Vector4& c) throw()
+  { e(1,col)=c.x; e(2,col)=c.y; e(3,col)=c.z; e(4,col)=c.w; }
+
+  void swapColumns(Int col1, Int col2) throw(std::out_of_range)
+  {
+    if ((col1 < 1) || (col1 > 4) || (col2 < 1) || (col2 > 4))
+      throw std::out_of_range(Exception("matrix col out of bounds"));
+
+    Vector4 tmp(column(col1));
+    setColumn(col1,column(col2));
+    setColumn(col2,tmp);
+  }
+
+  void swapRows(Int row1, Int row2) throw(std::out_of_range)
+  {
+    if ((row1 < 1) || (row1 > 4) || (row2 < 1) || (row2 > 4))
+      throw std::out_of_range(Exception("matrix row out of bounds"));
+
+    Vector4 tmp(row(row1));
+    setRow(row1,row(row2));
+    setRow(row2,tmp);
+  }
+
+
+  Vector4 operator[](Int r) const  // row
+  { return row(r); }
+
+
+  int index(Int row, Int col) const throw()
+  { return MATRIX4_ACCESS(row,col); }
+
+  Matrix4& operator=(const Matrix4& src) throw()
+  { 
+    if (&src != this)
+      for(int i=0; i<16; i++)
+	m[i] = src.m[i];
+    return *this;
+  }
+
+
+  bool operator==(const Matrix4& m1) const throw()
+  {
+    for(int i=0; i<16; i++)
+      if (m1.m[i]!=m[i]) return false;
+    return true;
+  }
+
+  bool equals(const Matrix4& m1, Real epsilon = consts::epsilon) const throw()
+  {
+    for(int i=0; i<16; i++)
+      if (!base::equals(m1.m[i],m[i],epsilon)) return false;
+    return true;
+  }
+
+
+  void setToTranslation(const Vector3& trans);
+  void setTranslationComponent(const Vector3& trans);
+  Vector3 getTranslationComponent() const { return Vector3(e(1,4),e(2,4),e(3,4)); }
+  void setRotationAboutZ(Real angle);
+
+  Matrix4& transpose();
+  Matrix4& invert();
+  Matrix4& negate() throw();
+
+  // Find LUP decomposition.  P is represented by the vector Pi, where the element
+  //  values represent the column of P containing a 1. i.e. Pi[i]=j => P[i][j]=1
+  void decomposeLUP(Matrix4& L, Matrix4& U, Vector4& Pi) const;
+  
+  // Solve Ax=b for x, given b, where A=*this (returns x)
+  Vector4  solve(const Vector4& b) const; 
+
+
+  Matrix4& operator*=(const Matrix4& m2);
+  Matrix4& operator+=(const Matrix4& m2);
+  Matrix4& operator-=(const Matrix4& m2);
+  Matrix4& operator*=(const Real& s);
+  Matrix4& operator/=(const Real& s);
+
+  operator Matrix3() const;  ///< convert to 3x3 submatrix
+#ifdef USE_OSG
+  operator osg::Matrix() const; ///< convert to osg::Matrix
+#endif
+
+  const Real* c_array() const { return m; }
+  Real* c_array() { return m; }
+
+  // Solve for xA = b, given LUP decomposition of A as L, U and Pi, and given b, returns x
+  static Vector4 solveLUP(const Matrix4& L, const Matrix4& U, const Vector4& Pi, const Vector4& b);
+
+  static void decomposeLUP(const Matrix4& A, Matrix4& L, Matrix4& U, Vector4& Pi)
+  { A.decomposeLUP(L,U,Pi); }
+
+  // best to use the operators than use these directly
+  static Vector4 matrixMulVector(const Matrix4& m, const Vector4& v); // m x v
+  static Vector4 matrixMulVectorAddVector(const Matrix4& m, const Vector4& v, const Vector4& v2); // m x v + v2
+  static Vector4 matrixMulVector(const Matrix4& m, const Vector3& v); // m x v
+
+  void serialize(Serializer& s); ///< read or write object state to Serializer
+
+private:
+  Real m[16];
+  
+  void setDiag(const Real& d)
+  {
+    m[0] = d;
+    m[1] = Real(0);
+    m[2] = Real(0);
+    m[3] = Real(0);
+    m[4] = Real(0);
+    m[5] = d;
+    m[6] = Real(0);
+    m[7] = Real(0);
+    m[8] = Real(0);
+    m[9] = Real(0);
+    m[10] = d;
+    m[11] = Real(0);
+    m[12] = Real(0);
+    m[13] = Real(0);
+    m[14] = Real(0);
+    m[15] = d;
+  }
+
+};
+
+
+// Operations
+
+
+inline Matrix4 operator*(const Matrix4& m1, const Matrix4& m2) // Matrix multiplication
+{ Matrix4 r(m1); return r *= m2; }
+
+inline Matrix4 operator+(const Matrix4& m1, const Matrix4& m2) // Addition
+{ Matrix4 r(m1); return r += m2; }
+
+inline Matrix4 operator-(const Matrix4& m1, const Matrix4& m2) // Subtraction
+{ Matrix4 r(m1); return r -= m2; }
+
+inline Matrix4 operator-(const Matrix4& m1) // Negation
+{ Matrix4 r(m1); return r.negate(); }
+
+inline Matrix4 operator*(const Matrix4& m1, const Real& s) // Scalar multiplication
+{ Matrix4 r(m1); return r *= s; }
+
+inline Matrix4 operator*(const Real& s, const Matrix4& m1) // Scalar multiplication
+{ Matrix4 r(m1); return r *= s; }
+
+inline Matrix4 operator/(const Matrix4& m1, const Real& s) // Scalar division
+{ Matrix4 r(m1); return r /= s; }
+
+
+inline Vector3 operator*(const Matrix4& m1, const Vector3& v) // Vector multiplication
+{ Vector4 r(Matrix4::matrixMulVector(m1,v)); return Vector3(r.x,r.y,r.z); }
+
+inline Matrix4 transpose(const Matrix4& m) // Transpose
+{ Matrix4 r(m); return r.transpose(); }
+
+inline Matrix4 inverse(const Matrix4& m) // Inverse
+{ Matrix4 r(m); return r.invert(); }
+
+
+// These functions and the structs above provide closures for common vector matrix
+//  operations.
+// For example, an expression like m*v+v2 will expand to:
+//              Matrix4::matrixMulVectorAddVector(m,v,v2);
+// rather than: Vector4 r(operator*(m,v)); r.operator+=(v2), return r
+//   (saving a couple copies between temporaries)
+
+inline M4V4mulV4add operator+(const M4V4mul& mv, const Vector4& vv)
+{ return M4V4mulV4add(mv,vv); }
+
+inline M4V4mul operator*(const Matrix4& mm, const Vector4& vv)
+{ return M4V4mul(mm,vv); }
+
+inline M4V4mul::operator Vector4() const
+{ return Matrix4::matrixMulVector(m,v); }
+
+inline M4V4mulV4add::operator Vector4() const
+{ return Matrix4::matrixMulVectorAddVector(m,v,v2); }
+
+
+std::ostream& operator<<(std::ostream& out, const Matrix4& m); // Output
+
+
+} // base
+
+#endif
+

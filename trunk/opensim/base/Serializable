@@ -1,0 +1,93 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Serializable 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_SERIALIZABLE_
+#define _BASE_SERIALIZABLE_
+
+#include <base/base>
+#include <base/Object>
+
+#include <map>
+
+
+namespace base {
+
+class Serializer;
+
+class Serializable : public virtual base::Object
+{
+public:
+
+  virtual void serialize(Serializer& s) = 0; ///< read or write object state to Serializer
+
+  // the following types and methods allow serialization of concrete derived class
+  //  objects via a ref<> to their, possibly abstract, base class type
+
+  class SerializableInstantiator {
+  public:
+    virtual Serializable* newSerializable() const = 0;
+  };
+
+  template<class SerializableDerived>
+  class SerializableDerivedInstantiator : public SerializableInstantiator
+  {
+  public:
+    virtual Serializable* newSerializable() const { 
+      return NewObj SerializableDerived();
+    }
+  };
+
+  template<class BaseClass, class DerivedClass>
+  static void registerSerializableInstantiator(const SerializableInstantiator& instantiator)
+  {
+    registerSerializableInstantiator(base::className(typeid(BaseClass)), 
+				     base::className(typeid(DerivedClass)),
+				     instantiator);
+  }
+  
+
+  template<class BaseClass>
+  static const SerializableInstantiator& getSerializableInstantiator(const String& derivedClassTypeName)
+  {
+    return getSerializableInstantiator(base::className(typeid(BaseClass)),
+				       derivedClassTypeName); 
+  }
+
+
+  static void registerSerializableInstantiator(const String& baseClassTypeName, 
+					       const String& derivedClassTypeName,
+					       const SerializableInstantiator& instantiator);
+
+  static const SerializableInstantiator& getSerializableInstantiator(const String& baseClassTypeName,
+								     const String& derivedClassTypeName);
+
+private:
+  typedef std::pair<String, const SerializableInstantiator*> BaseAndInstantiatorPair;
+  typedef std::map<String, BaseAndInstantiatorPair > DerivedClassMap;
+  static DerivedClassMap derivedClasses;
+};
+
+} // base
+
+#endif

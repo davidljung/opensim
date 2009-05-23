@@ -1,0 +1,90 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: HeightField 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_HEIGHTFIELD_
+#define _PHYSICS_HEIGHTFIELD_
+
+#include <base/base>
+#include <base/VFile>
+#include <base/path_not_found>
+#include <base/io_error>
+
+#include <valarray>
+
+
+namespace physics {
+
+
+class HeightField : public base::ReferencedObject
+{
+public:
+  HeightField();
+  HeightField(const HeightField& heightfield);
+  HeightField(Int nx, Int ny, Real dx, Real dy) throw(std::invalid_argument);
+  HeightField(ref<base::VFile> file) throw(std::invalid_argument, base::io_error);
+  virtual ~HeightField();
+
+  virtual String className() const { return String("HeightField"); }
+  virtual base::Object& clone() const { return *NewNamedObj(className()) HeightField(*this); }
+
+  Real& height(Real x, Real y)             throw(std::out_of_range);
+  const Real& height(Real x, Real y) const throw(std::out_of_range);
+  Real& at(Real x, Real y)                 throw(std::out_of_range) { return height(x,y); }
+  const Real& at(Real x, Real y) const     throw(std::out_of_range) { return height(x,y); }
+
+  // fast, unchecked and unmapped access
+  Real& height(Int xi, Int yi) throw() { return (*hf)[yi*_nx+xi]; }
+  const Real& height(Int xi, Int yi) const throw() { return (*hf)[yi*_nx+xi]; }
+  Real operator[](Int i) const throw() { return (*hf)[i]; }  
+  Real& operator[](Int i) throw() { return (*hf)[i]; }
+
+  Real dx() const throw() { return _dx; }
+  Real dy() const throw() { return _dy; }
+  Int nx() const throw() { return _nx; }
+  Int ny() const throw() { return _ny; }
+  Real xsize() const throw() { return (_nx-1)*_dx; }
+  Real ysize() const throw() { return (_ny-1)*_dy; }
+  
+  void setResolution(Real dx, Real dy) throw(std::invalid_argument);
+
+  void load(ref<base::VFile> file) throw(std::invalid_argument, base::io_error);
+  void save(ref<base::VFile> file) throw(std::invalid_argument, base::io_error);
+
+  void scale(Real s);
+  void scaleHeights(Real s);
+  Real maxHeight();
+  Real minHeight();
+
+protected:
+  Int _nx, _ny;
+  Real _dx, _dy;
+  std::valarray<Real>* hf;
+
+  void loadDATFile(std::istream& in) throw(base::io_error);
+  void loadTHFFile(std::istream& in) throw(base::io_error);
+};
+
+} // physics
+
+#endif

@@ -1,0 +1,207 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedSerialManipulator 1114 2004-09-27 22:08:25Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_SIMULATEDSERIALMANIPULATOR_
+#define _ROBOT_SIM_SIMULATEDSERIALMANIPULATOR_
+
+#include <robot/sim/sim>
+
+#include <robot/sim/SimulatedKinematicChain>
+
+#include <physics/SolidSystem>
+#include <physics/Solid>
+#include <physics/Motor>
+#include <physics/Spatial>
+#include <physics/SpatialGroup>
+#include <physics/CollidableProvider>
+#include <physics/CollisionDetector>
+#include <physics/CollisionResponseHandler>
+
+#include <robot/sim/SimulatedManipulatorDescription>
+#include <robot/sim/SimulatedTool>
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * Represents a a simulated manipulator according to a supplied
+ * D-H parameter specification.
+ *  Simulated using gfx/physics.
+ */
+class SimulatedSerialManipulator : public SimulatedKinematicChain
+{
+public:
+  SimulatedSerialManipulator(bool dynamic=true);
+  SimulatedSerialManipulator(ref<physics::SolidSystem> solidSystem, bool dynamic=true);
+  SimulatedSerialManipulator(ref<const robot::ManipulatorDescription> manipulatorDescription, ref<physics::SolidSystem> solidSystem, bool dynamic=true);
+
+  virtual String className() const { return String("SimulatedSerialManipulator"); }
+
+  virtual void setDynamic(bool enabled) { dynamic = enabled; }
+
+  virtual void setSolidSystem(ref<physics::SolidSystem> solidSystem)
+    { this->solidSystem = solidSystem; }
+
+  ref<const SimulatedManipulatorDescription> getManipulatorDescription() const { return manipulatorDescr; }
+
+  ref<physics::Solid> getBaseSolid() const  ///< get the Solid for the base link
+    { return baseSolid; }
+
+  /// Set the force (torque for revolute joints) of joint j (first joint j=1)
+  void setJointForce(Int j, Real f);
+
+  /// Set the velocity (ang. velocity for revolute joints) of joint j (first joint j=1)
+  /** NB: As the simulation is force controlled, this will set the target velocity */
+  void setJointVel(Int j, Real v, Real maxForce=10.0);
+
+
+  /// Set the position (angle for revolute joints) of joint j (first joint j=1)
+  /** NB: This will instantaneously move the joint to the specified angle - which obviously
+   *      is not physically realistic.  Consequently, for dynamic simulations, this can
+   *      cause large forces in the system and possibly numerical instability in the
+   *      simulation.  It is intended for non-dynamic simulations.
+   *  NB: the angle is relative to the theta home position.
+   */
+  void setJointPos(Int j, Real p);
+
+
+  /// Get the current theta* angle (revolute) or position d (prismatic) of the joint
+  /** *NB: the angle is relative to the theta home position. */
+  Real getJointPos(Int j) const;
+
+  /// Get the current joint velocity (ang. velocity for revolute joints)
+  Real getJointVel(Int j) const;
+
+  base::Point3 getEEPosition() const;    ///< end-effector position in WorldFrame
+  base::Orient getEEOrientation() const; ///< end-effector orientation in WorldFrame
+
+
+  /// test if tool is in position to be grasped by the end-effector.
+  bool checkProximity(ref<SimulatedTool> tool);
+
+  /// get the last tool passed to checkProximity() that was in proximity to the end-effector (or 0)
+  ref<SimulatedTool> getToolInProximity() const { return proximityTool; }
+
+  /// returns true if a tool is currently being grasped
+  bool isToolGrasped() const { return toolGrasped; }
+
+  /// grasp tool (if a suitable one is within grasping proximity of the end-effector)
+  ///  returns true if a tool was grasped
+  bool graspTool();
+
+  /// release grasp
+  void releaseGrasp();
+
+
+  // Proximity sensor methods
+
+  /// get distance to closest object detected by proximity sensors on the link
+  Real    getClosestObjectDistance(Int link) const;
+
+  /// get the direction vector to the closest object detected by proximity sensors on the link
+  Vector3 getClosestObjectDirection(Int link) const;
+
+  /// get the distance along the link x-axis of the proximity sensor that detected the closest object to the link
+  Real    getClosestObjectSensorPosition(Int link) const;
+
+
+
+  // Spatial
+  virtual void   setPosition(const Point3& pos);
+  virtual Point3 getPosition() const;
+  virtual void   setOrientation(const Orient& orient);
+  virtual Orient getOrientation() const;
+  virtual void   setConfiguration(const base::Transform& configuration);
+  virtual base::Transform getConfiguration() const;
+
+  // CollidableProvider
+  virtual ref<physics::Collidable> createCollidable(CollidableFlags flags = 0);
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(base::Externalizer& e, const String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+  virtual void externalize(base::Externalizer& e, const String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  SimulatedSerialManipulator(const SimulatedSerialManipulator& sm) { Unimplemented; }
+
+  ref<const SimulatedManipulatorDescription> manipulatorDescr;
+
+  /// construct an approximation of the manipulator from the D-H parameters (best we can do)
+  void construct(const base::Point3& initialPosition, const base::Orient& initialOrientation);
+
+  /// compute the dimensions of each link's Solid based on the KinematicChain
+  ///  and fill in linkLengths[]
+  array<base::Dimension3> computeLinkDimensions(const array<Real>& linkRadii, Int firstLinkIndex=1);
+
+
+  /// compute transform information for chain
+  TransformInfo computeLinkTransforms(const Transform& mountTransform, const base::Vector& q) const;
+
+
+
+  /// create the Solids for each link and assemble them into a Spatial tree (and add them to solidSystem)
+  virtual void createLinks(const array<base::Dimension3>& linkDims);
+
+  /// position the links
+  virtual void positionLinks(const TransformInfo& transformInfo);
+
+  virtual void disableCollisions(const array<ref<physics::Collidable> >& collidables,
+                         const array<ref<physics::Collidable> >& proximityCollidables);
+
+  virtual void attachJoints(const TransformInfo& transformInfo);
+
+
+  void setToolInProximity(ref<SimulatedTool> tool) { proximityTool = tool; }
+
+  virtual void handleCollision(ref<physics::CollisionState> collisionState);  ///< called from ProximityCollisionResponseHandler::handleCollision()
+
+
+  mutable Transform mountConfiguration; ///< the mount configuration of the manipulator (WorldFrame)
+  Transform mountToBaseSolid;  ///< transform from mount frame to base Solid frame
+  Transform eeToEESolid;       ///< transform from ee frame to ee Solid frame
+
+  ref<physics::Solid> baseSolid; ///< Solid for the base link
+  ref<physics::Solid> endSolid;  ///< Solid for the end link
+
+  array<ref<physics::SpatialGroup> > linkGroups;   ///< a group for each link (which contains the link Solid and the group for the next link)
+
+
+  Real proximityDistance; ///< distance between ee and tool below which is considered within grasping proximity
+  Real proximityAngle;    ///< anglular distance components between ee and tool below which is considered within grasping range
+
+  ref<SimulatedTool> proximityTool; ///< last tool found to be in proximity of the end-effector (by checkProximity())
+  bool toolGrasped;
+
+
+  friend class SimulatedRobot;
+  friend class ProximityCollisionResponseHandler;
+  friend class base::Serializable::SerializableDerivedInstantiator<SimulatedSerialManipulator>;
+};
+
+
+
+}
+} // robot::sim
+
+#endif

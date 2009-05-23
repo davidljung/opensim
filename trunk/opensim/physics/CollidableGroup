@@ -1,0 +1,101 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: CollidableGroup 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_COLLIDABLEGROUP_
+#define _PHYSICS_COLLIDABLEGROUP_
+
+#include <physics/physics>
+
+#include <physics/Collidable>
+
+
+namespace physics {
+
+
+class CollidableGroup : public Collidable
+{
+public:
+  CollidableGroup() : childIntercollisionsEnabled(true) {}
+  virtual ~CollidableGroup() {}
+  
+  virtual String className() const { return String("CollidableGroup"); }
+  
+  virtual BoundingBox getBoundingBox() const
+  {
+    // combine bounding boxes of all group members
+    BoundingBox bb; bb.setEmpty();
+    const_iterator_const c = const_begin();
+    const_iterator_const end = const_end();
+    while (c != end) {
+      ref<const Collidable> collidable(*c);
+      bb.include( collidable->getBoundingBox() );
+      ++c;
+    }
+    return bb;
+  }
+
+  virtual void addCollidable(ref<Collidable> c) { Assert(c); collidables.push_back(c); } ///< add Collidable to the group
+  virtual void removeCollidable(ref<Collidable> c) { collidables.remove(c); } ///< remove collidable from the group
+  virtual void clear() { collidables.clear(); } ///< remove all Collidables from group
+  
+  virtual ref<const Collidable> findNamed(const String& name, bool recurse=true) const;
+  virtual ref<Collidable>       findNamed(const String& name, bool recurse=true);
+  
+  virtual bool find(ref<const Collidable> collidable, bool recurse=true) const;
+  
+  virtual void setChildIntercollisionEnabled(bool enabled) 
+  { childIntercollisionsEnabled = enabled; }
+  
+  virtual bool isChildIntercollisionEnabled() const
+  { return childIntercollisionsEnabled; }
+  
+  
+  typedef base::reflist<Collidable> Collidables;
+  typedef Collidables::iterator             iterator;
+  typedef Collidables::iterator_const       iterator_const;
+  typedef Collidables::const_iterator       const_iterator;
+  typedef Collidables::const_iterator_const const_iterator_const;
+                                                                                                                                                                                                    
+  iterator       begin()                   { return collidables.begin(); }
+  const_iterator begin() const             { return collidables.begin(); }
+  const_iterator_const const_begin() const { return collidables.const_begin(); }
+  iterator       end()                     { return collidables.end(); }
+  const_iterator end() const               { return collidables.end(); }
+  const_iterator_const const_end() const   { return collidables.const_end(); }
+                                                                                                                                                                                                    
+  
+protected:
+  CollidableGroup(const CollidableGroup& cg) 
+    : Collidable(cg), childIntercollisionsEnabled(cg.childIntercollisionsEnabled),
+      collidables(cg.collidables) {}
+
+  bool childIntercollisionsEnabled;
+  Collidables collidables;
+};
+  
+  
+
+} // physics
+
+#endif

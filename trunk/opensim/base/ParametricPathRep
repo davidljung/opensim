@@ -1,0 +1,87 @@
+/****************************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ParametricPathRep 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_PARAMETRICPATHREP_
+#define _BASE_PARAMETRICPATHREP_
+
+#include <base/PathRep>
+#include <base/Expression>
+#include <base/Math>
+
+
+namespace base {
+
+
+/// Concrete path representation as a set of symbolic parametric equations (functions of s)
+class ParametricPathRep : public PathRep
+{
+public:
+  ParametricPathRep(const ExpressionVector& p);
+
+  virtual Object& clone() const
+    { return *NewObj ParametricPathRep(v); }
+
+  virtual String className() const { return String("ParametricPathRep"); }
+
+  /// get cartesian position at s:[0..1]
+  virtual Point3 position(Real s) const;
+
+  /// get orientation at s:[0..1]
+  virtual Orient orientation(Real s) const;
+
+  virtual Real distinguishedValue(Int i) const;
+
+  /// number of distinguished s values
+  virtual Int numDistinguishedValues() const;
+
+  /// translate the path position by t
+  virtual void translate(const Vector3& t);
+
+  /// rotate the path orientation by r
+  virtual void rotate(const Quat4& r);
+
+  /// transform the path by m
+  virtual void transform(const Matrix4& m);
+
+  virtual void scalePosition(Real s);
+
+  virtual void serialize(Serializer& s);
+
+protected:
+  enum Flags { None=0, HasOrient=1 };
+
+  ParametricPathRep() {}
+
+  ExpressionVector v; ///< parametric rep of path (symbolic expressions for x,y,z[,r,p,y | ,q0,q1,q2,w]) in terms of s in [0..1]
+  
+  Int flags;
+
+  friend class Trajectory;
+  friend class Serializable::SerializableDerivedInstantiator<ParametricPathRep>;
+};
+
+
+} // base
+
+#endif

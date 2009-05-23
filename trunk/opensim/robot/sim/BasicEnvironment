@@ -1,0 +1,147 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: BasicEnvironment 1033 2004-02-11 20:47:52Z jungd $
+  $Revision: 1.6 $
+  $Date: 2004-02-11 15:47:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_BASICENVIRONMENT_
+#define _ROBOT_SIM_BASICENVIRONMENT_
+
+#include <robot/sim/sim>
+
+#include <robot/sim/Environment>
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * An abstract basic 'no-frills' environment for Robots
+ *  Assumes a flat ground and can contain simple obstacles
+ */
+class BasicEnvironment : public Environment
+{
+public:
+  BasicEnvironment(ref<base::VFileSystem> fs, ref<base::Cache> cache, const String& name = "") 
+    : Environment(fs, cache, name) {}
+    
+  BasicEnvironment(const BasicEnvironment& e) 
+    : Environment(e) {}
+    
+  virtual String className() const { return String("BasicEnvironment"); }
+
+  // factory
+  virtual ref<ToolDescription> newToolDescription() const = 0;
+
+  // methods to add/remove tools
+
+  class Tool : public base::Named, public base::ReferencedObject
+  {
+  public:
+    Tool(String name, ref<const robot::ToolDescription> toolDescription,
+	 const base::Point3& position, 
+	 const base::Orient& orientation)
+      : Named(name), toolDescription(toolDescription),
+        position(position), orientation(orientation) {}
+    
+    virtual String className() const { return String("Tool"); }
+
+    virtual ref<const robot::ToolDescription> getToolDescription() const { return toolDescription; }
+    virtual const base::Point3& getPosition() const { return position; }
+    virtual       base::Point3& getPosition() { return position; }
+    virtual const base::Orient& getOrientation() const { return orientation; }
+    virtual       base::Orient& getOrientation() { return orientation; }
+    
+  protected:
+    ref<const robot::ToolDescription> toolDescription;
+    base::Point3 position;
+    base::Orient orientation;
+  };
+
+  
+  virtual ref<Tool> addTool(ref<const robot::ToolDescription> toolDescription,
+                            const base::Point3& position, 
+                            const base::Orient& orientation) = 0;
+
+  virtual void removeTool(ref<Tool> tool) = 0;
+
+  virtual Int numTools() const = 0;
+  virtual ref<Tool> getTool(Int i) = 0;
+  virtual ref<const Tool> getTool(Int i) const = 0;
+
+
+  /// place the specified tool within grasping range of the end-effector of the specified robot manipulator
+  virtual void placeToolInProximity(ref<Tool> tool, ref<Robot> robot, Int manipulatorIndex=0) = 0;
+
+
+  // methods to add/remove simple objects to/from the environment
+  class Obstacle : public base::ReferencedObject, public base::Named
+  {
+  public:
+    enum ObstacleType { BoxObstacle, SphereObstacle };
+
+    Obstacle(base::Dimension3 dims,
+             const base::Point3& position, 
+             const base::Orient& orientation)
+      : type(BoxObstacle), dims(dims), 
+         position(position), orientation(orientation) {}
+    
+    Obstacle(Real radius,
+             const base::Point3& position, 
+             const base::Orient& orientation)
+      : type(SphereObstacle), radius(radius),
+        position(position), orientation(orientation) {}
+
+    virtual String className() const { return String("Obstacle"); }
+
+    void setName(const String& name) { Named::setName(name); }
+    
+    ObstacleType type;
+    base::Dimension3 dims; // for Box
+    Real radius;           // for Sphere
+    base::Point3 position;
+    base::Orient orientation;
+  };
+
+  
+  virtual ref<Obstacle> addBoxObstacle(base::Dimension3 dim, 
+                                       const base::Point3& position, 
+                                       const base::Orient& orientation,
+                                       const String& name="") = 0;
+  
+  virtual ref<Obstacle> addSphereObstacle(Real radius,
+                                          const base::Point3& position, 
+                                          const base::Orient& orientation,
+                                          const String& name="") = 0;
+
+  virtual void removeObstacle(ref<Obstacle> obstacle) = 0;
+  
+  virtual Int numObstacles() const = 0;
+  virtual ref<Obstacle> getObstacle(Int i) = 0;
+  virtual ref<const Obstacle> getObstacle(Int i) const = 0;
+
+};
+
+
+}
+} // robot::sim
+
+#endif

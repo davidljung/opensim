@@ -1,0 +1,64 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: physics 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_
+#define _PHYSICS_
+
+#include <gfx/gfx>
+
+#include <base/Math>
+#include <base/Vector2>
+#include <base/Point2>
+#include <base/Vector3>
+#include <base/Point3>
+#include <base/Quat4>
+#include <base/Orient>
+#include <base/Matrix3>
+#include <base/Matrix4>
+
+#include <physics/physics_error>
+
+namespace physics {
+
+// These are used so commonly, we don't want to qualify them 
+using base::Math;
+using base::Point2;
+using base::Point3;
+using base::Vector2;
+using base::Vector3;
+using base::Vector4;
+using base::Quat4;
+using base::Orient;
+using base::Matrix3;
+using base::Matrix4;
+using base::ref;
+using base::narrow_ref;
+
+using physics::physics_error;
+
+using osg::ref_ptr;
+
+}
+
+#endif

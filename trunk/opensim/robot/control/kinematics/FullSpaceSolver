@@ -1,0 +1,72 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: IKORFullSpaceSolver 1068 2004-07-28 19:06:06Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-07-28 15:06:06 -0400 (Wed, 28 Jul 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_FULLSPACESOLVER_
+#define _ROBOT_CONTROL_KINEMATICS_FULLSPACESOLVER_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <base/ReferencedObject>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+
+/// Base class of Solvers that find the set of vectors gi, such that dq = sum ti.gi s.t. sum tk=1
+///  is a solution to Jdq=dx, and dq = sum ti.gi s.t. sum tk=0 is a solution to
+///  Jdq=0 (null-space)
+class FullSpaceSolver : public base::ReferencedObject
+{
+public:
+
+  /// Computes a set of vectors gi that can be used to find solutions to Ax=b for x
+  /**
+   *   @param A_in                     NxM Matrix
+   *   @param b_in                     N-dim Vector
+   *   @param dependentRowsEliminated  is filled out with the indices of rows of A_in
+   *                                   that are eliminated from the computation because they
+   *                                   are dependent (actually if Ai|bi is dependent.  If only
+   *                                   Ai is dependent but bi conflicts an exception is throw
+   *                                   because solution is impossible)
+   *                                   Can be 0-length is not-supported/used.
+   *   @return      returns the set of vector gis as columns of a Matrix
+   *   @exception   std::invalid_argument if gis can't be found for the provided A & b
+   */
+  virtual Matrix solve(const Matrix& A_in, const Vector& b_in,
+                       array<Int>& dependentRowsEliminated) = 0;
+
+protected:
+  FullSpaceSolver() {}
+  FullSpaceSolver(const FullSpaceSolver& fsp) {}
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

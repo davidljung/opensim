@@ -1,0 +1,79 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: MathTest 1088 2004-09-13 17:28:59Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-09-13 13:28:59 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_MATHTEST_
+#define _BASE_MATHTEST_
+
+#include <cppunit/extensions/HelperMacros.h>
+
+#include <base/Math>
+
+namespace base {
+
+
+class MathTest : public CppUnit::TestFixture
+{
+  static const Int numOfTests = 7;
+
+  CPPUNIT_TEST_SUITE( MathTest );
+
+  CPPUNIT_TEST( testMatrixVector );
+  CPPUNIT_TEST( testRanges );
+  CPPUNIT_TEST( testNullSpace );
+  CPPUNIT_TEST( testInverse );
+  CPPUNIT_TEST_EXCEPTION( testInverseSingular, std::invalid_argument );
+  CPPUNIT_TEST( testSVD );
+  CPPUNIT_TEST( testPseudoInverse );
+  CPPUNIT_TEST( testExpression );
+  CPPUNIT_TEST( testPath );
+
+  CPPUNIT_TEST_SUITE_END();
+
+protected:
+  Matrix I, A, S, P;
+  Vector b, x;
+
+public:
+  MathTest();
+
+  int countTestCases () const { return numOfTests; }
+
+  void setUp();
+  void tearDown();
+
+  void testMatrixVector();
+  void testRanges();
+  void testNullSpace();
+  void testInverse();
+  void testInverseSingular();
+  void testSVD();
+  void testPseudoInverse();
+  void testExpression();
+  void testPath();
+};
+
+
+} // base
+
+#endif

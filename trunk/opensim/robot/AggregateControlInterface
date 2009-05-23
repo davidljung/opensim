@@ -1,0 +1,79 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+	
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+	
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: AggregateControlInterface 1039 2004-02-11 20:50:52Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:50:52 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_AGGREGATECONTROLINTERFACE_
+#define _ROBOT_AGGREGATECONTROLINTERFACE_
+
+#include <robot/robot>
+#include <robot/ControlInterface>
+
+
+namespace robot {
+
+/**
+ * Aggregates one of more ControlInterfaces into a single ControlInterface by
+ *  concatenating their input/output vectors.
+ */
+class AggregateControlInterface : public ControlInterface
+{
+public:
+  AggregateControlInterface(const String& name, const String& type,
+                            array<ref<ControlInterface> > interfaces);
+  AggregateControlInterface(const String& name, const String& type,
+                            ref<ControlInterface> interface1, ref<ControlInterface> interface2);
+  AggregateControlInterface(const AggregateControlInterface& aci);
+
+  virtual String className() const { return String("AggregateControlInterface"); }
+
+  virtual Int           inputSize() const 
+    { recomputeInputSize(); return numInputs; }
+  virtual String        inputName(Int i) const;
+  virtual Real          getInput(Int i) const;
+  virtual const Vector& getInputs() const;
+
+  virtual Int    outputSize() const 
+    { recomputeOutputSize(); return numOutputs; }
+  virtual String outputName(Int i) const;
+  virtual void   setOutput(Int i, Real value);
+  virtual void   setOutputs(const Vector& values);
+
+protected:
+  void recomputeInputSize() const;
+  void recomputeOutputSize() const;
+  
+  void inputIndex(Int aindex, Int& interfaceIndex, Int& index) const;  
+  void outputIndex(Int aindex, Int& interfaceIndex, Int& index) const;
+
+  array< ref<ControlInterface> > interfaces;
+
+  mutable Int numInputs, numOutputs;
+  mutable Vector lastInputs;
+  mutable array<Int> inputOffsets;
+  mutable array<Int> outputOffsets;
+};
+
+
+} // robot
+
+#endif

@@ -1,0 +1,64 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: VFileSystem 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_VFILESYSTEM_
+#define _BASE_VFILESYSTEM_
+
+#include <base/base>
+#include <base/ReferencedObject>
+#include <base/path_not_found>
+#include <base/io_error>
+
+#include <base/PathName>
+#include <base/VEntry>
+#include <base/VDirectory>
+#include <base/VFile>
+
+
+namespace base {
+
+
+class VFileSystem : public ReferencedObject
+{
+public:
+  VFileSystem() {}
+  virtual ~VFileSystem() {}
+
+  virtual ref<VDirectory> root() = 0; ///< get the root directory of this VFileSystem (e.g. "/")
+  virtual ref<VDirectory> temp() = 0; ///< get directory in which temporary files can be stored
+  virtual ref<VDirectory> current() = 0; ///< get the current working directory
+  virtual void setCurrent(const PathName& path) throw (path_not_found, io_error, std::invalid_argument) = 0; ///< set the current directory (defaults to root)
+
+  virtual ref<VDirectory> getDirectory(const PathName& path)   throw (path_not_found, io_error, std::invalid_argument) = 0;
+  virtual ref<VFile>      getFile(const PathName& path)        throw (path_not_found, io_error, std::invalid_argument) = 0;
+  virtual bool            exists(const PathName& path)         throw (io_error) = 0;
+
+protected:  
+  VFileSystem(const VFileSystem& vfs) {}
+
+};
+
+} // base
+
+#endif

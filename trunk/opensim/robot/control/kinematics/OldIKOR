@@ -1,0 +1,76 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: OldIKOR 1036 2004-02-11 20:48:55Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-11 15:48:55 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_OLDIKOR_
+#define _ROBOT_CONTROL_KINEMATICS_OLDIKOR_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <robot/control/kinematics/InverseKinematicsSolver>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// wrapper for old IKORv2 inverse kinematics code.
+class OldIKOR : public InverseKinematicsSolver
+{                   
+public:
+  OldIKOR(const robot::KinematicChain& chain, bool platformActive=false);
+
+  virtual String className() const { return String("OldIKOR"); }
+
+  ///  Solve inverse kinematics.
+  /**
+   * (see InverseKinematicsSolver for parameters)
+   *   @param solver         ignored. The old IKORv2 FSP solver is (implicitly) used.
+   */
+  virtual Vector solve(const Vector& dx, const Vector& x, const Vector& q,
+		       const base::Matrix& J,
+		       OptimizationMethod      optMethod      = Lagrangian,
+		       OptimizationCriterion   optCriterion   = LeastNorm,
+		       OptimizationConstraints optConstraints = OptimizationConstraints(JointLimits),
+		       base::Orient::Representation  orientationRepresentation = base::Orient::EulerRPY);
+
+  /// Set implementation specific parameters.  Unknown names will throw a std::invald_argument exception
+  /** Valid parameters:   name               value            description
+   *  none currently
+   */
+  virtual void setParameter(const String& name, Real value);
+
+protected:
+  robot::KinematicChain chain;
+  bool platformActive;
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

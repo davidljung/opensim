@@ -1,0 +1,137 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: RobotDescription 1120 2004-09-27 22:15:46Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_ROBOTDESCRIPTION_
+#define _ROBOT_ROBOTDESCRIPTION_
+
+#include <robot/robot>
+
+#include <base/array>
+#include <base/Named>
+#include <base/Externalizable>
+#include <base/ReferencedObject>
+
+#include <robot/PlatformDescription>
+#include <robot/ManipulatorDescription>
+#include <robot/KinematicChain>
+
+
+namespace robot {
+
+/**
+ * An abstract description of a Robot
+ */
+class RobotDescription : public base::Named, public base::Externalizable, public base::ReferencedObject
+{
+public:
+  RobotDescription() {}
+  RobotDescription(String name, ref<const PlatformDescription> platformDescription,
+                   array<ref<const ManipulatorDescription> > manipulatorDescriptions,
+                   array<Vector3> manipulatorOffsets)
+    : Named(name), platformDescr(platformDescription),
+      manipulatorDescrs(manipulatorDescriptions), manipOffsets(manipulatorOffsets)
+    {}
+
+  RobotDescription(const RobotDescription& r)
+    : Named(r), platformDescr(r.platformDescr),
+      manipulatorDescrs(r.manipulatorDescrs),
+      manipOffsets(r.manipOffsets)
+    {}
+
+  virtual String className() const { return String("RobotDescription"); }
+
+
+  void set(String name, ref<const PlatformDescription> platformDescription,
+           array<ref<const ManipulatorDescription> > manipulatorDescriptions,
+           array<Vector3> manipulatorOffsets)
+    {
+      setName(name);
+      setPlatformDescription(platformDescription);
+      setManipulatorDescriptions(manipulatorDescriptions);
+      setManipulatorOffsets(manipulatorOffsets);
+    }
+
+
+  // factory
+  virtual ref<PlatformDescription>    newPlatformDescription() const { return ref<PlatformDescription>(NewObj PlatformDescription()); }
+  virtual ref<ManipulatorDescription> newManipulatorDescription() const { return ref<ManipulatorDescription>(NewObj ManipulatorDescription()); }
+
+
+  RobotDescription& operator=(const RobotDescription& r)
+    {
+      setName(r.getName());
+      platformDescr = r.platformDescr;
+      manipulatorDescrs = r.manipulatorDescrs;
+      manipOffsets = r.manipOffsets;
+      return *this;
+    }
+
+  /// get description of this robot's platform
+  virtual ref<const PlatformDescription>       platform() const     { return platformDescr; }
+
+  /// get descriptions of this robot's manipulators (if any)
+  virtual const array<ref<const ManipulatorDescription> >& manipulators() const { return manipulatorDescrs; }
+
+  /// get the offset of each manipulator from the platform origin
+  virtual const array<Vector3>&                manipulatorOffsets() const { return manipOffsets; }
+
+
+  /**
+   * get an equivelent kinematic chain for the robot (from world frame to indicated manipulator end-effector).
+   * The platform dof can either be 0, 3 or 6:
+   * - 0-dof: the first link in the chain is a FixedTransform set to platformTransform (transform from world frame to platform origin)
+   * - 3-dof: platform position in the 2D (x,y) plane with orientation theta about the Z-axis.
+   *          The static components of the platform position are taken from platformTransform.
+   * - 6-dof: platform position in 3D (x,y,z) and EulerRPY (roll, pitch, yaw) orientation.
+   * If the platform is not mobile, the platformDOF is considered 0
+   * If the robot has no manipulator, the chain ends at the platform origin.
+   */
+  virtual KinematicChain getKinematicChain(Int platformDOF=0, const base::Matrix4& platformTransform = base::Matrix4(),
+                                           Int manipIndex=0, Int manipChainIndex=0) const;
+
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const
+    { return ( (format=="xml") && (version==1.0) ); }
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+
+protected:
+  RobotDescription(const String& name) : Named(name) {}
+
+  void setPlatformDescription(ref<const PlatformDescription> pd) { platformDescr = pd; }
+  void setManipulatorDescriptions(const array<ref<const ManipulatorDescription> >& mds) { manipulatorDescrs = mds; }
+  void setManipulatorOffsets(const array<Vector3> offsets) { manipOffsets=offsets; }
+
+private:
+  ref<const PlatformDescription>            platformDescr;     ///< description of mobile platform
+  array<ref<const ManipulatorDescription> > manipulatorDescrs; ///< list of manipulators attached to platform
+  array<Vector3>                            manipOffsets;      ///< Vectors representing the offset of each manipulator relative to the platform coord. frame
+
+  friend class Robot;
+};
+
+
+} // robot
+
+#endif

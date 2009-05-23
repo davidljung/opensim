@@ -1,0 +1,69 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: ODEConstraintGroup 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_ODECONSTRAINTGROUP_
+#define _PHYSICS_ODECONSTRAINTGROUP_
+
+#include <physics/physics>
+#include <physics/ConstraintGroup>
+
+#include <base/reflist>
+
+#include <ode/ode.h>
+
+
+namespace physics {
+
+
+class ODEConstraintGroup : public ConstraintGroup
+{
+public:
+  virtual ~ODEConstraintGroup();
+
+  virtual String className() const { return String("ODEConstraintGroup"); }
+
+
+  virtual void addConstraint(ref<Constraint> c); ///< add constraint to the group
+  virtual void removeConstraint(ref<Constraint> c); ///< remove constraint from the group
+  virtual void clear(); ///< remove all constraints from group (and destroy them)
+
+  dWorldID getWorldID() const { return worldID; }
+  dJointGroupID getJointGroupID() const { return jointGroupID; }
+
+protected:
+  ODEConstraintGroup(dWorldID worldID);
+
+  typedef base::reflist<Constraint> Constraints;
+  Constraints constraints;
+
+  dWorldID worldID;
+  dJointGroupID jointGroupID;
+  
+  friend class ODESolidSystem;
+};
+
+
+} // physics
+
+#endif

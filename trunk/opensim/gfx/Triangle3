@@ -1,0 +1,191 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Triangle3 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.3 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_TRIANGLE3_
+#define _GFX_TRIANGLE3_
+
+#include <gfx/gfx>
+
+#include <base/Transform>
+#include <gfx/Segment3>
+
+#include <iostream>
+
+
+namespace gfx {
+
+
+class Triangle3 
+{
+
+public:
+  Triangle3() {}
+  Triangle3(const Triangle3& t) : _p1(t._p1), _p2(t._p2), _p3(t._p3) {}
+  Triangle3(const Point3& p1, const Point3& p2, const Point3& p3)
+    : _p1(p1), _p2(p2), _p3(p3) {}
+
+  virtual ~Triangle3() {}
+  
+  const Point3& operator[](Int i) const throw() { return e(i); }
+  const Point3& operator()(Int i) const throw() { return e(i-1); }
+
+  virtual const Point3& p1() const    { return _p1; }
+  virtual const Point3& p2() const    { return _p2; }
+  virtual const Point3& p3() const    { return _p3; }
+  virtual void setp1(const Point3& p) { _p1=p; }
+  virtual void setp2(const Point3& p) { _p2=p; }
+  virtual void setp3(const Point3& p) { _p3=p; }
+
+  
+  virtual const Point3& e(Int i) const throw() 
+    {
+#ifdef DEBUG
+    if ((i < 0) || (i > 2))
+      throw std::out_of_range("vertex index out of bounds (debug check only)");
+#endif
+      return (i==0)?_p1:((i==1)?_p2:_p3); 
+    }
+  
+  const Point3& at(Int i) const throw(std::out_of_range)
+  {
+    if ((i < 0) || (i > 2))
+      throw std::out_of_range("vertex index out of bounds");
+
+    return e(i);
+  }
+
+
+  Triangle3& operator=(const Triangle3& src) throw()
+  { 
+    if (&src != this) {
+      setp1(src.p1()); setp2(src.p2()); setp3(src.p3());
+    }
+    return *this;
+  }
+
+
+  bool operator==(const Triangle3& t) const throw()
+  {
+    if (&t == this) return true;
+
+    return ((p1()==t.p1())&&(p2()==t.p2())&&(p3()==t.p3()));
+  }
+
+  bool equals(const Triangle3& t) const throw()
+  {
+    if (&t == this) return true;
+
+    return (p1().equals(t.p1()) && p2().equals(t.p2()) && p3().equals(t.p3()));
+  }
+
+
+  Vector3 normal() const throw()
+  { 
+    Vector3 u12 = p2()-p1();
+    Vector3 u13 = p3()-p1();
+    Vector3 norm = cross(u12,u13);
+    norm.normalize();
+    return norm;
+  }
+
+  Triangle3& operator+=(const Vector3& v)
+    { setp1(p1()+v); setp2(p2()+v); setp3(p3()+v); return *this; }
+
+  Triangle3& operator-=(const Vector3& v)
+    { setp1(p1()-v); setp2(p2()-v); setp3(p3()-v); return *this; }
+
+  Triangle3& operator*=(Real s) { _p1*=s; _p2*=s; _p3*=s; return *this; }
+  Triangle3& operator/=(Real s) { _p1/=s; _p2/=s; _p3/=s; return *this; }
+
+  
+  void transform(const base::Transform& t)
+  {
+    setp1(t*p1());
+    setp2(t*p2());
+    setp3(t*p3());
+  }
+
+
+  /// shortest distance between triangle and p
+  Real distanceTo(const Point3& p) const;
+  
+  /// find point on triangle that is closest to p
+  Point3 pointClosestTo(const Point3& p) const;
+  
+  bool contains(const Point3& p) const
+  { return Math::equals(distanceTo(p),0); }
+  
+  /// return the shortest segment between this triangle and the segment s
+  Segment3 shortestSegmentBetween(const Segment3& s) const
+  { Real ds; return shortestSegmentBetween(s,ds); } 
+  
+  /// return the shortest segment between this triangle and the triangle t
+  Segment3 shortestSegmentBetween(const Triangle3& t) const;
+  
+  /// shortest distance between this triangle and the segment s
+  Real distanceTo(const Segment3& s) const
+  { Real ds; shortestSegmentBetween(s,ds); return Math::sqrt(ds); }
+  
+  /// shortest distance between this triangle and the triangle t
+  Real distanceTo(const Triangle3& t) const;
+
+  
+  // does this triangle intersect with t?
+  bool intersect(const Triangle3& t) const;
+
+  class Contact 
+  {
+  public:
+    enum ContactType { None, Point, Segment, Triangle, Quad };
+
+    ContactType type;
+    Point3&     point;
+    Segment3&   segment;
+    Triangle3&  triangle;
+    //Quad3&      quad;
+    Real        depth;
+  };
+
+  // where does this triangle contact t? 
+  //  (returns contact.type!=None)
+  bool contact(const Triangle3& t, Contact& contact) const;
+
+
+protected:
+  Point3 _p1, _p2, _p3;  // three vertices
+
+  Segment3 shortestSegmentBetween(const Segment3& seg, Real& ds) const;
+
+};
+
+
+// Operations
+
+inline std::ostream& operator<<(std::ostream& out, const Triangle3& t) // Output
+{ return out << "(" << t.p1() << "," << t.p2() << "," << t.p3() << ")"; }
+
+
+} // gfx
+
+#endif

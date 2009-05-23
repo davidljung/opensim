@@ -1,0 +1,177 @@
+/****************************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Vector2 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_VECTOR2_
+#define _BASE_VECTOR2_
+
+#include <iostream>
+#include <math.h>
+
+#include <base/base>
+#include <base/array>
+#include <base/consts>
+
+
+namespace base {
+
+
+class Vector2 
+{
+
+public:
+  Vector2() { x=y=Real(0); }
+  Vector2(Real xc, Real yc) { x=xc; y=yc; }
+  Vector2(const Vector2& v) { this->operator=(v); }
+  ~Vector2() {}
+
+  enum Coords { X=1, Y=2, Coords2D=3 };
+  
+  void setZero() throw()
+  { x=y=Real(0); }
+
+  Real& e(Int i) throw()
+  { return (i==1)?x:y; }
+
+  const Real& e(Int i) const throw()
+  { return (i==1)?x:y; }
+
+  Real& at(Int i) throw(std::out_of_range)
+  {
+    if ((i < 1) || (i > 2))
+      throw std::out_of_range(Exception("vector index out of bounds"));
+
+    return (i==1)?x:y;
+  }
+
+  const Real& at(Int i) const throw(std::out_of_range)
+  {
+    if ((i < 1) || (i > 2))
+      throw std::out_of_range(Exception("vector index out of bounds"));
+
+    return (i==1)?x:y;
+  }
+
+
+  Vector2& operator=(const Vector2& src) throw()
+  { 
+    if (&src != this) {
+      x=src.x; y=src.y;
+    }
+    return *this;
+  }
+
+
+  bool operator==(const Vector2& v) const throw()
+  {
+    if (&v == this) return true;
+
+    return ((x==v.x)&&(y==v.y));
+  }
+
+  bool equals(const Vector2& v, Real epsilon = consts::epsilon) const throw()
+  {
+    if (&v == this) return true;
+
+    return (base::equals(x,v.x,epsilon) && base::equals(y,v.y,epsilon));
+  }
+
+
+  Real magnitude() const throw()
+  { return sqrt(x*x+y*y); }
+
+  Real length() const throw()
+  { return magnitude(); }
+
+  Vector2& negate() throw()
+  { x=-x; y=-y; return *this; }
+
+  Vector2& normalize()
+  { Real l=length(); x/=l; y/=l; return *this; }
+
+  Real magNormalize()
+  { Real l=length(); x/=l; y/=l; return l; }
+
+  Real dot(const Vector2& p) const throw()
+  { return x*p.x+y*p.y; }
+
+
+  Vector2& operator+=(const Vector2& v2) throw()
+  { x+=v2.x; y+=v2.y; return *this; }
+
+  Vector2& operator-=(const Vector2& v2) throw()
+  { x-=v2.x; y-=v2.y; return *this; }
+
+  Vector2& operator*=(const Real& s) throw()
+  { x*=s; y*=s; return *this; }
+
+  Vector2& operator/=(const Real& s)
+  { x/=s; y/=s; return *this; }
+
+  const Real* c_array() const { return &x; }
+  Real* c_array() { return &x; }
+
+
+  Real x,y;
+
+};
+
+
+// Operations
+
+inline Vector2 operator+(const Vector2& v1, const Vector2& v2) throw() // Addition
+{ Vector2 r(v1); return r+=v2; }
+
+inline Vector2 operator-(const Vector2& v1, const Vector2& v2) throw() // Subtraction
+{ Vector2 r(v1); return r-=v2; }
+
+inline Vector2 operator-(const Vector2& v1) throw() // Negation
+{ Vector2 r(v1); return -r; }
+
+inline Vector2 operator*(const Vector2& v1, const Real& s) throw() // Scalar multiplication
+{ Vector2 r(v1); return r*=s; }
+
+inline Vector2 operator*(const Real& s, const Vector2& v1) throw() // Scalar multiplication
+{ Vector2 r(v1); return r*=s; }
+
+inline Vector2 operator/(const Vector2& v1, const Real& s) // Scalar division
+{ Vector2 r(v1); return r/= s; }
+
+inline std::ostream& operator<<(std::ostream& out, const Vector2& v) // Output
+{ return out << "(" << v.x << "," << v.y << ")"; }
+
+
+inline Vector2 midpoint(const Vector2& v1, const Vector2& v2) throw() // midpoint between
+{ Vector2 r(v1); r+=v2; return r/=2; }
+
+inline Real dot(const Vector2& v1, const Vector2& v2) throw() // dot product v1.v2
+{ Vector2 r(v1); return r.dot(v2); }
+
+inline Real operator*(const Vector2& v1, const Vector2& v2) // dot procuct v1.v2
+{ return dot(v1,v2); }
+
+
+
+} // base
+
+#endif

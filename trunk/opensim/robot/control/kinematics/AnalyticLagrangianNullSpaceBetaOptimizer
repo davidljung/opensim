@@ -1,0 +1,76 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: AnalyticLagrangianNullSpaceBetaOptimizer 1036 2004-02-11 20:48:55Z jungd $
+  $Revision: 1.1 $
+  $Date: 2004-02-11 15:48:55 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _ROBOT_CONTROL_KINEMATICS_ANALYTICLAGRANGIANNULLSPACEBETAOPTIMIZER_
+#define _ROBOT_CONTROL_KINEMATICS_ANALYTICLAGRANGIANNULLSPACEBETAOPTIMIZER_
+
+#include <robot/control/kinematics/kinematics>
+
+#include <robot/control/kinematics/LagrangianOptimizer>
+#include <robot/control/kinematics/BetaFormConstraints>
+
+
+namespace robot {
+namespace control {
+namespace kinematics {
+
+
+/// A constrained optimizer that uses an analytic Lagrangian solution technique
+/**
+ * Analytic Lagrangian optimizer in the null-space with Beta form constraints.
+ * Similar to the formulation of the FullSpace method 
+ *  (see the AnalyticLagrangianFSBetaOptimizer class), but as the solution is in the
+ *  null-space, the sum of ti constraint can be omitted.  
+ */
+class AnalyticLagrangianNullSpaceBetaOptimizer : public LagrangianOptimizer
+{
+public:
+  AnalyticLagrangianNullSpaceBetaOptimizer() 
+    : gs(0) {}
+
+  virtual String className() const { return String("AnalyticLagrangianNullSpaceBetaOptimizer"); }
+
+  /// set the gs (Matrix of column vectors that span the null-space)
+  virtual void setGs(const Matrix& gs) { this->gs = &gs; }
+
+  /// optimize the objective with the given constraints
+  virtual Vector optimize(ref<const Objective> objective, ref<const Constraints> constraints) const;
+
+protected:
+  Matrix const *gs; ///< matrix of column vectors that span the solition space of dq's (from a full-space solver)
+
+  mutable Vector o; // convenient zero Vector
+  mutable Vector e; // convenient Vector of 1s
+
+  /// compute t Vector
+  Vector calct(const Matrix& Ginv, const Vector& H, ref<const BetaFormConstraints> betaConstraints) const;
+
+};
+
+
+} // namespace kinematics
+} // namespace control
+} // namespace robot
+
+#endif

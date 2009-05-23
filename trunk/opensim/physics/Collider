@@ -1,0 +1,90 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Collider 1031 2004-02-11 20:46:36Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-02-11 15:46:36 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _PHYSICS_COLLIDER_
+#define _PHYSICS_COLLIDER_
+
+#include <physics/physics>
+
+#include <gfx/Visual>
+#include <physics/PotentialCollisionListener>
+#include <physics/Collidable>
+#include <physics/CollidableGroup>
+
+
+namespace physics {
+
+/// Root of classes that collide Collidables
+class Collider : public gfx::Visual, public PotentialCollisionListener, virtual public base::ReferencedObject
+{
+public:
+  Collider();
+  virtual ~Collider();
+
+  /// called at the beginning of each collision cycle
+  virtual void reset() { resetListeners(); }
+  
+  /// notify PotentialCollisionListeners if possible collision between Collidables
+  virtual void collide(ref<const Collidable> collidable1, ref<const Collidable> collidable2) = 0;
+  
+  /// convenience method that calls collide(collidable1, collidable2) for each pair of Collidables in the group
+  ///  collidable, unless collidable isn't a group or has child inter-collision disabled 
+  ///  (so that you can keep all your Collidables in a single top-level group)
+  virtual void collide(ref<const Collidable> collidable);
+
+  /// enable/disable all collisions
+  virtual void collisionEnable(bool enabled) { this->enabled = enabled; }
+  virtual bool isCollisionEnabled() const { return enabled; }
+  
+  virtual void addPotentialCollisionListener(ref<PotentialCollisionListener> listener)
+    { listeners.push_back(listener); }
+    
+  virtual void removePotentialCollisionListener(ref<PotentialCollisionListener> listener)
+    { listeners.remove(listener); }
+  
+  virtual void potentialCollision(ref<const Collidable> collidable1, ref<const Collidable> collidable2)
+    { collide(collidable1, collidable2); }
+  
+
+protected:
+  Collider(const Collider& c) 
+    : enabled(c.enabled), listeners(c.listeners) {}
+
+  bool enabled;
+
+  typedef base::reflist<PotentialCollisionListener> ListenerList;
+  ListenerList listeners;
+
+  /// call potentialCollision(collidable1,collidable2) on all listeners (if enabled)
+  void notifyListeners(ref<const Collidable> collidable1, ref<const Collidable> collidable2);
+  
+  /// call reset() on all listeners (if enabled)
+  void resetListeners();
+  
+};
+
+
+} // physics
+
+#endif

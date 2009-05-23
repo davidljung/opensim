@@ -1,0 +1,55 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Externalizable 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.4 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_EXTERNALIZABLE_
+#define _BASE_EXTERNALIZABLE_
+
+#include <base/base>
+#include <base/Object>
+#include <base/VFile>
+
+
+namespace base {
+
+class Externalizer;
+
+class Externalizable : public virtual base::Object
+{
+public:
+  enum ExternalizationType { Input=1, Output=2, IO = 3 };
+
+  virtual bool formatSupported(String format, Real version = 1.0, ExternalizationType type = IO) const = 0; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(Externalizer& e, String format = "", Real version = 1.0) = 0; ///< read or write object state to Externalizer
+  virtual void externalize(Externalizer& e, String format = "", Real version = 1.0) const; ///< write object state to Externalizer (throws if e is in Input)
+
+
+  // convenience methods
+  void load(ref<VFile> archive, const String& format = "", Real version = 1.0);
+  void save(ref<VFile> archive, const String& format = "", Real version = 1.0);
+
+};
+
+} // base
+
+#endif

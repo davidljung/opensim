@@ -1,0 +1,84 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Color3 1030 2004-02-11 20:46:17Z jungd $
+  $Revision: 1.7 $
+  $Date: 2004-02-11 15:46:17 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _GFX_COLOR3_
+#define _GFX_COLOR3_
+
+#include <gfx/gfx>
+
+#include <iostream>
+
+namespace gfx {
+
+class Color3 {
+
+public:
+  Color3() { r=g=b=Real(0); }
+  Color3(const String& name) { *this = lookupColor(name); }
+  Color3(const Color3& c) { r=c.r; g=c.g; b=c.b; }
+  Color3(Real rc, Real gc, Real bc)
+    { r = rc; g = gc; b = bc; }
+  ~Color3() {}
+
+  Color3& operator=(const Color3& c)
+  { r=c.r; g=c.g; b=c.b; return *this; }
+
+  bool operator==(const Color3& c) const
+  { return ((r==c.r) && (g==c.g) && (b==c.b)); }
+
+  bool equals(const Color3& c, Real epsilon = consts::epsilon) const
+  { return base::equals(r,c.r,epsilon) && base::equals(g,c.g,epsilon) && base::equals(b,c.b,epsilon); }
+
+  void setZero() { r=g=b=Real(0); }
+	
+  Color3& operator*=(Real s) 
+  { s=base::abs(s); if (s<1.0) { r*=s; g*=s; b*=s; } return *this; }
+
+  static Color3 interpolate(const Color3& c1, const Color3& c2, Real t)
+  { return Color3((1.0-t)*c1.r+t*c2.r,(1.0-t)*c1.g+t*c2.g,(1.0-t)*c1.b+t*c2.b); }
+
+  Real* c_array() { return &r; }
+
+  Real r,g,b;
+  
+protected:
+  struct ColorDatabaseEntry {
+    base::Byte r,g,b;
+    String name;
+  };
+
+  static ColorDatabaseEntry colorDatabase[];
+  static Color3 lookupColor(const String& name);
+  
+};
+
+inline Color3 operator*(const Color3& c, Real s)
+{ Color3 r(c); r*=s; return r; }
+
+inline std::ostream& operator<<(std::ostream& out, const Color3& c) // Output
+{ return out << "(" << c.r << "," << c.g << "," << c.b << ")"; }
+
+} // gfx
+
+#endif

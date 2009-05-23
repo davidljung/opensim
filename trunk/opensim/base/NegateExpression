@@ -1,0 +1,79 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: NegateExpression 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.9 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_NEGATEEXPRESSION_
+#define _BASE_NEGATEEXPRESSION_
+
+#include <base/base>
+#include <base/UnaryOpExpression>
+#include <base/ProductExpression>
+#include <base/ConstantExpression>
+
+namespace base {
+
+
+//
+// Evaluates the negative of it's argument
+//
+
+class NegateExpression : public UnaryOpExpression 
+{
+public:
+  NegateExpression(ref<ExpressionNode> arg)
+    : UnaryOpExpression(arg) {}
+  NegateExpression(const NegateExpression& e)
+    : UnaryOpExpression(e) {}
+
+  virtual Object& clone() const { return *NewObj NegateExpression(*this); }
+  virtual String className() const { return String("NegateExpression"); }
+
+  virtual NodeType type() const { return NodeType(UnaryOp|Negative); } 
+
+  virtual String toString() const { return String("-")+arg->toString(); }
+
+protected:
+  NegateExpression() {}
+
+  virtual void cacheValue(const Vector& params) const
+    { value = -arg->evaluate(params); valueCached=true; }
+
+  virtual void cacheDerivative(Int withRespectToIndex) const
+    {
+      derivative = ref<ExpressionNode>( NewObj NegateExpression( arg->differentiate(withRespectToIndex) ) ); 
+      derivWithRespToIndex = withRespectToIndex;
+      derivCached = true;
+    }
+
+
+  virtual void operationCounts(Int& addsub, Int& multdiv, Int& trig) const 
+    { UnaryOpExpression::operationCounts(addsub,multdiv,trig); }
+  
+  friend class Expression;
+  friend class Serializable::SerializableDerivedInstantiator<NegateExpression>;
+};
+
+} // base
+
+#endif
+

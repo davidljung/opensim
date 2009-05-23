@@ -1,0 +1,72 @@
+/****************************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: OrientTest 1092 2004-09-13 17:37:31Z jungd $
+  $Revision: 1.2 $
+  $Date: 2004-09-13 13:37:31 -0400 (Mon, 13 Sep 2004) $
+  $Author: jungd $
+
+****************************************************************************/
+
+#ifndef _BASE_ORIENTTEST_
+#define _BASE_ORIENTTEST_
+
+#include <cppunit/extensions/HelperMacros.h>
+
+#include <base/Orient>
+
+namespace base {
+
+
+class OrientTest : public CppUnit::TestFixture
+{
+  static const Int numOfTests = 1;
+
+  CPPUNIT_TEST_SUITE( OrientTest );
+
+  CPPUNIT_TEST( testQuatMat );
+  CPPUNIT_TEST( testTransform );
+  CPPUNIT_TEST( testEulerRPY );
+  CPPUNIT_TEST( testAngularVelConversion );
+  CPPUNIT_TEST( testRotationConcatenation );
+
+  CPPUNIT_TEST_SUITE_END();
+
+protected:
+  Quat4 q;
+  Matrix m;
+  Vector v;
+
+public:
+  OrientTest();
+
+  int countTestCases () const { return numOfTests; }
+
+  void setUp();
+  void tearDown();
+
+  void testQuatMat();
+  void testTransform();
+  void testEulerRPY();
+  void testAngularVelConversion();
+  void testRotationConcatenation();
+};
+
+
+} // base
+
+#endif

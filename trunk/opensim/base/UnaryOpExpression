@@ -1,0 +1,69 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: UnaryOpExpression 1029 2004-02-11 20:45:54Z jungd $
+  $Revision: 1.8 $
+  $Date: 2004-02-11 15:45:54 -0500 (Wed, 11 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_UNARYOPEXPRESSION_
+#define _BASE_UNARYOPEXPRESSION_
+
+#include <base/base>
+#include <base/ExpressionNode>
+
+
+namespace base {
+
+
+//
+// Super class of all unary operator experssions
+//
+
+class UnaryOpExpression : public ExpressionNode
+{
+public:
+  UnaryOpExpression(ref<ExpressionNode> arg)
+    : arg(arg) {}
+  UnaryOpExpression(const UnaryOpExpression& e)
+    : arg(e.arg) {}
+
+  virtual void serialize(Serializer& s) { s.baseRef(arg,"arg"); }
+
+protected:
+  UnaryOpExpression() {}
+
+  virtual void cacheValue(const Vector& params) const = 0; ///< perform evaluation with params and sore in value (& set valueCached true)
+  virtual void resetCache() const { valueCached=false; arg->resetCache(); }
+
+  virtual void cacheDerivative(Int withRespectToIndex) const = 0; ///< perform differentiation and cache in derivative (& set set derivCached)
+  virtual void resetDerivCached() const { derivCached=false; arg->resetDerivCached(); derivative = ref<ExpressionNode>(0); }
+
+  virtual void operationCounts(Int& addsub, Int& multdiv, Int& trig) const 
+    { arg->operationCounts(addsub,multdiv,trig); }
+
+  ref<ExpressionNode> arg;
+
+  friend class Expression;
+};
+
+} // base
+
+#endif
+

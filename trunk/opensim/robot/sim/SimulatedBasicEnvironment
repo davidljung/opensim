@@ -1,0 +1,227 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2003 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedBasicEnvironment 1112 2004-09-27 22:06:45Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_SIMULATEDBASICENVIRONMENT_
+#define _ROBOT_SIM_SIMULATEDBASICENVIRONMENT_
+
+#include <robot/sim/sim>
+
+#include <robot/sim/BasicEnvironment>
+
+#include <osg/Group>
+
+#include <base/Externalizable>
+#include <base/Simulatable>
+#include <base/Orient>
+#include <base/Trajectory>
+
+#include <gfx/Color3>
+#include <gfx/OSGWorld>
+
+#include <physics/Shape>
+#include <physics/SolidSystem>
+#include <physics/CollisionCuller>
+
+#include <robot/sim/SimulatedRobotDescription>
+#include <robot/sim/SimulatedRobot>
+#include <robot/sim/SimulatedTool>
+
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * A basic 'no-frills' simulated environment for robots
+ *  Robot instances added must be of type SimulatedRobot.
+ */
+class SimulatedBasicEnvironment : public robot::sim::BasicEnvironment, public gfx::OSGWorld
+{
+public:
+  SimulatedBasicEnvironment(ref<base::VFileSystem> fs, ref<base::Cache> cache, const String& name = "", bool dynamic=true);
+  SimulatedBasicEnvironment(const SimulatedBasicEnvironment& e);
+
+  virtual void setDynamic(bool enabled);
+
+  virtual String className() const { return String("SimulatedBasicEnvironment"); }
+
+  virtual Object& clone() const { return *(NewObj SimulatedBasicEnvironment(*this)); }
+
+
+  // factory
+  virtual ref<RobotDescription> newRobotDescription() const
+    { return ref<RobotDescription>(NewObj SimulatedRobotDescription()); }
+
+  virtual ref<ToolDescription> newToolDescription() const
+    { return ref<ToolDescription>(NewObj ToolDescription()); }
+
+  // methods to add/remove robots
+  virtual ref<Robot> addRobot(ref<const robot::RobotDescription> robotDescription,
+                              const base::Point3& position,
+                              const base::Orient& orientation,
+                              bool anchored = false);
+
+  virtual void removeRobot(ref<robot::Robot> robot);
+
+  virtual Int numRobots() const { return robots.size(); }
+  virtual ref<Robot> getRobot(Int i) { return base::elementAt(robots,i); }
+  virtual ref<Robot> getRobot(String name);
+
+
+  // methods to add/remove tools
+
+  virtual ref<Tool> addTool(ref<const robot::ToolDescription> toolDescription,
+                            const base::Point3& position,
+                            const base::Orient& orientation);
+
+  virtual void removeTool(ref<Tool> tool);
+
+  virtual Int numTools() const { return tools.size(); };
+  virtual ref<Tool> getTool(Int i) { return base::elementAt(tools,i); }
+  virtual ref<const Tool> getTool(Int i) const { return base::elementAt(tools,i); }
+
+  /// place the specified tool within grasping range of the end-effector of the specified robot manipulator
+  virtual void placeToolInProximity(ref<Tool> tool, ref<Robot> robot, Int manipulatorIndex=0);
+
+
+  // methods to add/remove simple objects to the environment
+
+  virtual ref<BasicEnvironment::Obstacle> addBoxObstacle(base::Dimension3 dim,
+                                                         const base::Point3& position,
+                                                         const base::Orient& orientation,
+                                                         const String& name = "");
+
+  virtual ref<BasicEnvironment::Obstacle> addSphereObstacle(Real radius,
+                                                            const base::Point3& position,
+                                                            const base::Orient& orientation,
+                                                            const String& name = "");
+
+  virtual ref<BasicEnvironment::Obstacle> addBoxObstacle(base::Dimension3 dim,
+                                                         const base::Point3& position,
+                                                         const base::Orient& orientation,
+                                                         ref<const physics::Material> material,
+                                                         const String& name = "");
+
+  virtual ref<BasicEnvironment::Obstacle> addSphereObstacle(Real radius,
+                                                            const base::Point3& position,
+                                                            const base::Orient& orientation,
+                                                            ref<const physics::Material> material,
+                                                            const String& name = "");
+
+  virtual void removeObstacle(ref<BasicEnvironment::Obstacle> obstacle);
+
+
+  virtual void setObstacleColor(ref<BasicEnvironment::Obstacle> obstacle, const gfx::Color3& color);
+  virtual void setObstacleDensity(ref<BasicEnvironment::Obstacle> obstacle, Real density);
+
+  virtual Int numObstacles() const { return obstacles.size(); }
+  virtual ref<Obstacle> getObstacle(Int i) { return base::elementAt(obstacles,i); }
+  virtual ref<const Obstacle> getObstacle(Int i) const { return base::elementAt(obstacles,i); }
+
+
+  // OSGWorld (Visual)
+  virtual osg::Node* createOSGVisual(Visual::Attributes visualAttributes=0) const;
+
+  // Simulatable
+  virtual void preSimulate();
+  virtual void simulateForSimTime(const base::Time& dt);
+
+  // Externalizable
+  virtual bool formatSupported(const String format, Real version = 1.0, ExternalizationType type = IO) const; ///< query if specific format is supported (for input, output or both)
+  virtual void externalize(base::Externalizer& e, const String format = "", Real version = 1.0); ///< read or write object state to Externalizer
+
+protected:
+
+  class SolidObstacle : public Obstacle
+  {
+  public:
+    SolidObstacle(base::Dimension3 dims,
+             const base::Point3& position,
+             const base::Orient& orientation,
+             ref<physics::Solid> solid)
+      : Obstacle(dims, position, orientation),
+        solid(solid) {}
+
+    SolidObstacle(Real radius,
+             const base::Point3& position,
+             const base::Orient& orientation,
+             ref<physics::Solid> solid)
+      : Obstacle(radius, position, orientation),
+        solid(solid) {}
+
+    virtual String className() const { return String("SolidObstacle"); }
+
+    ref<physics::Solid> solid;
+  };
+
+
+  class SolidTool : public Tool
+  {
+  public:
+    SolidTool(String name, ref<const robot::ToolDescription> toolDescription,
+              const base::Point3& position,
+              const base::Orient& orientation,
+              ref<SimulatedTool> simTool)
+      : Tool(name, toolDescription, position, orientation),
+        simTool(simTool) {}
+
+    virtual String className() const { return String("SolidTool"); }
+
+    ref<SimulatedTool> simTool;
+  };
+
+
+  void construct();
+
+  ref<physics::Solid> findObstacle(ref<Obstacle> obstacle);
+
+  /// true for a dynamic simulation, fasle for static (no force/torque or velocity control, just position control)
+  bool dynamic;
+
+  ref<physics::SolidSystem>       system;            ///< SolidSystem for simulating physical bodies in this environment
+  ref<physics::CollidableGroup>   collidables;       ///< Collidables for items in the environment
+  ref<physics::Collidable>        groundCollidable;  ///< Collidable for the ground
+  ref<physics::CollisionCuller>   collisionCuller;   ///< CollisionCuller registering which Collidables shouldn't be collided
+  ref<physics::Solid>             ground;            ///< Solid ground (flat)
+  ref<physics::ConstraintGroup>   cgroup;            ///< constraints (e.g. for fixing robots to the ground)
+
+  typedef reflist<robot::sim::SimulatedRobot> RobotList;
+  typedef std::list<bool> RobotAnchoredList;
+  typedef reflist<Tool> ToolList;
+  typedef reflist<SolidObstacle> ObstacleList;
+
+  RobotList    robots;    ///< list of robots in the environment
+  ToolList     tools;     ///< list of tools in the environment
+  ObstacleList obstacles; ///< list of Solid obstacles in the environment
+  RobotAnchoredList robotsAnchored; ///< for each robot, is it anchored to the environment?
+
+  mutable Visual::Attributes attributes;
+  mutable osg::ref_ptr<osg::Group> rootnode;
+
+  /// check each tool for proximity with end-effectors of each robot
+  void checkTools();
+};
+
+
+}
+} // robot::sim
+
+#endif

@@ -1,0 +1,101 @@
+/****************************************************************************
+  Copyright (C)2004 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: InverseKinematicsControlWidget 1059 2004-02-27 19:28:44Z jungd $
+ 
+****************************************************************************/
+
+#ifndef _APPS_INVERSEKINEMATICSCONTROLWIDGET_
+#define _APPS_INVERSEKINEMATICSCONTROLWIDGET_
+
+#include <gtkmm.h>
+
+#include <base/Trajectory>
+
+#include <robot/robot>
+
+#include <robot/control/kinematics/IKORController>
+#include <robot/sim/BasicEnvironment>
+
+#include <apps/ControlInterfaceWidget>
+
+
+
+namespace apps {
+
+// GUI Widget for inverse kinematics control over the end-effector from a ControlInterface of type JointPositionControl
+class InverseKinematicsControlWidget : public ControlInterfaceWidget
+{
+
+public:
+  InverseKinematicsControlWidget(GUIControlWindow& parentWindow);
+
+  virtual base::String className() const { return String("InverseKinematicsControlWidget"); }
+
+  virtual void init(ref<robot::sim::BasicEnvironment> env, ref<robot::Robot> robot, Int index, ref<robot::ControlInterface> interface);
+
+  virtual void iterate(const base::Time& simTime);
+  
+protected:
+  base::Time lastSimTime;
+
+  ref<robot::ControlInterface> posInterface;
+  ref<robot::ControlInterface> eePosInterface;
+  
+  array<Gtk::Adjustment*> eeadjustments;
+  array<Gtk::SpinButton*> eeCoordButtons; ///< target x,y,z [,R,P,Y]
+  array<Int> skipUpdate;
+  bool targetLock; ///< don't update the target with the current ee pos
+  Gtk::CheckButton* targetLockButton;
+  bool orientationControl; ///< controling orientation? (true) or just position (false)
+  Gtk::CheckButton* orientControlCheck;
+  Gtk::VBox* orientationBox;
+  
+  Gtk::Adjustment* dangerAdj;
+  
+  Gtk::Entry* trajFile; ///< filename of a ee trajectory file to follow
+  Gtk::FileSelection* dialog;
+  bool validTrajectoryLoaded;
+  base::Trajectory traj; ///< ee trajectory
+  
+  ref<robot::Robot> robot;
+  Int index;
+  ref<robot::control::kinematics::IKORController> ikorController;
+  void instantiateController();
+  
+  void loadTrajectory(const String& filename);
+  
+  // signal handlers
+  void eeScaleChanged(Int i);
+  void orientationControlClicked();
+  void targetLockClicked();
+  void dangerDistChanged();
+  void browseClicked();
+  void fileDialogResponse(int response_id);
+  void filenameActivated();
+  
+  void stopClicked();
+  void playClicked();
+  bool playingTraj;
+  base::Time traj_t;
+};
+
+
+} // app
+
+#endif
+

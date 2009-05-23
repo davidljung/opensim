@@ -1,0 +1,102 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)1996 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: Box 1140 2004-09-28 21:02:12Z jungd $
+
+****************************************************************************/
+
+#ifndef _PHYSICS_BOX_
+#define _PHYSICS_BOX_
+
+#include <base/ref>
+
+#include <base/Dimension3>
+#include <base/Serializable>
+#include <gfx/Segment3>
+#include <gfx/Triangle3>
+#include <gfx/Quad3>
+
+#include <physics/physics>
+#include <physics/ConvexShape>
+
+#include <gfx/Visual>
+
+
+
+namespace physics {
+
+
+class Box : virtual public ConvexShape
+{
+public:
+  Box(Real width=1.0, Real height=1.0, Real depth=1.0);
+  Box(const Box& b);
+  virtual ~Box();
+
+  virtual String className() const { return String("Box"); }
+  virtual base::Object& clone() const { return *NewNamedObj(className()) Box(*this); }
+
+  const base::Dimension3& dimensions() const { return dim; }
+
+  // Shape
+  virtual BoundingBox    getBoundingBox() const { return BoundingBox(-dim/2.0,dim/2.0); }
+  virtual BoundingSphere getBoundingSphere() const { return BoundingSphere(base::Point3(),Math::maximum(dim.x,dim.y,dim.z)/2.0); }
+  virtual const MassProperties& getMassProperties(ref<const Material> material) const;
+
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const Point3& p) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Segment3& s) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Triangle3& tri) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t, const gfx::Quad3& q) const;
+  virtual gfx::Segment3 shortestSegmentBetween(const base::Transform& t1, ref<const Shape> s, const base::Transform& t2) const;
+
+  // ConvexShape
+  virtual base::Point3 support(const base::Vector3& v) const;
+
+  // CollisionModelProvider
+  virtual ref<CollisionModel> getCollisionModel(CollisionModel::CollisionModelType modelType) const;
+
+  // Visual
+  virtual bool visualTypeSupported(VisualType type) const { return (type==OSGVisual); }
+  virtual osg::Node* createOSGVisual(Attributes visualAttributes=0) const;
+
+  virtual void serialize(base::Serializer& s);
+
+  // Externalizable
+  virtual bool formatSupported(String format, Real version = 1.0, ExternalizationType type = IO) const;
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0);
+  virtual void externalize(base::Externalizer& e, String format = "", Real version = 1.0) const
+    { Externalizable::externalize(e,format,version); }
+
+protected:
+  /// return array of 6 quads that mke up the faces of this box
+  array<gfx::Quad3> asQuads() const;
+
+private:
+  base::Dimension3 dim;
+
+  mutable bool massPropertiesCached;
+  mutable Real density;
+  mutable MassProperties massProperties;
+
+  mutable ref<CollisionModel> collisionModel;
+  mutable CollisionModel::CollisionModelType modelType;
+};
+
+
+} // physics
+
+#endif

@@ -1,0 +1,201 @@
+/* **-*-c++-*-**************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+
+  $Id: SimulatedKinematicChain 1105 2004-09-27 21:58:34Z jungd $
+
+****************************************************************************/
+
+#ifndef _ROBOT_SIM_SIMULATEDKINEMATICCHAIN_
+#define _ROBOT_SIM_SIMULATEDKINEMATICCHAIN_
+
+#include <robot/sim/sim>
+
+#include <base/ReferencedObject>
+#include <base/Dimension3>
+#include <base/Externalizable>
+
+#include <physics/SolidSystem>
+#include <physics/Solid>
+#include <physics/SpatialGroup>
+#include <physics/CollidableProvider>
+#include <physics/CollisionDetector>
+#include <physics/CollisionResponseHandler>
+
+#include <robot/KinematicChain>
+
+
+namespace robot {
+namespace sim {
+
+/**
+ * Base for concrete classes that simulate kinematic chains
+ *  - such as manipulators and tools
+ */
+class SimulatedKinematicChain : public physics::Spatial, public physics::CollidableProvider, public base::Externalizable
+{
+public:
+  SimulatedKinematicChain(bool dynamic=true)
+    : dynamic(dynamic) {}
+  SimulatedKinematicChain(ref<physics::SolidSystem> solidSystem, bool dynamic=true)
+    : solidSystem(solidSystem), dynamic(dynamic) {}
+
+
+  virtual void setDynamic(bool enabled) { dynamic = enabled; }
+
+  virtual void setSolidSystem(ref<physics::SolidSystem> solidSystem)
+    { this->solidSystem = solidSystem; }
+
+  /// Set the force (torque for revolute joints) of joint j (first joint j=1)
+  virtual void setJointForce(Int j, Real f) = 0;
+
+  /// Set the velocity (ang. velocity for revolute joints) of joint j (first joint j=1)
+  /** NB: As the simulation is force controlled, this will set the target velocity */
+  virtual void setJointVel(Int j, Real v, Real maxForce=10.0) = 0;
+
+
+  /// Set the position (angle for revolute joints) of joint j (first joint j=1)
+  /** NB: This will instantaneously move the joint to the specified angle - which obviously
+   *      is not physically realistic.  Consequently, for dynamic simulations, this can
+   *      cause large forces in the system and possibly numerical instability in the
+   *      simulation.  It is intended for non-dynamic simulations.
+   *  NB: the angle is relative to the theta home position.
+   */
+  virtual void setJointPos(Int j, Real p) = 0;
+
+
+  /// Get the current theta* angle (revolute) or position d (prismatic) of the joint
+  /** *NB: the angle is relative to the theta home position. */
+  virtual Real getJointPos(Int j) const = 0;
+
+  /// Get the current joint velocity (ang. velocity for revolute joints)
+  virtual Real getJointVel(Int j) const = 0;
+
+
+
+  // Proximity sensor methods
+
+  static const Real maxDist;
+
+  /// get distance to closest object detected by proximity sensors on the link
+  virtual Real    getClosestObjectDistance(Int link) const = 0;
+
+  /// get the direction vector to the closest object detected by proximity sensors on the link
+  virtual Vector3 getClosestObjectDirection(Int link) const = 0;
+
+  /// get the distance along the link x-axis of the proximity sensor that detected the closest object to the link
+  virtual Real    getClosestObjectSensorPosition(Int link) const = 0;
+
+
+protected:
+  SimulatedKinematicChain(const SimulatedKinematicChain& kc) { Unimplemented; }
+
+  KinematicChain chain;
+  ref<physics::SolidSystem> solidSystem;
+
+  /// true for a dynamic simulation, fasle for static (no force/torque or velocity control, just position control)
+  bool dynamic;
+
+  /// construct an approximation of the manipulator from the D-H parameters (best we can do)
+  virtual void construct(const base::Point3& initialPosition, const base::Orient& initialOrientation) = 0;
+
+  /// compute the dimensions of each link's Solid based on the KinematicChain
+  ///  and fill in linkLengths[1..dof]
+  virtual array<base::Dimension3> computeLinkDimensions(const array<Real>& linkRadii, Int firstLinkIndex=1);
+
+  // used to hold temporary transformation result during computation for placement of links
+  struct TransformInfo {
+    base::Transform mountTransform; ///< transform from mount point to world frame
+    array<base::Transform> A;       ///< transform from link l frame into link l-1 frame
+    array<base::Transform> T;       ///< accumulated transformations for each link (transforms from link l frame to mount frame)
+    array<base::Transform> SLT;     ///< relative configuration of link's Solid from its origin
+    base::Vector q;                 ///< joint variable parameter value at which A,T,ST were evaluated
+    base::Transform mountToBaseSolid;  ///< transform from mount frame to base Solid frame
+    base::Transform eeToEESolid;       ///< transform from ee frame to ee Solid frame
+  };
+
+
+  /// create the Solids for each link and assemble them into a Spatial tree (and add them to solidSystem)
+  virtual void createLinks(const array<base::Dimension3>& linkDims) = 0;
+
+  /// position the links
+  virtual void positionLinks(const TransformInfo& transformInfo) = 0;
+
+  virtual void disableCollisions(const array<ref<physics::Collidable> >& collidables,
+                                 const array<ref<physics::Collidable> >& proximityCollidables) = 0;
+
+  virtual void attachJoints(const TransformInfo& transformInfo) = 0;
+
+  array<ref<physics::SpatialGroup> > linkGroups;   ///< a group for each link (which contains the link Solid and the group for the next link)
+
+  array<ref<physics::Solid> > links;   ///< Solids for each link
+  array<ref<physics::Joint> > joints;  ///< Joint attaching each pair of consecutive links (dynamic simulation only)
+  array<Real> linkLengths;             ///< Length of each link corresponding with links[]
+  array<ref<physics::Collidable> > collidables;          ///< collidables for each link Solid
+  array<ref<physics::Collidable> > proximityCollidables; ///< collidables for each link's proximity sensor
+
+  mutable base::Vector q; ///< current joint parameters (static simulation only)
+
+
+  // this CollisionResponseHandler is inserted before the final handler to
+  //  filter out collisions between the proximity sensor Collidables and
+  //  handle them appropriately
+  class ProximityCollisionResponseHandler : public physics::CollisionResponseHandler
+  {
+  public:
+    ProximityCollisionResponseHandler(ref<SimulatedKinematicChain> kc, ref<physics::CollisionDetector> collisionDetector);
+
+    virtual String className() const { return String("ProximityCollisionResponseHandler"); }
+
+    virtual void reset();
+    virtual void collide(ref<const physics::Collidable> collidable1, ref<const physics::Collidable> collidable2);
+    virtual void handleCollision(ref<physics::CollisionState> collisionState); ///< calls KinematicChain::handleCollision()
+
+    protected:
+      ref<SimulatedKinematicChain> kc;
+      bool resetCalled;
+  };
+
+  virtual void handleCollision(ref<physics::CollisionState> collisionState) = 0;  ///< called from ProximityCollisionResponseHandler::handleCollision()
+
+  enum CollidableClasses { SensorCollidableClass = 1 };
+
+  ref<physics::CollidableGroup> proximityCollidableGroup;
+
+  struct ProximityData {
+    ProximityData() : dist(SimulatedKinematicChain::maxDist+1.0) {}
+    ProximityData(Real dist, Real intersect, const Vector3& dir)
+      : dist(dist), intersect(intersect), dir(dir) {}
+
+    Real    dist;      ///< distance to object (> maxInt => no object in proximity)
+    Real    intersect; ///< distance along link x-axis of sensor
+    Vector3 dir;       ///< direction of object from sensor
+  };
+
+  array< ProximityData > linkProximity;
+  // !!! this assumes cylindrical/capsule surface
+  array< Real > linkProximitySurfPosition;     ///< dist from link axis of proximity sensor (i.e. on link sufrace)
+
+  friend class SimulatedRobot;
+  friend class ProximityCollisionResponseHandler;
+};
+
+
+
+}
+} // robot::sim
+
+#endif

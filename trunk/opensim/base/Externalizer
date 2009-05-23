@@ -1,0 +1,258 @@
+/* *-*-c++-*-****************************************************************
+  Copyright (C)2002 David Jung <opensim@pobox.com>
+
+  This program/file is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+  
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details. (http://www.gnu.org)
+  
+  You should have received a copy of the GNU General Public License
+  along with this program; if not, write to the Free Software
+  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+  
+  $Id: Externalizer 1067 2004-02-27 21:09:46Z jungd $
+  $Revision: 1.5 $
+  $Date: 2004-02-27 16:09:46 -0500 (Fri, 27 Feb 2004) $
+  $Author: jungd $
+ 
+****************************************************************************/
+
+#ifndef _BASE_EXTERNALIZER_
+#define _BASE_EXTERNALIZER_
+
+#include <base/base>
+#include <base/Externalizable>
+#include <base/Referenced>
+#include <base/PathName>
+#include <base/VFile>
+#include <base/Vector>
+#include <base/Vector3>
+#include <base/Matrix4>
+#include <base/Matrix>
+
+#include <base/DOM>
+
+#include <iostream>
+#include <list>
+#include <stack>
+
+
+
+
+
+
+
+namespace base {
+
+
+  /// Helper class for transcoding between char* or String ASCII and XML Unicode strings
+  ///  Use like XS("ascii") - has automatic conversion to XMLCh*
+  ///        or XS(domElement->getTagName()) - has auto conversion to String
+  class XS
+  {
+  public:
+    XS(String str)
+    { 
+      const Int len = str.length();
+      unicode = new XCh[len+8];
+      dom::XMLString::transcode(str.c_str(), unicode, len+4);
+    }
+
+    XS(const char *cstr) 
+    {
+      const Int len = strlen(cstr);
+      unicode = new XCh[len+8];
+      dom::XMLString::transcode(cstr, unicode, len+4);
+    }
+
+    XS(const XCh* xstr)
+    {
+      unicode = new XCh[dom::XMLString::stringLen(xstr)+4];
+      dom::XMLString::copyString(unicode, xstr);
+    }
+
+    ~XS() { delete[] unicode; }
+
+    operator XCh*() const { return unicode; }
+
+    operator String() const
+    { 
+      char* cstr = dom::XMLString::transcode(unicode);
+      String str(cstr);
+      delete[] cstr;
+      return str;
+    }
+
+  private:
+    XCh* unicode;
+  };
+
+
+
+
+class Externalizer : public Object
+{
+public:
+  Externalizer(Externalizable::ExternalizationType type, ref<VFile> archive); 
+  Externalizer(Externalizable::ExternalizationType type, std::ios& stream);
+  virtual ~Externalizer();
+
+  virtual String className() const { return String("Externalizer"); }
+
+  bool isOutput() const { return isoutput; }     ///< true is this is an output serialization stream
+  bool isInput() const { return !isOutput(); } ///< true if this is an input serialization stream
+  Externalizable::ExternalizationType ioType() { return isOutput()?Externalizable::Output:Externalizable::Input; }
+
+  /// return the filesystem path of the stream to which this Externalizer is
+  ///  attached; or the empty String (if unknown - i.e. instantiated from an iostream)
+  PathName getArchivePath() const { return path; }
+
+  void flush(); ///< flush output stream (no-op on input).  Should use this before closing an output file before Externalizer goes out-of-scope.
+
+  bool moreInput() ///< still input remaining in current context?
+    { Assert(isInput()); return bool(input()); } 
+  String readLine();                      ///< read until end of line
+  String readString(SInt maxLength=-1);   ///< read maxLength chars (or until end of context if -1)
+  void   writeLine(const String& line);   ///< write 'line' followed by end-of-line char 
+  void   writeString(const String& str);  ///< write String str (may contain end-of-line chars)
+
+  void   writeComment(const String& comment); ///< output a comment ('# <text> <newline>' in raw mode, xml comment in XML mode)
+
+  static String readLineFromStream(std::istream& istream)
+  {
+    char linebuf[1024];
+    istream.getline(linebuf,1024);
+    linebuf[1023]=char(0);
+    return String(linebuf);
+  }
+
+
+  // XML IO methods
+
+  dom::DOMDocument* doc() { if (!xmlMode) initXMLDoc(); return xmldoc; }
+  dom::DOMNode* context() { if (!xmlMode) initXMLDoc(); return xmlcontext.top(); }
+
+  // for writing
+
+  /// if a DOCTYPE is to be set, always call setDocumentType() first on a new output Externalizer.  
+  /// Subsequent calls will be ignored.  Only then can createElement() be called to create an element.
+  ///  createElement() must be the first 'write' method called on a new output Externalizer - in which
+  ///  case the element will be the root element of the document.
+  void setDocumentType(const String& name, const String& publicid, const String& sysid);
+  dom::DOMElement* createElement(const String& tagname, bool indenting=true);
+  
+  void pushContext(dom::DOMNode* context) { Assert(xmlMode); xmlcontext.push(context); }
+  dom::DOMNode* popContext() { Assert(xmlMode); dom::DOMNode* top = xmlcontext.top(); xmlcontext.pop(); return top; }
+
+  void appendElement(dom::DOMElement* e) { Assert(xmlMode); if (e != xmlcontext.top()) { xmlcontext.top()->appendChild(e); lastAppendedElem=e;} }
+  void appendBreak() { Assert(xmlMode); appendText(xmlcontext.top(), newline); }
+  dom::DOMElement* lastAppendedElement() { Assert(xmlMode); return lastAppendedElem; }
+  String elementTagName(dom::DOMNode* n) { Assert(xmlMode); return !isElement(n)?String():String(XS(dynamic_cast<dom::DOMElement*>(n)->getTagName())); }
+
+  void        appendElement(dom::DOMNode* n, const String& tagname, bool indenting=true);
+  void        setElementAttribute(dom::DOMElement* e, const String& attrname, const String& value) { e->setAttribute(XS(attrname),XS(value)); }
+  void        appendProcessingInstruction(dom::DOMNode* n, const String& target, const String& data);
+  dom::DOMText*    createText(const String& text);
+  void        appendText(dom::DOMNode* n, const String& text);
+  dom::DOMComment* createComment(const String& comment);
+  void        appendComment(dom::DOMNode* n, const String& comment);
+  dom::DOMCDATASection* createCDATA(const String& text);
+  void             appendCDATA(dom::DOMNode* n, const String& text);
+  void        appendNode(dom::DOMNode* n, dom::DOMNode* n2) { Assert(xmlMode); n->appendChild(n2); }
+  void        appendBreak(dom::DOMNode* n) { Assert(xmlMode); appendText(n, newline); }
+
+  // for reading
+  dom::DOMElement* getFirstElement(dom::DOMNode* n, const String& tagname, bool required=true);
+  dom::DOMElement* getFirstChildElement(dom::DOMNode* n, const String& tagname, bool required=true);
+  dom::DOMElement* getNextSiblingElement(dom::DOMNode* n, const String& tagname, bool required=true);
+  void             removeElement(dom::DOMElement* e);
+  String           getContainedText(dom::DOMNode* n, bool removeIndentation=false);
+  String           getElementAttribute(dom::DOMElement* e, const String& attrname, bool required=true);
+  String           getDefaultedElementAttribute(dom::DOMElement* e, const String& attrname, const String& defaultValue);
+
+  // useful String processing
+  static array<String> splitIntoLines(const String& text, bool removeBlankLines=true);
+  static array<String> splitAtDelimiter(const String& line, char delimiter=',');
+  static base::Vector  stringsToReals(const array<String>& strings, bool acceptUnits = true);
+  static base::Matrix4 toMatrix4(const String& text);
+  static String        toString(const base::Matrix4& m);
+  static base::Vector3 toVector3(const String& text, bool acceptUnits = true);
+  static base::Vector  toVector(const String& text, bool commasep=false, bool acceptUnits = true);
+  static String        toString(const base::Vector3& v);
+  static String        toString(const base::Vector& v, bool commasep=false);
+  static String        toString(const base::Matrix& m);
+  static String        toString(Real v, const String& units="m");
+  static Real          toReal(const String& text, bool acceptUnits = true);
+  static base::Matrix  toMatrix(const String& text);
+  static String        removeChar(const String& text, char toRemove);
+  static bool          isNumeric(const String& text);
+  
+
+
+
+  static const String newline;
+  static const Int indentSpaces = 2;
+
+protected:  
+  Externalizer(const Externalizer& e) 
+    : xmlMode(e.xmlMode), parser(e.parser), 
+      impl(e.impl), doctype(e.doctype),
+      xmldoc(e.xmldoc), xmlcontext(e.xmlcontext),
+      isoutput(e.isoutput), aborted(e.aborted)
+  {}
+
+  std::istream& input() { Assert(isInput()); return *istream; }
+  std::ostream& output() { Assert(isOutput()); return *ostream; }
+
+  bool xmlMode;
+
+
+  static bool xmlInitialized;
+  static void xmlInitialize();
+
+  void initXMLDoc(const String& rootElementName = "");
+
+  dom::DOMBuilder*  parser;
+  dom::DOMImplementation *impl;
+  dom::DOMDocumentType* doctype;
+  dom::DOMDocument* xmldoc;
+  std::stack<dom::DOMNode*> xmlcontext;
+  dom::DOMElement* lastAppendedElem;
+
+  dom::DOMDocument* xmlParseDocument();
+  void         xmlWriteDocument(dom::DOMDocument* doc);
+  void         xmlReleaseDocument();
+  void         xmlFormat(dom::DOMNode* n, Int indent);
+
+  bool         isNewline(dom::DOMNode* n);
+  bool         equals(const XCh* str1, const String& str2);
+  bool         isElement(dom::DOMNode* n) { return n->getNodeType() == dom::DOMNode::ELEMENT_NODE; }
+  bool         isElement(dom::DOMNode* n, const String& tagname);
+
+
+
+  const static String inputToConstErrorString;
+  const static String inputDuringOutputErrorString;
+
+  // helpers
+  void abort(const String& exceptionString); // flags the externalization as aborted and throws an exception
+
+
+  bool isoutput;
+  bool aborted;
+
+  std::istream* istream;
+  std::ostream* ostream;
+  PathName path;
+  
+};
+
+
+} // base
+
+#endif
