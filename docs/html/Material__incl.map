@@ -1,0 +1,7 @@
+base referer
+rect $base.html 96,93 168,117
+rect $Externalizable.html 108,168 233,191
+rect $PathName.html 257,168 364,191
+rect $Shape.html 159,242 255,266
+rect $Dimension3.html 329,242 438,266
+rect $Color4.html 462,242 529,266

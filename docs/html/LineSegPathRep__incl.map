@@ -1,0 +1,9 @@
+base referer
+rect $PathRep.html 400,168 493,192
+rect $base.html 121,19 193,43
+rect $Orient.html 57,93 137,117
+rect $Math.html 708,93 780,117
+rect $Serializable.html 161,93 276,117
+rect $ReferencedObject.html 300,93 454,117
+rect $Point3.html 478,93 556,117
+rect $Cloneable.html 580,93 684,117

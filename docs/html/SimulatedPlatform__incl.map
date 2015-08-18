@@ -1,0 +1,9 @@
+base referer
+rect $sim.html 6,168 92,192
+rect $ReferencedObject.html 232,19 386,43
+rect $Spatial.html 481,93 579,117
+rect $SpatialGroup.html 396,168 529,192
+rect $PlatformDescription.html 166,168 321,192
+rect $Externalizable.html 281,93 406,117
+rect $PositionableOrientable.html 477,19 669,43
+rect $SolidSystem.html 654,168 785,192

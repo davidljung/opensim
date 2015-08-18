@@ -1,0 +1,3 @@
+base referer
+rect $control.html 6,93 129,117
+rect $robot.html 32,18 103,42

@@ -1,0 +1,10 @@
+base referer
+rect $Application.html 464,317 573,341
+rect $base.html 385,93 457,117
+rect $Object.html 526,168 612,192
+rect $Universe.html 380,242 473,266
+rect $VFileSystem.html 228,168 345,192
+rect $Cache.html 420,168 502,192
+rect $Directory.html 57,168 153,192
+rect $StdFileSystem.html 200,242 328,266
+rect $Time.html 649,242 721,266

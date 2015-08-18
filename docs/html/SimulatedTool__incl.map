@@ -1,0 +1,12 @@
+base referer
+rect $sim.html 263,93 348,117
+rect $SimulatedKinematicChain.html 327,168 545,192
+rect $Robot.html 60,168 137,192
+rect $ToolDescription.html 57,93 188,117
+rect $KinematicChain.html 56,19 189,43
+rect $SolidSystem.html 473,93 604,117
+rect $Solid.html 393,19 478,43
+rect $Motor.html 549,19 640,43
+rect $SpatialGroup.html 678,93 812,117
+rect $Spatial.html 800,19 898,43
+rect $SpatialTransform.html 729,168 884,192

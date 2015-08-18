@@ -1,0 +1,8 @@
+base referer
+rect $VisualIKORTest.html 162,57 320,81
+rect $Externalizer.html 184,206 298,230
+rect $VFile.html 26,182 101,206
+rect $Matrix.html 24,256 104,280
+rect $Expression.html 188,305 294,329
+rect $externalization__error.html 158,353 324,377
+rect $VDirectory.html 189,401 293,425

@@ -1,0 +1,13 @@
+base referer
+rect $SimulatedRobot.html 506,57 669,81
+rect $Orient.html 299,33 379,57
+rect $SimulatedPlatform.html 252,94 425,118
+rect $SimulatedSerialManipulator.html 223,208 454,232
+rect $Solid.html 53,184 139,208
+rect $CollisionDetector.html 19,233 173,257
+rect $SimpleXMLSerializer.html 502,356 673,380
+rect $Externalizer.html 530,404 645,428
+rect $Box.html 548,452 628,476
+rect $ConstraintGroup.html 513,500 662,524
+rect $FixedConstraint.html 513,548 662,572
+rect $CollisionCuller.html 517,596 658,620

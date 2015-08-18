@@ -1,0 +1,7 @@
+base referer
+rect $base.html 70,93 142,117
+rect $VEntry.html 108,242 190,266
+rect $PathName.html 158,168 265,191
+rect $reflist.html 25,18 100,42
+rect $path__not__found.html 265,242 398,266
+rect $io__error.html 422,242 513,266

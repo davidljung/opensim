@@ -1,0 +1,5 @@
+base referer
+rect $GfxTest.html 18,93 72,117
+rect $GfxTest_8cpp.html 6,18 84,42
+rect $Quad3_8cpp.html 96,93 170,117
+rect $Triangle3_8cpp.html 194,93 285,117

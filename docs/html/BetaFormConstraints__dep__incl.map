@@ -1,0 +1,5 @@
+base referer
+rect $AnalyticLagrangianFSBetaOptimizer.html 6,93 236,117
+rect $AnalyticLagrangianNullSpaceBetaOptimizer.html 260,93 534,117
+rect $IKOR.html 609,93 649,117
+rect $IKORTest.html 567,18 631,42

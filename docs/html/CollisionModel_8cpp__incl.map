@@ -1,0 +1,5 @@
+base referer
+rect $CollisionModel.html 138,93 279,117
+rect $physics.html 6,18 108,42
+rect $ReferencedObject.html 132,18 286,42
+rect $Visual.html 310,18 377,42

@@ -1,0 +1,4 @@
+base referer
+rect $base.html 20,18 92,42
+rect $Time.html 57,93 129,117
+rect $ReferencedObject.html 153,93 308,117

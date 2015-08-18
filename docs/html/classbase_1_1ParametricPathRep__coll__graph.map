@@ -1,0 +1,8 @@
+base referer
+rect $classbase_1_1PathRep.html 180,290 276,314
+rect $classbase_1_1ReferencedObject.html 276,200 433,223
+rect $classbase_1_1Object.html 169,109 254,133
+rect $classbase_1_1Serializable.html 6,200 121,223
+rect $classbase_1_1Referenced.html 297,109 411,133
+rect $classbase_1_1Cloneable.html 145,200 252,223
+rect $classbase_1_1vector.html 378,290 490,314

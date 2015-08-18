@@ -1,0 +1,5 @@
+base referer
+rect $Simulatable.html 98,168 213,192
+rect $base.html 109,19 181,43
+rect $Time.html 236,93 308,117
+rect $ReferencedObject.html 57,93 212,117

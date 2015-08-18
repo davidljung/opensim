@@ -1,0 +1,6 @@
+base referer
+rect $ToolDescription.html 6,93 137,117
+rect $Externalizer.html 212,93 326,117
+rect $VFile.html 184,18 258,42
+rect $externalization__error.html 350,93 515,117
+rect $Application.html 539,93 649,117

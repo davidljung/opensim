@@ -1,0 +1,4 @@
+base referer
+rect $CLODTerrainRenderer.html 457,93 622,117
+rect $gfx.html 144,18 194,42
+rect $BitArray.html 218,18 309,42

@@ -1,0 +1,4 @@
+base referer
+rect $robot.html 7,18 79,42
+rect $ReferencedObject.html 103,18 257,42
+rect $Named.html 281,18 366,42

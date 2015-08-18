@@ -1,0 +1,4 @@
+base referer
+rect $classphysics_1_1Spatial.html 83,8 184,32
+rect $classphysics_1_1CollidableProvider.html 48,59 219,83
+rect $classbase_1_1Externalizable.html 69,109 197,133

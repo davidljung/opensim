@@ -1,0 +1,3 @@
+base referer
+rect $base.html 57,93 129,117
+rect $array.html 18,18 93,42

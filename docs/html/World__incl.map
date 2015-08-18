@@ -1,0 +1,13 @@
+base referer
+rect $Named.html 812,317 897,341
+rect $base.html 549,18 621,42
+rect $VFileSystem.html 390,317 508,341
+rect $PathName.html 169,93 276,117
+rect $VEntry.html 260,168 342,192
+rect $VDirectory.html 220,242 324,266
+rect $VFile.html 449,242 524,266
+rect $Cache.html 728,466 810,490
+rect $ResourceCache.html 582,391 721,415
+rect $ReferencedObject.html 561,93 716,117
+rect $path__not__found.html 481,168 614,192
+rect $io__error.html 366,168 457,192

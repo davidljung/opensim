@@ -1,0 +1,9 @@
+base referer
+rect $StdFileSystem.html 313,317 441,341
+rect $base.html 177,93 249,117
+rect $VFileSystem.html 296,242 413,266
+rect $VFile.html 260,168 334,192
+rect $Directory.html 510,168 606,192
+rect $File.html 173,242 237,266
+rect $path__not__found.html 388,93 521,117
+rect $io__error.html 273,93 364,117

@@ -1,0 +1,5 @@
+base referer
+rect $SimulatedManipulatorDescription.html 7,18 265,42
+rect $Application.html 289,18 398,42
+rect $Externalizer.html 422,18 537,42
+rect $externalization__error.html 561,18 726,42

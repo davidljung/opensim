@@ -1,0 +1,6 @@
+base referer
+rect $classrobot_1_1control_1_1ControllableAdaptor.html 409,7 614,31
+rect $classrobot_1_1control_1_1kinematics_1_1IKORController.html 389,55 634,79
+rect $classrobot_1_1control_1_1ManipulatorPIDPositionController.html 372,102 652,126
+rect $classrobot_1_1RobotController.html 445,150 578,174
+rect $classbase_1_1ReferencedObject.html 17,79 175,102

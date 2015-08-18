@@ -1,0 +1,5 @@
+base referer
+rect $BaseTest.html 57,93 156,117
+rect $array.html 25,18 100,42
+rect $Math.html 180,93 252,117
+rect $Transform.html 276,93 374,117

@@ -1,0 +1,3 @@
+base referer
+rect $robot.html 72,18 144,42
+rect $ManipulatorDescription.html 83,93 258,117

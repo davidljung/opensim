@@ -1,0 +1,5 @@
+base referer
+rect $classbase_1_1Named.html 6,93 94,117
+rect $classbase_1_1ReferencedObject.html 118,93 276,117
+rect $classbase_1_1Object.html 92,18 177,42
+rect $classbase_1_1Referenced.html 201,18 316,42

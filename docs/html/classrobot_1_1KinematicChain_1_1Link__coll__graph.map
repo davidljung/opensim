@@ -1,0 +1,4 @@
+base referer
+rect $classbase_1_1Serializable.html 25,8 140,32
+rect $classbase_1_1Externalizable.html 18,58 146,82
+rect $classbase_1_1Hashable.html 32,109 133,133

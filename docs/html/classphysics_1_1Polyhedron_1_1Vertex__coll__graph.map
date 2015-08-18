@@ -1,0 +1,5 @@
+base referer
+rect $classbase_1_1ReferencedObject.html 7,18 164,42
+rect $classbase_1_1Serializable.html 188,18 303,42
+rect $classbase_1_1SmallObject.html 327,18 460,42
+rect $classbase_1_1reflist.html 553,18 718,42

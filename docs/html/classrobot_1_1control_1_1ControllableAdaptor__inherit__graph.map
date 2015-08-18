@@ -1,0 +1,6 @@
+base referer
+rect $classrobot_1_1Controller.html 7,168 108,192
+rect $classbase_1_1ReferencedObject.html 44,93 201,117
+rect $classrobot_1_1Controllable.html 132,168 246,192
+rect $classbase_1_1Object.html 19,19 104,43
+rect $classbase_1_1Referenced.html 128,19 242,43

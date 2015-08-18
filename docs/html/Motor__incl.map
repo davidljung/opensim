@@ -1,0 +1,3 @@
+base referer
+rect $ReferencedObject.html 7,18 161,42
+rect $physics.html 185,18 286,42

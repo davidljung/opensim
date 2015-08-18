@@ -1,0 +1,15 @@
+base referer
+rect $Disc3.html 551,109 591,133
+rect $GfxTest.html 293,210 346,234
+rect $Quad3.html 422,310 473,334
+rect $Triangle3.html 539,260 603,284
+rect $Line3.html 427,511 467,535
+rect $Shape.html 296,316 344,340
+rect $Box.html 301,268 338,292
+rect $CollisionDetector_8cpp.html 52,268 182,292
+rect $CollisionDetector.html 266,364 373,387
+rect $SimulatedKinematicChain_8cpp.html 24,340 210,364
+rect $SimulatedSerialManipulator_8cpp.html 18,494 216,518
+rect $SimulatedTool_8cpp.html 58,426 176,450
+rect $Segment3_8cpp.html 272,563 368,587
+rect $VisualIKORTest.html 521,713 622,737

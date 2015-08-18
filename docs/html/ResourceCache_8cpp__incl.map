@@ -1,0 +1,6 @@
+base referer
+rect $ResourceCache.html 86,242 225,266
+rect $base.html 74,18 146,42
+rect $PathName.html 57,93 164,117
+rect $VFileSystem.html 145,168 262,191
+rect $ReferencedObject.html 238,93 393,117

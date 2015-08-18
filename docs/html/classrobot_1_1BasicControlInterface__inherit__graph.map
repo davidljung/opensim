@@ -1,0 +1,10 @@
+base referer
+rect $classrobot_1_1sim_1_1SimulatedRobot_1_1ManipulatorControlInterface.html 417,7 748,31
+rect $classrobot_1_1sim_1_1SimulatedRobot_1_1PlatformControlInterface.html 428,55 737,79
+rect $classrobot_1_1sim_1_1SimulatedRobot_1_1ProximitySensorInterface.html 425,103 740,127
+rect $classrobot_1_1sim_1_1SimulatedRobot_1_1ToolControlInterface.html 441,151 724,175
+rect $classrobot_1_1TestRobot_1_1ManipulatorControlInterface.html 449,198 716,222
+rect $classrobot_1_1TestRobot_1_1PlatformControlInterface.html 460,246 705,270
+rect $classrobot_1_1TestRobot_1_1ProximitySensorInterface.html 456,294 709,318
+rect $classrobot_1_1TestRobot_1_1ToolControlInterface.html 472,342 693,366
+rect $classrobot_1_1ControlInterface.html 19,175 152,198

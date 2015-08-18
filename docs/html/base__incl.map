@@ -1,0 +1,6 @@
+base referer
+rect $MemoryTracer.html 379,375 510,399
+rect $reflist.html 152,201 226,225
+rect $array.html 152,351 226,375
+rect $ref.html 22,239 81,263
+rect $debugtools.html 134,782 244,806

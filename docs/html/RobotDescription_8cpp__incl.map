@@ -1,0 +1,5 @@
+base referer
+rect $RobotDescription.html 7,93 148,117
+rect $Externalizer.html 223,93 337,117
+rect $VFile.html 195,18 269,42
+rect $Application.html 361,93 470,117

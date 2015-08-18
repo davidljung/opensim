@@ -1,0 +1,6 @@
+base referer
+rect $classbase_1_1ReferencedObject.html 201,199 358,223
+rect $classbase_1_1Object.html 150,109 236,133
+rect $classbase_1_1Serializable.html 62,199 177,223
+rect $classbase_1_1Referenced.html 259,109 374,133
+rect $classbase_1_1Cloneable.html 382,199 489,223

@@ -1,0 +1,6 @@
+base referer
+rect $KinematicChain.html 6,18 140,42
+rect $JFKengine.html 65,93 172,117
+rect $MD5.html 196,93 265,117
+rect $Externalizer.html 289,93 404,117
+rect $externalization__error.html 428,93 593,117

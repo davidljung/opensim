@@ -1,0 +1,11 @@
+base referer
+rect $Cache.html 635,242 718,266
+rect $base.html 462,93 534,117
+rect $ResourceCache.html 742,168 881,192
+rect $VFile.html 337,168 412,192
+rect $VDirectory.html 57,168 161,192
+rect $CacheDirectory.html 173,317 306,341
+rect $CacheFile.html 241,242 345,266
+rect $MD5.html 537,168 606,192
+rect $path__not__found.html 180,93 313,117
+rect $io__error.html 64,93 154,117

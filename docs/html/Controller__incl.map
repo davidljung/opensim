@@ -1,0 +1,4 @@
+base referer
+rect $robot.html 36,18 108,42
+rect $ControlInterface.html 57,93 190,117
+rect $Time.html 214,93 286,117

@@ -1,0 +1,4 @@
+base referer
+rect $base.html 24,18 96,42
+rect $Object.html 57,93 142,117
+rect $Cloneable.html 166,93 270,117

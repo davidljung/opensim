@@ -1,0 +1,9 @@
+base referer
+rect $classrobot_1_1sim_1_1BasicEnvironment.html 90,442 266,466
+rect $classrobot_1_1sim_1_1Environment.html 106,365 250,389
+rect $classbase_1_1Simulatable.html 121,288 236,311
+rect $classbase_1_1ReferencedObject.html 100,186 257,210
+rect $classbase_1_1Object.html 20,109 105,133
+rect $classbase_1_1Externalizable.html 6,237 134,261
+rect $classbase_1_1Referenced.html 129,109 244,133
+rect $classbase_1_1Cloneable.html 260,288 366,311

@@ -1,0 +1,13 @@
+base referer
+rect $sim.html 702,242 788,266
+rect $Environment.html 393,317 532,341
+rect $robot.html 625,93 697,117
+rect $Robot.html 601,242 678,266
+rect $ToolDescription.html 444,168 574,192
+rect $Orient.html 300,18 380,42
+rect $ReferencedObject.html 178,93 333,117
+rect $Simulatable.html 57,168 172,192
+rect $VFileSystem.html 196,168 313,192
+rect $Externalizable.html 362,93 488,117
+rect $Named.html 514,93 600,117
+rect $Cache.html 342,242 425,266

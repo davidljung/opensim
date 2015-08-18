@@ -1,0 +1,4 @@
+base referer
+rect $gfx.html 57,93 94,117
+rect $physics.html 21,18 75,42
+rect $robot.html 118,93 158,117

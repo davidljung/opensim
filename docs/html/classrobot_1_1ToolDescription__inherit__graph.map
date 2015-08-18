@@ -1,0 +1,6 @@
+base referer
+rect $classbase_1_1Named.html 6,93 94,117
+rect $classbase_1_1Externalizable.html 118,93 246,117
+rect $classbase_1_1Object.html 161,18 246,42
+rect $classbase_1_1ReferencedObject.html 270,93 428,117
+rect $classbase_1_1Referenced.html 292,18 406,42

@@ -1,0 +1,9 @@
+base referer
+rect $classbase_1_1VFile.html 187,381 261,405
+rect $classbase_1_1VEntry.html 337,304 420,328
+rect $classbase_1_1ReferencedObject.html 621,213 778,237
+rect $classbase_1_1Object.html 614,109 700,133
+rect $classbase_1_1PathName.html 325,213 432,237
+rect $classbase_1_1Referenced.html 724,109 838,133
+rect $classbase_1_1array.html 159,109 265,133
+rect $classbase_1_1Cloneable.html 289,109 396,133

@@ -1,0 +1,6 @@
+base referer
+rect $classbase_1_1Named.html 211,8 299,32
+rect $classbase_1_1Externalizable.html 191,58 319,82
+rect $classbase_1_1ReferencedObject.html 176,106 333,130
+rect $classbase_1_1PathName.html 201,261 308,285
+rect $classbase_1_1Vector3.html 211,449 299,473

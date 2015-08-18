@@ -1,0 +1,11 @@
+base referer
+rect $Object.html 198,7 284,31
+rect $Transform.html 192,55 290,79
+rect $physics.html 22,227 124,251
+rect $Box.html 201,153 281,177
+rect $Cylinder.html 188,300 294,324
+rect $Capsule.html 188,252 294,276
+rect $Dimension3.html 18,300 128,324
+rect $Sphere.html 190,348 292,372
+rect $Visual.html 40,129 106,153
+rect $Color4.html 208,446 274,470

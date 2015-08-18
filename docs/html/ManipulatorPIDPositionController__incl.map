@@ -1,0 +1,5 @@
+base referer
+rect $control.html 6,18 129,42
+rect $Controller.html 153,18 252,42
+rect $Controllable.html 276,18 387,42
+rect $KinematicChain.html 411,18 545,42

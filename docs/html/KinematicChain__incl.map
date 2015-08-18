@@ -1,0 +1,10 @@
+base referer
+rect $robot.html 274,242 346,266
+rect $ManipulatorJointTrajectory.html 340,317 537,341
+rect $KinematicEvaluator.html 108,317 265,341
+rect $Vector.html 342,93 425,117
+rect $Matrix.html 433,168 513,192
+rect $Serializer.html 621,242 722,266
+rect $array.html 514,18 589,42
+rect $Hashable.html 797,168 896,192
+rect $Externalizable.html 421,242 546,266

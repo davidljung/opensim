@@ -1,0 +1,3 @@
+base referer
+rect $Time.html 26,18 98,42
+rect $Serializer.html 57,93 158,117

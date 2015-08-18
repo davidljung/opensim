@@ -1,0 +1,11 @@
+base referer
+rect $base.html 390,19 462,43
+rect $Serializable.html 589,93 704,117
+rect $Externalizable.html 57,242 182,266
+rect $Orient.html 308,168 388,192
+rect $Vector.html 385,93 468,117
+rect $Expression.html 761,168 868,192
+rect $PathRep.html 480,242 573,266
+rect $Point3.html 412,168 489,192
+rect $LineSegPathRep.html 358,317 502,341
+rect $WaypointPathRep.html 526,317 676,341

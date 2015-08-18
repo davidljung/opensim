@@ -1,0 +1,6 @@
+base referer
+rect $base.html 213,168 285,192
+rect $Object.html 286,242 372,266
+rect $PathComponent.html 169,317 308,341
+rect $array.html 249,93 324,117
+rect $Cloneable.html 108,242 212,266

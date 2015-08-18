@@ -1,0 +1,8 @@
+base referer
+rect $SpatialGroup.html 204,168 337,192
+rect $physics.html 294,19 396,43
+rect $Spatial.html 179,93 277,117
+rect $Body.html 450,93 538,117
+rect $ReferencedObject.html 7,19 161,43
+rect $Named.html 185,19 271,43
+rect $reflist.html 352,93 426,117

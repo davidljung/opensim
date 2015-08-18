@@ -1,0 +1,4 @@
+base referer
+rect $classgfx_1_1Triangle3.html 17,31 105,54
+rect $classgfx_1_1TriangleDesc.html 181,7 293,31
+rect $classMassProperties_1_1WTriangle.html 154,54 320,78

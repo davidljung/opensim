@@ -1,0 +1,4 @@
+base referer
+rect $classbase_1_1RefCountedMT.html 256,20 634,44
+rect $classbase_1_1SmallObject.html 174,80 716,103
+rect $classbase_1_1SmallObject.html 778,107 912,131

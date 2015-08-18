@@ -1,0 +1,10 @@
+base referer
+rect $classphysics_1_1ComplexShape.html 398,354 550,378
+rect $classphysics_1_1Shape.html 425,277 523,301
+rect $classphysics_1_1CollisionModelProvider.html 495,200 690,224
+rect $classbase_1_1Referenced.html 457,109 571,133
+rect $classbase_1_1ReferencedObject.html 314,200 472,224
+rect $classgfx_1_1Visual.html 819,200 889,224
+rect $classbase_1_1Serializable.html 24,200 138,224
+rect $classbase_1_1Object.html 201,109 286,133
+rect $classbase_1_1Externalizable.html 162,200 290,224

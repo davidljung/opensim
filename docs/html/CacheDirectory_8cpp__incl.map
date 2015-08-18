@@ -1,0 +1,3 @@
+base referer
+rect $CacheDirectory.html 7,18 140,42
+rect $File.html 164,18 228,42

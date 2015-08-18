@@ -1,0 +1,9 @@
+base referer
+rect $physics.html 376,18 477,42
+rect $Body.html 346,168 434,191
+rect $MassProperties.html 240,93 389,117
+rect $CollidableBody.html 510,242 660,266
+rect $CollidableProvider.html 561,93 729,117
+rect $ref.html 57,242 116,266
+rect $Visual.html 140,242 206,266
+rect $Material.html 382,242 486,266

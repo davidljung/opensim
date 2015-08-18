@@ -1,0 +1,16 @@
+base referer
+rect $sim.html 560,338 645,362
+rect $SimulatedPlatform.html 720,238 893,262
+rect $SimulatedSerialManipulator.html 942,389 1174,413
+rect $SimulatedTool.html 732,539 881,563
+rect $Robot.html 564,641 641,665
+rect $ToolDescription.html 336,666 466,690
+rect $Externalizable.html 141,703 266,727
+rect $VFile.html 17,747 92,771
+rect $Point3.html 1020,841 1097,865
+rect $Orient.html 1018,889 1098,913
+rect $SolidSystem.html 537,189 668,213
+rect $CollidableProvider.html 317,88 485,112
+rect $Spatial.html 352,441 450,465
+rect $SpatialGroup.html 536,441 669,465
+rect $BasicControlInterface.html 976,937 1141,961

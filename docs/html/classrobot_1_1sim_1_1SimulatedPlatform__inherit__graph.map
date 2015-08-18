@@ -1,0 +1,11 @@
+base referer
+rect $classphysics_1_1Spatial.html 255,168 356,192
+rect $classphysics_1_1PositionableOrientable.html 49,93 244,117
+rect $classphysics_1_1Positionable.html 7,19 137,43
+rect $classphysics_1_1Orientable.html 161,19 284,43
+rect $classbase_1_1Named.html 268,93 356,117
+rect $classbase_1_1ReferencedObject.html 386,93 544,117
+rect $classphysics_1_1CollidableProvider.html 380,168 550,192
+rect $classbase_1_1Object.html 560,19 645,43
+rect $classbase_1_1Externalizable.html 574,168 702,192
+rect $classbase_1_1Referenced.html 408,19 522,43

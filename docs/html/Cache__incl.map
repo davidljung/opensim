@@ -1,0 +1,3 @@
+base referer
+rect $base.html 37,18 109,42
+rect $ResourceCache.html 57,93 195,117

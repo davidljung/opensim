@@ -1,0 +1,6 @@
+base referer
+rect $ParametricPathRep.html 72,168 232,192
+rect $PathRep.html 57,93 151,117
+rect $Math.html 27,19 99,43
+rect $Expression.html 174,93 281,117
+rect $Serializer.html 222,19 324,43

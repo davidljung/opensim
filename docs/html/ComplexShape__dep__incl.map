@@ -1,0 +1,4 @@
+base referer
+rect $Polyhedron.html 6,18 81,42
+rect $Terrain.html 105,18 153,42
+rect $Torus.html 177,18 217,42

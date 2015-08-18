@@ -1,0 +1,7 @@
+base referer
+rect $Externalizer.html 60,93 175,117
+rect $Externalizable.html 7,18 132,42
+rect $Application.html 199,93 308,117
+rect $Math.html 332,93 404,117
+rect $externalization__error.html 428,93 593,117
+rect $io__error.html 617,93 708,117

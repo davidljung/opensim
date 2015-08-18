@@ -1,0 +1,7 @@
+base referer
+rect $classrobot_1_1sim_1_1VisualIKORTest.html 101,242 264,266
+rect $classbase_1_1Named.html 6,93 94,117
+rect $classbase_1_1Externalizable.html 118,93 246,117
+rect $classbase_1_1Object.html 161,19 246,43
+rect $classbase_1_1ReferencedObject.html 270,93 428,117
+rect $classbase_1_1Referenced.html 292,19 406,43

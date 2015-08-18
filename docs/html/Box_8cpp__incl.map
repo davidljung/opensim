@@ -1,0 +1,6 @@
+base referer
+rect $Box.html 42,7 122,31
+rect $Externalizer.html 25,55 139,79
+rect $VisualTriangles.html 21,103 143,127
+rect $Material.html 30,151 134,175
+rect $Sphere.html 32,198 133,222

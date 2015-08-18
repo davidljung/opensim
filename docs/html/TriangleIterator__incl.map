@@ -1,0 +1,4 @@
+base referer
+rect $Object.html 6,93 92,117
+rect $gfx.html 144,18 194,42
+rect $Triangle3.html 166,93 252,117

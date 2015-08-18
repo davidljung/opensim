@@ -1,0 +1,12 @@
+base referer
+rect $MemoryTracer.html 489,7 620,31
+rect $reflist.html 37,105 112,129
+rect $Serializer.html 181,253 283,277
+rect $SmallObj.html 505,105 604,129
+rect $Dimension3.html 500,153 609,177
+rect $VFile.html 37,228 112,252
+rect $Serializable.html 17,326 132,350
+rect $Shape.html 333,326 429,350
+rect $TriangleContainer.html 486,353 622,377
+rect $physics.html 181,400 283,424
+rect $ComplexShape.html 480,401 629,425

@@ -1,0 +1,4 @@
+base referer
+rect $ControllableAdaptor.html 7,18 135,42
+rect $kinematics.html 159,18 231,42
+rect $ManipulatorPIDPositionController.html 254,18 454,42

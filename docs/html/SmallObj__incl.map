@@ -1,0 +1,3 @@
+base referer
+rect $Threads.html 6,18 97,42
+rect $Singleton.html 192,93 290,117

@@ -1,0 +1,4 @@
+base referer
+rect $gfx.html 29,18 80,42
+rect $Visual.html 57,93 124,117
+rect $World.html 241,93 318,117

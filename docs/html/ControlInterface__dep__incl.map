@@ -1,0 +1,5 @@
+base referer
+rect $AggregateControlInterface.html 6,18 172,42
+rect $BasicControlInterface.html 196,18 329,42
+rect $Controller.html 353,18 419,42
+rect $Controllable.html 443,18 521,42

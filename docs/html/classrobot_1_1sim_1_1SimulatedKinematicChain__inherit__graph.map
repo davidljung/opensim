@@ -1,0 +1,13 @@
+base referer
+rect $classrobot_1_1sim_1_1SimulatedSerialManipulator.html 240,317 474,341
+rect $classrobot_1_1sim_1_1SimulatedTool.html 498,317 650,341
+rect $classphysics_1_1Spatial.html 255,168 356,191
+rect $classphysics_1_1PositionableOrientable.html 49,93 244,117
+rect $classphysics_1_1Positionable.html 7,18 137,42
+rect $classphysics_1_1Orientable.html 161,18 284,42
+rect $classbase_1_1Named.html 268,93 356,117
+rect $classbase_1_1ReferencedObject.html 386,93 544,117
+rect $classphysics_1_1CollidableProvider.html 380,168 550,191
+rect $classbase_1_1Object.html 560,18 645,42
+rect $classbase_1_1Externalizable.html 574,168 702,191
+rect $classbase_1_1Referenced.html 408,18 522,42

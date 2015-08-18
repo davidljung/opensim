@@ -1,0 +1,7 @@
+base referer
+rect $CollidableBody.html 6,93 108,117
+rect $CollidableGroup.html 182,93 286,117
+rect $Collider.html 206,18 262,42
+rect $PotentialCollisionListener.html 310,93 465,117
+rect $CollidableProvider.html 489,93 609,117
+rect $CollisionState.html 633,93 721,117

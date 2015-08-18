@@ -1,0 +1,7 @@
+base referer
+rect $classReferencedObject.html 7,186 127,210
+rect $classbase_1_1Serializable.html 151,186 265,210
+rect $classbase_1_1Object.html 45,96 131,120
+rect $classbase_1_1SmallObject.html 289,186 422,210
+rect $classThreadingModel.html 168,19 688,43
+rect $classbase_1_1SmallObject.html 388,96 830,120

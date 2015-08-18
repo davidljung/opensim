@@ -1,0 +1,4 @@
+base referer
+rect $kinematics.html 6,18 220,42
+rect $InverseKinematicsSolver.html 57,93 355,117
+rect $KinematicChain.html 379,93 513,117

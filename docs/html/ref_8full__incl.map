@@ -1,0 +1,7 @@
+base referer
+rect $SmallObj.html 279,168 377,192
+rect $Threads.html 7,19 97,43
+rect $Singleton.html 179,93 277,117
+rect $TypeManip.html 498,168 608,192
+rect $NullType.html 632,168 725,192
+rect $static__check.html 749,168 866,192

@@ -1,0 +1,4 @@
+base referer
+rect $Orient.html 24,18 104,42
+rect $Serializer.html 57,93 158,117
+rect $Math.html 182,93 254,117

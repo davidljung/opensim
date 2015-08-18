@@ -1,0 +1,5 @@
+base referer
+rect $Point3.html 29,19 106,43
+rect $gfx.html 90,93 141,117
+rect $Triangle3.html 108,168 193,192
+rect $TriangleContainer.html 217,168 353,192

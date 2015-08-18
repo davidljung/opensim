@@ -1,0 +1,5 @@
+base referer
+rect $base.html 57,93 129,117
+rect $VFile.html 182,168 257,192
+rect $path__not__found.html 153,93 286,117
+rect $io__error.html 310,93 401,117

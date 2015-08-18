@@ -1,0 +1,17 @@
+base referer
+rect $RobotDescription.html 348,317 454,341
+rect $Robot.html 414,242 459,266
+rect $IKORController.html 557,168 653,192
+rect $TestRobot.html 677,168 743,192
+rect $Robot_8cpp.html 69,168 138,192
+rect $RobotController.html 162,168 261,192
+rect $Environment.html 285,168 368,192
+rect $SimulatedRobot.html 470,93 574,117
+rect $SimulatedTool.html 392,168 482,192
+rect $SimulatedPlatform.html 767,168 885,192
+rect $SimulatedBasicEnvironment.html 345,18 521,42
+rect $SimulatedRobotDescription.html 6,242 174,266
+rect $SimulatedRobot_8cpp.html 653,18 781,42
+rect $RobotDescription_8cpp.html 257,242 390,266
+rect $PlatformDescription_8cpp.html 570,317 717,341
+rect $SimulatedPlatform_8cpp.html 647,93 789,117

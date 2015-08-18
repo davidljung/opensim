@@ -1,0 +1,7 @@
+base referer
+rect $control.html 6,168 129,192
+rect $robot.html 190,19 262,43
+rect $Controller.html 153,168 252,192
+rect $ControlInterface.html 260,93 393,117
+rect $Controllable.html 276,168 388,192
+rect $Time.html 164,93 236,117

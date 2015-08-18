@@ -1,0 +1,5 @@
+base referer
+rect $base.html 74,19 146,43
+rect $PathName.html 57,93 164,117
+rect $VFileSystem.html 145,168 262,192
+rect $ReferencedObject.html 238,93 393,117

@@ -1,0 +1,6 @@
+base referer
+rect $classbase_1_1Path.html 100,168 171,192
+rect $classbase_1_1Serializable.html 6,93 121,117
+rect $classbase_1_1Object.html 93,19 178,43
+rect $classbase_1_1Externalizable.html 145,93 273,117
+rect $classgfx_1_1Visual.html 195,168 265,192

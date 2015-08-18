@@ -1,0 +1,6 @@
+base referer
+rect $ManipulatorDescription.html 7,93 183,117
+rect $Externalizer.html 257,93 372,117
+rect $VFile.html 229,18 304,42
+rect $externalization__error.html 396,93 561,117
+rect $Application.html 585,93 694,117

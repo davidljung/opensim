@@ -1,0 +1,7 @@
+base referer
+rect $ODECollidableBody.html 6,18 182,42
+rect $Box.html 206,18 286,42
+rect $Sphere.html 310,18 412,42
+rect $Cylinder.html 436,18 542,42
+rect $Capsule.html 566,18 673,42
+rect $Polyhedron.html 697,18 820,42

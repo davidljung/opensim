@@ -1,0 +1,6 @@
+base referer
+rect $SimpleXMLSerializer.html 145,317 316,341
+rect $base.html 137,93 209,117
+rect $Serializer.html 196,242 297,266
+rect $Serializable.html 6,168 121,192
+rect $array.html 222,18 297,42

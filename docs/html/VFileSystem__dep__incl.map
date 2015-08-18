@@ -1,0 +1,12 @@
+base referer
+rect $Universe.html 37,168 98,192
+rect $Cache.html 57,317 105,341
+rect $World.html 184,243 226,266
+rect $Application.html 88,93 165,117
+rect $Application_8cpp.html 76,19 177,43
+rect $StdFileSystem.html 325,93 418,117
+rect $Universe_8cpp.html 189,93 274,117
+rect $ResourceCache.html 142,392 246,416
+rect $Environment.html 269,243 352,266
+rect $ResourceCache_8cpp.html 129,317 260,341
+rect $StdFileSystem_8cpp.html 312,19 432,43

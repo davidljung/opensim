@@ -1,0 +1,5 @@
+base referer
+rect $physics.html 36,18 137,42
+rect $PositionableOrientable.html 57,93 249,117
+rect $ReferencedObject.html 273,93 427,117
+rect $Named.html 451,93 537,117

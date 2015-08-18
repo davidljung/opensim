@@ -1,0 +1,8 @@
+base referer
+rect $MPPseudoInvSolver.html 81,242 353,266
+rect $kinematics.html 6,168 220,191
+rect $control.html 52,93 174,117
+rect $robot.html 77,18 149,42
+rect $ReferencedObject.html 244,168 398,191
+rect $Object.html 238,93 324,117
+rect $Referenced.html 348,93 460,117

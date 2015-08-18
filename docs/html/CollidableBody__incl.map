@@ -1,0 +1,4 @@
+base referer
+rect $physics.html 65,18 166,42
+rect $Collidable.html 57,93 174,117
+rect $Body.html 198,93 286,117

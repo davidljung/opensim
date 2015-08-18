@@ -1,0 +1,11 @@
+base referer
+rect $VFileSystem.html 244,93 327,117
+rect $VDirectory.html 172,168 241,192
+rect $VFile.html 385,168 425,192
+rect $Directory.html 57,93 119,117
+rect $CacheDirectory.html 105,19 207,43
+rect $CacheFile.html 351,93 420,117
+rect $Polyhedron_8cpp.html 412,19 513,43
+rect $File.html 444,93 481,117
+rect $HeightField.html 505,93 582,117
+rect $Externalizer_8cpp.html 657,168 758,192

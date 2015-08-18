@@ -1,0 +1,6 @@
+base referer
+rect $base.html 36,18 108,42
+rect $VDirectory.html 57,93 161,117
+rect $CacheFile.html 236,93 340,117
+rect $path__not__found.html 132,18 265,42
+rect $io__error.html 289,18 380,42

@@ -1,0 +1,6 @@
+base referer
+rect $TestBasicEnvironment.html 6,93 201,117
+rect $Externalizer.html 276,93 390,117
+rect $VFile.html 248,18 322,42
+rect $externalization__error.html 414,93 579,117
+rect $Application.html 603,93 713,117

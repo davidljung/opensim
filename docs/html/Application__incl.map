@@ -1,0 +1,6 @@
+base referer
+rect $base.html 144,19 216,43
+rect $Object.html 57,93 142,117
+rect $Universe.html 128,168 221,192
+rect $Cache.html 217,93 300,117
+rect $Directory.html 296,168 392,192

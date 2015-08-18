@@ -1,0 +1,6 @@
+base referer
+rect $Solid.html 256,317 293,341
+rect $SolidSystem.html 98,242 181,266
+rect $SimulatedRobot.html 18,18 122,42
+rect $SimulatedSerialManipulator.html 152,93 325,117
+rect $SimulatedKinematicChain.html 158,168 318,192

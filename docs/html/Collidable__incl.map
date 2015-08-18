@@ -1,0 +1,5 @@
+base referer
+rect $physics.html 21,18 122,42
+rect $BoundingBox.html 57,93 193,117
+rect $ReferencedObject.html 217,93 371,117
+rect $Named.html 395,93 481,117

@@ -1,0 +1,8 @@
+base referer
+rect $kinematics.html 239,168 453,191
+rect $Optimizer.html 98,242 309,266
+rect $control.html 285,93 407,117
+rect $robot.html 310,18 382,42
+rect $ReferencedObject.html 61,168 216,191
+rect $Object.html 6,93 92,117
+rect $Referenced.html 116,93 228,117

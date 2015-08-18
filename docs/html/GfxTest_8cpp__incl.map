@@ -1,0 +1,9 @@
+base referer
+rect $GfxTest.html 399,317 474,341
+rect $gfx.html 445,18 495,42
+rect $Line3.html 294,168 356,192
+rect $Segment3.html 507,93 598,117
+rect $Plane.html 369,242 435,266
+rect $Triangle3.html 430,168 515,192
+rect $Quad3.html 590,242 662,266
+rect $Disc3.html 691,168 753,192

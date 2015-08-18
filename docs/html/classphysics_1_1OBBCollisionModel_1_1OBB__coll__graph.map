@@ -1,0 +1,4 @@
+base referer
+rect $classgfx_1_1Triangle3.html 7,138 95,162
+rect $classbase_1_1Vector3.html 119,138 206,162
+rect $classbase_1_1Matrix3.html 230,138 318,162

@@ -1,0 +1,6 @@
+base referer
+rect $kinematics.html 7,18 220,42
+rect $InverseKinematicsSolver.html 57,93 356,117
+rect $Controller.html 380,93 478,117
+rect $Controllable.html 497,18 609,42
+rect $Robot.html 553,93 630,117

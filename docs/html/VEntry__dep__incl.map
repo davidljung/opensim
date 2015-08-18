@@ -1,0 +1,4 @@
+base referer
+rect $VFileSystem.html 51,18 133,42
+rect $VDirectory.html 57,93 126,117
+rect $VFile.html 150,93 190,117

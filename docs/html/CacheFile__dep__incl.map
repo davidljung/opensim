@@ -1,0 +1,5 @@
+base referer
+rect $CacheDirectory.html 54,93 156,117
+rect $Cache_8cpp.html 6,18 81,42
+rect $CacheDirectory_8cpp.html 105,18 230,42
+rect $CacheFile_8cpp.html 180,93 276,117

@@ -1,0 +1,5 @@
+base referer
+rect $gfx.html 34,18 85,42
+rect $Triangle3.html 57,93 142,117
+rect $Object.html 166,93 252,117
+rect $Cloneable.html 276,93 380,117

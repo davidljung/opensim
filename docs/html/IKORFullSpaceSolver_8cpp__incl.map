@@ -1,0 +1,9 @@
+base referer
+rect $IKORFullSpaceSolver.html 124,317 406,341
+rect $kinematics.html 239,168 453,192
+rect $FullSpaceSolver.html 58,242 309,266
+rect $control.html 285,93 407,117
+rect $robot.html 310,18 382,42
+rect $ReferencedObject.html 61,168 216,192
+rect $Object.html 6,93 92,117
+rect $Referenced.html 116,93 228,117

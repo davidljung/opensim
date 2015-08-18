@@ -1,0 +1,9 @@
+base referer
+rect $Material.html 296,117 400,141
+rect $Color4.html 142,68 209,92
+rect $Color3.html 18,43 85,67
+rect $Application.html 293,165 402,189
+rect $VFile.html 138,240 213,264
+rect $Externalizer.html 290,264 405,288
+rect $Vector.html 134,288 217,312
+rect $externalization__error.html 265,362 430,386

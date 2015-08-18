@@ -1,0 +1,6 @@
+base referer
+rect $base.html 125,19 197,43
+rect $Serializable.html 57,93 172,117
+rect $Serializer.html 150,168 251,192
+rect $Vector.html 246,93 329,117
+rect $ReferencedObject.html 326,168 481,192

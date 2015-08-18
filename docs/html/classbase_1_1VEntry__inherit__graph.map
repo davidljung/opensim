@@ -1,0 +1,10 @@
+base referer
+rect $classbase_1_1VDirectory.html 163,242 269,266
+rect $classbase_1_1VFile.html 305,242 380,266
+rect $classbase_1_1ReferencedObject.html 200,93 357,117
+rect $classbase_1_1Object.html 175,18 260,42
+rect $classbase_1_1Referenced.html 284,18 398,42
+rect $classbase_1_1CacheDirectory.html 7,317 143,341
+rect $classbase_1_1Directory.html 167,317 265,341
+rect $classbase_1_1CacheFile.html 289,317 396,341
+rect $classbase_1_1File.html 420,317 486,341

@@ -1,0 +1,10 @@
+base referer
+rect $ProductExpression.html 223,250 340,274
+rect $SumExpression.html 433,325 532,349
+rect $NegateExpression.html 223,176 340,200
+rect $CosExpression_8cpp.html 93,101 213,125
+rect $SinExpression.html 108,176 199,200
+rect $Expression.html 367,101 438,125
+rect $QuotientExpression.html 520,250 642,274
+rect $DifferenceExpression.html 617,176 750,200
+rect $Expression_8cpp.html 353,26 452,50

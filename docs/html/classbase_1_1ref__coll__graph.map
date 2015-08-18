@@ -1,0 +1,5 @@
+base referer
+rect $classStoragePolicy.html 113,20 228,44
+rect $classOwnershipPolicy.html 17,94 324,118
+rect $classCheckingPolicy.html 23,169 319,193
+rect $classConversionPolicy.html 116,244 225,268

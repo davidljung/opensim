@@ -1,0 +1,5 @@
+base referer
+rect $Shape.html 6,18 54,42
+rect $GfxTest.html 78,18 132,42
+rect $Quad3_8cpp.html 156,18 230,42
+rect $Box.html 254,18 292,42

@@ -1,0 +1,4 @@
+base referer
+rect $AggregateControlInterface.html 6,168 204,192
+rect $robot.html 69,19 141,43
+rect $ControlInterface.html 90,93 224,117

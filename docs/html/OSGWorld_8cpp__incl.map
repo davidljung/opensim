@@ -1,0 +1,5 @@
+base referer
+rect $OSGWorld.html 89,168 182,192
+rect $gfx.html 29,19 80,43
+rect $Visual.html 57,93 124,117
+rect $World.html 241,93 318,117

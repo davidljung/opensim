@@ -1,0 +1,4 @@
+base referer
+rect $Externalizer.html 6,18 86,42
+rect $ManipulatorDescription.html 110,18 251,42
+rect $VisualIKORTest.html 275,18 377,42

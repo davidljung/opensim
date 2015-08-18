@@ -1,0 +1,6 @@
+base referer
+rect $Capsule.html 7,18 65,42
+rect $Box.html 89,18 127,42
+rect $Sphere.html 151,18 204,42
+rect $Cone.html 228,18 268,42
+rect $Cylinder.html 292,18 350,42

@@ -1,0 +1,8 @@
+base referer
+rect $IndexedPoint3Array.html 101,242 250,266
+rect $Point3.html 58,18 136,42
+rect $gfx.html 150,93 201,117
+rect $Triangle3.html 267,168 353,191
+rect $TriangleContainer.html 108,168 244,191
+rect $TriangleIterator.html 302,242 422,266
+rect $Object.html 427,168 513,191

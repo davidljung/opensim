@@ -1,0 +1,6 @@
+base referer
+rect $IKORController.html 7,93 244,117
+rect $MPPseudoInvSolver.html 236,18 508,42
+rect $LeastNormIKSolver.html 319,93 582,117
+rect $FullSpaceSolver.html 558,18 809,42
+rect $IKOR.html 657,93 838,117

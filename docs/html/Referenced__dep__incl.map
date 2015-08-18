@@ -1,0 +1,5 @@
+base referer
+rect $ReferencedObject.html 6,18 126,42
+rect $Serializer.html 150,18 217,42
+rect $Externalizer.html 241,18 321,42
+rect $CollisionModelProvider.html 345,18 492,42

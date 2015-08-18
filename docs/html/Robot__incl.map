@@ -1,0 +1,6 @@
+base referer
+rect $robot.html 149,18 221,42
+rect $Controllable.html 57,93 169,117
+rect $RobotDescription.html 348,93 489,117
+rect $ToolDescription.html 193,93 324,117
+rect $array.html 434,18 509,42

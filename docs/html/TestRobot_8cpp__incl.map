@@ -1,0 +1,14 @@
+base referer
+rect $TestRobot.html 146,392 248,416
+rect $Robot.html 158,317 236,341
+rect $ToolDescription.html 108,243 238,266
+rect $KinematicChain.html 106,168 240,192
+rect $Vector.html 184,93 266,117
+rect $BasicControlInterface.html 260,317 425,341
+rect $base.html 461,19 533,43
+rect $VFile.html 314,168 389,192
+rect $Application.html 502,243 612,266
+rect $Object.html 454,93 540,117
+rect $Universe.html 524,168 617,192
+rect $Cache.html 614,93 697,117
+rect $Directory.html 692,168 788,192

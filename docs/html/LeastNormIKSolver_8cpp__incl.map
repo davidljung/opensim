@@ -1,0 +1,12 @@
+base referer
+rect $LeastNormIKSolver.html 61,466 325,490
+rect $kinematics.html 36,317 249,341
+rect $InverseKinematicsSolver.html 353,391 652,415
+rect $MPPseudoInvSolver.html 57,391 329,415
+rect $control.html 93,242 216,266
+rect $robot.html 392,168 464,192
+rect $Orient.html 465,93 545,117
+rect $Matrix.html 465,18 545,42
+rect $ReferencedObject.html 273,317 428,341
+rect $Object.html 398,242 484,266
+rect $Referenced.html 262,242 374,266

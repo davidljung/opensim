@@ -1,0 +1,5 @@
+base referer
+rect $OldIKOR.html 104,168 309,192
+rect $kinematics.html 6,19 220,43
+rect $InverseKinematicsSolver.html 57,93 355,117
+rect $KinematicChain.html 379,93 513,117

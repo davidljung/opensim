@@ -1,0 +1,6 @@
+base referer
+rect $ManipulatorJointTrajectory.html 7,18 204,42
+rect $Math.html 305,18 377,42
+rect $Externalizer.html 401,18 516,42
+rect $Serializer.html 540,18 641,42
+rect $externalization__error.html 665,18 830,42

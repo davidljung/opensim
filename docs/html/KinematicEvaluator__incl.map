@@ -1,0 +1,6 @@
+base referer
+rect $robot.html 108,242 180,266
+rect $Vector.html 78,93 161,117
+rect $Matrix.html 158,168 238,191
+rect $array.html 82,18 157,42
+rect $ReferencedObject.html 254,242 409,266

@@ -1,0 +1,8 @@
+base referer
+rect $SmallObj.html 150,93 214,117
+rect $Singleton.html 81,168 145,192
+rect $policyref_8impl.html 6,19 92,43
+rect $ref_8full.html 116,19 158,43
+rect $SmallObj_8cpp.html 182,19 273,43
+rect $Polyhedron.html 297,19 372,43
+rect $Singleton_8cpp.html 36,93 126,117

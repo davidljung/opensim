@@ -1,0 +1,6 @@
+base referer
+rect $SmallObj.html 126,168 225,192
+rect $Threads.html 74,19 165,43
+rect $Singleton.html 126,93 225,117
+rect $base.html 436,93 508,117
+rect $MemoryTracer.html 428,168 558,192

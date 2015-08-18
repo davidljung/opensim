@@ -1,0 +1,7 @@
+base referer
+rect $robot.html 26,18 98,42
+rect $KinematicChain.html 57,93 190,117
+rect $Named.html 265,93 350,117
+rect $Externalizable.html 144,18 269,42
+rect $ReferencedObject.html 374,93 529,117
+rect $DOM.html 553,93 628,117

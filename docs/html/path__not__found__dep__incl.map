@@ -1,0 +1,9 @@
+base referer
+rect $VFileSystem.html 193,93 276,117
+rect $VDirectory.html 126,168 196,192
+rect $VFile.html 322,168 362,192
+rect $Directory.html 57,93 118,117
+rect $CacheDirectory.html 105,19 206,43
+rect $CacheFile.html 300,93 369,117
+rect $File.html 393,93 430,117
+rect $HeightField.html 454,93 532,117

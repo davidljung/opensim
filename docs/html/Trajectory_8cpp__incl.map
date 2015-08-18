@@ -1,0 +1,10 @@
+base referer
+rect $Trajectory.html 491,158 593,182
+rect $TrajectoryTimeRep.html 17,109 172,133
+rect $LineSegTrajectoryRep.html 228,208 403,232
+rect $WaypointTrajectoryRep.html 225,61 406,85
+rect $ParametricTrajectoryRep.html 221,109 410,133
+rect $Externalizer.html 485,305 599,329
+rect $VFile.html 278,329 353,353
+rect $externalization__error.html 459,404 625,428
+rect $Application.html 487,452 597,476

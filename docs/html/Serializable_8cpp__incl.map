@@ -1,0 +1,4 @@
+base referer
+rect $Serializable.html 42,168 157,192
+rect $base.html 24,19 96,43
+rect $Object.html 57,93 142,117

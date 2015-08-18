@@ -1,0 +1,10 @@
+base referer
+rect $Path.html 417,158 486,182
+rect $PathRep.html 18,109 112,133
+rect $LineSegPathRep.html 169,109 313,133
+rect $WaypointPathRep.html 166,208 316,232
+rect $ParametricPathRep.html 161,9 321,33
+rect $Externalizer.html 394,356 509,380
+rect $VFile.html 204,330 278,354
+rect $externalization__error.html 369,404 534,428
+rect $Application.html 397,452 506,476

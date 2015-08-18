@@ -1,0 +1,6 @@
+base referer
+rect $gfx.html 173,243 224,266
+rect $Segment3.html 236,317 326,341
+rect $Triangle3.html 108,392 193,416
+rect $Vector3.html 193,93 278,117
+rect $Point3.html 197,168 274,192

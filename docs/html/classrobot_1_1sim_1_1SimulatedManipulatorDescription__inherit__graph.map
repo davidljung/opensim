@@ -1,0 +1,7 @@
+base referer
+rect $classrobot_1_1ManipulatorDescription.html 93,168 272,192
+rect $classbase_1_1Named.html 6,93 94,117
+rect $classbase_1_1Externalizable.html 118,93 246,117
+rect $classbase_1_1Object.html 161,19 246,43
+rect $classbase_1_1ReferencedObject.html 270,93 428,117
+rect $classbase_1_1Referenced.html 292,19 406,43

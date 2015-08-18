@@ -1,0 +1,9 @@
+base referer
+rect $base.html 249,168 321,192
+rect $Object.html 398,242 484,266
+rect $Simulatable.html 108,317 222,341
+rect $VFileSystem.html 286,391 404,415
+rect $PathName.html 348,317 454,341
+rect $Cache.html 180,391 262,415
+rect $reflist.html 114,93 189,117
+rect $World.html 244,466 321,490

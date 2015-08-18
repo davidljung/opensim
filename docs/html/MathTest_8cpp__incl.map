@@ -1,0 +1,4 @@
+base referer
+rect $MathTest.html 6,18 102,42
+rect $SVD.html 126,18 195,42
+rect $Path.html 219,18 289,42

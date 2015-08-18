@@ -1,0 +1,6 @@
+base referer
+rect $robot.html 57,93 129,117
+rect $Vector.html 14,18 97,42
+rect $Serializable.html 153,93 267,117
+rect $Externalizable.html 291,93 417,117
+rect $Time.html 441,93 513,117

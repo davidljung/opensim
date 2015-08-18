@@ -1,0 +1,3 @@
+base referer
+rect $physics.html 12,18 113,42
+rect $Terrain.html 57,93 153,117

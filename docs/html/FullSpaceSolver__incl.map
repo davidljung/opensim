@@ -1,0 +1,7 @@
+base referer
+rect $kinematics.html 6,168 220,192
+rect $control.html 52,93 174,117
+rect $robot.html 77,19 149,43
+rect $ReferencedObject.html 244,168 398,192
+rect $Object.html 238,93 324,117
+rect $Referenced.html 348,93 460,117

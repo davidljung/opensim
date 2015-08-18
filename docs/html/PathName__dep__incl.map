@@ -1,0 +1,17 @@
+base referer
+rect $VFileSystem.html 261,242 344,266
+rect $VEntry.html 377,392 425,416
+rect $VDirectory.html 268,317 337,341
+rect $VFile.html 412,317 452,341
+rect $Universe.html 148,93 209,117
+rect $World.html 332,168 375,192
+rect $Universe_8cpp.html 311,18 396,42
+rect $ResourceCache.html 399,168 502,192
+rect $StdFileSystem.html 108,168 201,192
+rect $Environment.html 225,168 308,192
+rect $Externalizer.html 577,242 657,266
+rect $SimulatedPlatform_8cpp.html 624,168 765,192
+rect $Material.html 760,242 816,266
+rect $PathName_8cpp.html 678,392 777,416
+rect $IKORTest.html 852,392 916,416
+rect $IKORTester.html 882,317 960,341

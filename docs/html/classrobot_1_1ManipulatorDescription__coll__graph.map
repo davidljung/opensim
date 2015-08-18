@@ -1,0 +1,5 @@
+base referer
+rect $classbase_1_1Named.html 6,96 94,120
+rect $classbase_1_1Externalizable.html 106,19 234,43
+rect $classrobot_1_1KinematicChain.html 169,96 305,120
+rect $classbase_1_1ReferencedObject.html 329,96 486,120

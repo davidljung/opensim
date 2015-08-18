@@ -1,0 +1,12 @@
+base referer
+rect $sim.html 725,6 810,30
+rect $ReferencedObject.html 17,253 172,277
+rect $CollidableProvider.html 221,477 389,501
+rect $SpatialGroup.html 238,130 372,154
+rect $Dimension3.html 713,105 822,129
+rect $Externalizable.html 482,178 607,202
+rect $KinematicChain.html 701,204 834,228
+rect $SolidSystem.html 702,403 833,427
+rect $Solid.html 502,502 587,526
+rect $CollisionDetector.html 228,353 382,377
+rect $CollisionResponseHandler.html 438,353 651,377

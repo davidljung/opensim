@@ -1,0 +1,4 @@
+base referer
+rect $classrobot_1_1Controller.html 320,8 421,32
+rect $classrobot_1_1Controllable.html 313,58 428,82
+rect $classrobot_1_1KinematicChain.html 302,278 438,302

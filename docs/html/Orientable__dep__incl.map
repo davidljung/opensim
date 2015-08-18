@@ -1,0 +1,15 @@
+base referer
+rect $PositionableOrientable.html 245,541 389,565
+rect $Spatial.html 292,466 342,490
+rect $DynamicSpatial.html 153,392 254,416
+rect $Body.html 196,317 236,341
+rect $SpatialGroup.html 177,242 262,266
+rect $SimulatedRobot.html 152,18 256,42
+rect $SimulatedPlatform.html 6,168 124,192
+rect $SimulatedSerialManipulator.html 241,93 414,117
+rect $SimulatedTool.html 265,168 356,192
+rect $SimulatedSerialManipulator_8cpp.html 341,18 538,42
+rect $SpatialTransform.html 489,242 596,266
+rect $SpatialTransform_8cpp.html 540,168 673,192
+rect $SimulatedKinematicChain_8cpp.html 697,168 884,192
+rect $PositionableOrientable_8cpp.html 366,466 537,490

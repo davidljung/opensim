@@ -1,0 +1,8 @@
+base referer
+rect $sim.html 19,59 104,83
+rect $IKORTest.html 179,59 301,83
+rect $BasicEnvironment.html 153,107 326,131
+rect $DOM.html 203,155 277,179
+rect $Visual.html 207,203 273,227
+rect $Segment3.html 195,250 285,274
+rect $Color4.html 207,298 273,322

@@ -1,0 +1,6 @@
+base referer
+rect $TriangleContainer.html 6,168 142,192
+rect $gfx.html 116,19 166,43
+rect $TriangleIterator.html 166,168 286,192
+rect $Triangle3.html 178,93 263,117
+rect $Object.html 287,93 373,117

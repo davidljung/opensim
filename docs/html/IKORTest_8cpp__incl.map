@@ -1,0 +1,11 @@
+base referer
+rect $IKORTest.html 575,65 698,89
+rect $FullSpaceSolver.html 18,65 269,89
+rect $IKOR.html 320,114 501,138
+rect $Externalizer.html 579,214 694,238
+rect $VFile.html 373,190 447,214
+rect $Matrix.html 370,263 450,287
+rect $Expression.html 583,313 690,337
+rect $externalization__error.html 554,361 719,385
+rect $VDirectory.html 585,409 689,433
+rect $BasicEnvironment.html 550,457 723,481

@@ -1,0 +1,5 @@
+base referer
+rect $structANGLE.html 65,313 118,337
+rect $structEndEffector.html 413,313 490,337
+rect $structPlatform.html 301,313 357,337
+rect $structMATRIX.html 554,132 610,156

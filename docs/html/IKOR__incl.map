@@ -1,0 +1,6 @@
+base referer
+rect $kinematics.html 18,81 232,105
+rect $InverseKinematicsSolver.html 281,57 579,81
+rect $FullSpaceSolver.html 305,105 555,129
+rect $BetaFormConstraints.html 294,153 566,177
+rect $KinematicChain.html 363,252 497,276

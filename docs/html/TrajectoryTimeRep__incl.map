@@ -1,0 +1,6 @@
+base referer
+rect $base.html 79,18 151,42
+rect $Serializable.html 57,93 172,117
+rect $Time.html 196,93 268,117
+rect $ReferencedObject.html 292,93 446,117
+rect $Cloneable.html 470,93 574,117
