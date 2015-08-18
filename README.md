@@ -4,8 +4,8 @@ Most experimental AI/robotics research involves a simulation component. Typical 
 
 OpenSim is a 3D simulator that uses OpenGL for real-time rendering of the robot environment, including a physics engine to simulate dynamics in real-time (collision between arbitrary polyhedral objects with friction). 
 
-<a href="url"><img src="http://opensimulator.sourceforge.net/images/poscontrol_nonhol_platf.png" width="320" ></a>
-<a href="url"><img src="http://opensimulator.sourceforge.net/images/viewenv_screen_small.png" width="440" ></a>
+<a href="url"><img src="https://raw.githubusercontent.com/davidljung/opensim/master/docs/poscontrol_nonhol_platf.png" width="320" ></a>
+<a href="url"><img src="https://raw.githubusercontent.com/davidljung/opensim/master/docs/viewenv_screen_small.png" width="440" ></a>
 
 
 __Note__: _OpenSim was actively developed between 2001-2006 and sporadically until around 2009.  It is no longer under active development, 
